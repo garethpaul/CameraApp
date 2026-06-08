@@ -224,7 +224,14 @@ public class Camera2BasicFragment extends Fragment implements View.OnClickListen
 
         @Override
         public void onImageAvailable(ImageReader reader) {
-            mBackgroundHandler.post(new ImageSaver(reader.acquireNextImage(), mFile));
+            Image image = reader.acquireNextImage();
+            if (mBackgroundHandler == null || mFile == null) {
+                if (image != null) {
+                    image.close();
+                }
+                return;
+            }
+            mBackgroundHandler.post(new ImageSaver(image, mFile));
         }
 
     };
@@ -395,7 +402,11 @@ public class Camera2BasicFragment extends Fragment implements View.OnClickListen
     @Override
     public void onActivityCreated(Bundle savedInstanceState) {
         super.onActivityCreated(savedInstanceState);
-        mFile = new File(getActivity().getExternalFilesDir(null), "pic.jpg");
+        Activity activity = getActivity();
+        File directory = activity == null ? null : activity.getExternalFilesDir(null);
+        if (directory != null) {
+            mFile = new File(directory, "pic.jpg");
+        }
     }
 
     @Override
@@ -429,7 +440,13 @@ public class Camera2BasicFragment extends Fragment implements View.OnClickListen
      */
     private void setUpCameraOutputs(int width, int height) {
         Activity activity = getActivity();
+        if (activity == null) {
+            return;
+        }
         CameraManager manager = (CameraManager) activity.getSystemService(Context.CAMERA_SERVICE);
+        if (manager == null) {
+            return;
+        }
         try {
             for (String cameraId : manager.getCameraIdList()) {
                 CameraCharacteristics characteristics
@@ -443,10 +460,19 @@ public class Camera2BasicFragment extends Fragment implements View.OnClickListen
 
                 StreamConfigurationMap map = characteristics.get(
                         CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
+                if (map == null) {
+                    continue;
+                }
 
                 // For still image captures, we use the largest available size.
+                Size[] jpegSizes = map.getOutputSizes(ImageFormat.JPEG);
+                Size[] previewSizes = map.getOutputSizes(SurfaceTexture.class);
+                if (jpegSizes == null || jpegSizes.length == 0 ||
+                        previewSizes == null || previewSizes.length == 0) {
+                    continue;
+                }
                 Size largest = Collections.max(
-                        Arrays.asList(map.getOutputSizes(ImageFormat.JPEG)),
+                        Arrays.asList(jpegSizes),
                         new CompareSizesByArea());
                 mImageReader = ImageReader.newInstance(largest.getWidth(), largest.getHeight(),
                         ImageFormat.JPEG, /*maxImages*/2);
@@ -456,7 +482,7 @@ public class Camera2BasicFragment extends Fragment implements View.OnClickListen
                 // Danger, W.R.! Attempting to use too large a preview size could  exceed the camera
                 // bus' bandwidth limitation, resulting in gorgeous previews but the storage of
                 // garbage capture data.
-                mPreviewSize = chooseOptimalSize(map.getOutputSizes(SurfaceTexture.class),
+                mPreviewSize = chooseOptimalSize(previewSizes,
                         width, height, largest);
 
                 // We fit the aspect ratio of TextureView to the size of preview we picked.
@@ -486,9 +512,20 @@ public class Camera2BasicFragment extends Fragment implements View.OnClickListen
      */
     private void openCamera(int width, int height) {
         setUpCameraOutputs(width, height);
+        if (mCameraId == null || mImageReader == null || mPreviewSize == null) {
+            showToast("Camera unavailable");
+            return;
+        }
         configureTransform(width, height);
         Activity activity = getActivity();
+        if (activity == null) {
+            return;
+        }
         CameraManager manager = (CameraManager) activity.getSystemService(Context.CAMERA_SERVICE);
+        if (manager == null) {
+            showToast("Camera unavailable");
+            return;
+        }
         try {
             if (!mCameraOpenCloseLock.tryAcquire(2500, TimeUnit.MILLISECONDS)) {
                 throw new RuntimeException("Time out waiting to lock camera opening.");
@@ -539,6 +576,10 @@ public class Camera2BasicFragment extends Fragment implements View.OnClickListen
      * Stops the background thread and its {@link Handler}.
      */
     private void stopBackgroundThread() {
+        if (mBackgroundThread == null) {
+            mBackgroundHandler = null;
+            return;
+        }
         mBackgroundThread.quitSafely();
         try {
             mBackgroundThread.join();
@@ -644,6 +685,11 @@ public class Camera2BasicFragment extends Fragment implements View.OnClickListen
      * Initiate a still image capture.
      */
     private void takePicture() {
+        if (mCameraDevice == null || mCaptureSession == null ||
+                mPreviewRequestBuilder == null || mFile == null) {
+            showToast("Camera unavailable");
+            return;
+        }
         lockFocus();
     }
 
@@ -787,6 +833,12 @@ public class Camera2BasicFragment extends Fragment implements View.OnClickListen
 
         @Override
         public void run() {
+            if (mImage == null || mFile == null) {
+                if (mImage != null) {
+                    mImage.close();
+                }
+                return;
+            }
             ByteBuffer buffer = mImage.getPlanes()[0].getBuffer();
             byte[] bytes = new byte[buffer.remaining()];
             buffer.get(bytes);

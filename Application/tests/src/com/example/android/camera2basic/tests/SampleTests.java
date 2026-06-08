@@ -59,7 +59,7 @@ public class SampleTests extends ActivityInstrumentationTestCase2<CameraActivity
         // All other fields are null or empty.
         mTestActivity = getActivity();
         mTestFragment = (Camera2BasicFragment)
-            mTestActivity.getSupportFragmentManager().getFragments().get(1);
+            mTestActivity.getFragmentManager().findFragmentById(R.id.container);
     }
 
     /**

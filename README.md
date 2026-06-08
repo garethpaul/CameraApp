@@ -42,8 +42,39 @@ Pre-requisites
 --------------
 
 - Android SDK v21
-- Android Build Tools v21.1.1
+- Android Build Tools v24.0.3
 - Android Support Repository
+
+Repository Baseline
+-------------------
+
+This repository intentionally does not track machine-local Gradle output,
+Android Studio metadata, generated APK intermediates, or `local.properties`.
+Set `ANDROID_HOME` or create your own untracked `local.properties` before
+building.
+The current source baseline also guards camera/file/thread lifecycle edges that
+can be unavailable on devices without Camera2-compatible outputs.
+
+The legacy build remains on Gradle 2.2.1, Android Gradle Plugin 1.0.0,
+compile SDK 21, min SDK 21, target SDK 21, and support libraries 21.0.2.
+Dependency resolution uses explicit HTTPS Maven Central and Google Maven
+repositories instead of JCenter. Lint only suppresses the legacy `LintError`
+infrastructure issue produced by this old toolchain.
+
+Run the SDK-free baseline guard before committing:
+
+```sh
+scripts/check-baseline.sh
+```
+
+With the Android SDK available, verify the legacy Gradle project with:
+
+```sh
+ANDROID_HOME=/path/to/android-sdk ./gradlew tasks --no-daemon
+ANDROID_HOME=/path/to/android-sdk ./gradlew assembleDebug --no-daemon
+ANDROID_HOME=/path/to/android-sdk ./gradlew assembleDebugTest --no-daemon
+ANDROID_HOME=/path/to/android-sdk ./gradlew check --no-daemon
+```
 
 Screenshots
 -------------
@@ -60,7 +91,7 @@ Support
 -------
 
 - Google+ Community: https://plus.google.com/communities/105153134372062985968
-- Stack Overflow: http://stackoverflow.com/questions/tagged/android
+- Stack Overflow: https://stackoverflow.com/questions/tagged/android
 
 If you've found an error in this sample, please file an issue:
 https://github.com/googlesamples/android-Camera2Basic
@@ -80,7 +111,7 @@ file to you under the Apache License, Version 2.0 (the "License"); you may not
 use this file except in compliance with the License.  You may obtain a copy of
 the License at
 
-http://www.apache.org/licenses/LICENSE-2.0
+https://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
