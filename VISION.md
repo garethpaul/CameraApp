@@ -1,5 +1,9 @@
 ## CameraApp Vision
 
+This document explains the current state and direction of the project.
+Project overview and developer docs: [`README.md`](README.md)
+Contribution guide: [`CONTRIBUTING.md`](CONTRIBUTING.md)
+
 CameraApp is an Android Camera2Basic sample. It demonstrates Camera2 device
 selection, preview, focus locking, precapture, and still image capture.
 
