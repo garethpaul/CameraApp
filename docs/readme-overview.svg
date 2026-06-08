@@ -10,9 +10,9 @@
   <circle cx="1014" cy="82" r="18" fill="#f97316"/>
   <text x="76" y="82" font-size="36" fill="#ffffff" font-weight="700">CameraApp</text>
   <text x="76" y="124" font-size="20" fill="#cbd5e1">Android application or sample</text>
-  <text x="76" y="206" font-size="24" fill="#111827">Android Camera2Basic Sample =================================== This</text>
-<text x="76" y="240" font-size="24" fill="#111827">sample demonstrates how to use basic functionalities of Camera2 API.</text>
-<text x="76" y="274" font-size="24" fill="#111827">You can learn how to iterate through characteristics of all the</text>
+  <text x="76" y="206" font-size="24" fill="#111827">CameraApp Overview `garethpaul/CameraApp` is an Android application</text>
+<text x="76" y="240" font-size="24" fill="#111827">or sample. No GitHub description is currently set. This README is</text>
+<text x="76" y="274" font-size="24" fill="#111827">based on the checked-in source, manifests, scripts, and repository</text>
 
   <rect x="76" y="286" width="316" height="276" rx="14" fill="#eff6ff" stroke="#bfdbfe"/>
   <text x="102" y="328" font-size="24" font-weight="700" fill="#1d4ed8">Code Shape</text>
