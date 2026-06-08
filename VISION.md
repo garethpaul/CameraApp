@@ -47,3 +47,6 @@ capture.
 - Broad project migrations mixed with capture behavior changes
 - Attribution or license removals
 - Permission expansion without documentation
+
+This list is a roadmap guardrail, not a permanent rule.
+Strong user demand and strong technical rationale can change it.
