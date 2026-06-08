@@ -44,15 +44,35 @@ git clone https://github.com/garethpaul/CameraApp.git
 cd CameraApp
 ```
 
+Configure the Android SDK with `ANDROID_HOME` or an untracked `local.properties` file:
+
+```properties
+sdk.dir=/path/to/android-sdk
+```
+
 The setup commands above are derived from repository files. Legacy mobile, Python, or JavaScript samples may require older SDKs or package versions than a modern workstation uses by default.
 
 ## Running or Using the Project
 
 - Use Android Studio to open the project or run `./gradlew assembleDebug` when the Android SDK is configured.
+- This legacy sample uses Gradle 2.2.1, Android Gradle Plugin 1.0.0, compile/min/target SDK 21, and Android Build Tools v24.0.3.
 
 ## Testing and Verification
 
-- `./gradlew test` or Android Studio's test runner when the SDK is configured
+Run the SDK-free source baseline check first:
+
+```sh
+scripts/check-baseline.sh
+```
+
+Then run Gradle after Android SDK configuration is available:
+
+```sh
+ANDROID_HOME=/home/gjones/android-sdk ./gradlew lint --no-daemon
+ANDROID_HOME=/home/gjones/android-sdk ./gradlew assembleDebug --no-daemon
+```
+
+The Gradle lint configuration suppresses only the legacy `LintError` for the missing API database infrastructure issue. Instrumentation tests require an Android device or emulator with camera support.
 
 When the required SDK or runtime is unavailable, use static checks and source review first, then verify on a machine that has the matching platform toolchain.
 
@@ -74,6 +94,7 @@ When the required SDK or runtime is unavailable, use static checks and source re
 - This looks like a legacy Android project or sample. Expect Android SDK, Gradle, and support-library versions to matter.
 - See `SECURITY.md` for vulnerability reporting and safe research guidance.
 - See `VISION.md` for project direction and contribution guardrails.
+- See `CHANGES.md` for the maintenance history.
 
 ## Contributing
 

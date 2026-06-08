@@ -11,6 +11,16 @@ TEST_MANIFEST="$ROOT_DIR/Application/tests/AndroidManifest.xml"
 TEST_FIXTURE="$ROOT_DIR/Application/tests/src/com/example/android/camera2basic/tests/SampleTests.java"
 FRAGMENT="$ROOT_DIR/Application/src/main/java/com/example/android/camera2basic/Camera2BasicFragment.java"
 
+if [ ! -f "$ROOT_DIR/CHANGES.md" ]; then
+  printf '%s\n' "CHANGES.md must document repository maintenance." >&2
+  exit 1
+fi
+
+if ! grep -Fq "CameraApp Changes" "$ROOT_DIR/CHANGES.md"; then
+  printf '%s\n' "CHANGES.md must identify the project." >&2
+  exit 1
+fi
+
 require_file() {
   path=$1
   if [ ! -f "$ROOT_DIR/$path" ]; then
@@ -206,6 +216,26 @@ fi
 
 if ! grep -Fq "LintError" "$README"; then
   printf '%s\n' "README must document the scoped legacy lint suppression." >&2
+  exit 1
+fi
+
+if ! grep -Fq "./gradlew lint --no-daemon" "$README"; then
+  printf '%s\n' "README must document the lint gate." >&2
+  exit 1
+fi
+
+if ! grep -Fq "./gradlew assembleDebug --no-daemon" "$README"; then
+  printf '%s\n' "README must document the debug assemble gate." >&2
+  exit 1
+fi
+
+if ! grep -Fq "Instrumentation tests require an Android device or emulator" "$README"; then
+  printf '%s\n' "README must document instrumentation test runtime requirements." >&2
+  exit 1
+fi
+
+if ! grep -Fq "CHANGES.md" "$README"; then
+  printf '%s\n' "README must point to CHANGES.md." >&2
   exit 1
 fi
 
