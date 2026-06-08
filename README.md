@@ -1,125 +1,84 @@
 # CameraApp
 
-<!-- README-OVERVIEW-IMAGE -->
-![Project overview](docs/readme-overview.svg)
+## Overview
 
-Android Camera2Basic Sample
-===================================
+`garethpaul/CameraApp` is an Android application or sample. No GitHub description is currently set.
 
-This sample demonstrates how to use basic functionalities of Camera2
-API. You can learn how to iterate through characteristics of all the
-cameras attached to the device, display a camera preview, and take
-pictures.
+This README is based on the checked-in source, manifests, scripts, and repository metadata on the `master` branch. The project language mix found during review was: Java (4), shell (1).
 
-Introduction
-------------
+## Repository Contents
 
-The [Camera2 API][1] provides an interface to individual camera
-devices connected to an Android device. It replaces the deprecated
-Camera class.
+- `README.md` - project overview and local usage notes
+- `build.gradle` - Android or Gradle build configuration
+- `.google` - source or example code
+- `Application` - source or example code
+- `docs` - source or example code
+- `gradle` - source or example code
+- `gradlew` - Android or Gradle build configuration
+- `scripts` - source or example code
+- `SECURITY.md` - security reporting and disclosure guidance
+- `VISION.md` - project direction and maintenance guardrails
 
-Use [getCameraIdList][2] to get a list of all the available
-cameras. You can then use [getCameraCharacteristics][3] and find the
-best camera that suits your need (front/rear facing, resolution etc).
+Additional scan context:
 
-Create an instance of [CameraDevice.StateCallback][4] and open a
-camera. It is ready to start camera preview when the camera is opened.
+- Source directories: .google, Application, docs, gradle, scripts
+- Dependency and build manifests: build.gradle, gradlew
+- Entry points or build surfaces: Gradle build files
+- Test-looking files: Application/tests/AndroidManifest.xml, Application/tests/src/com/example/android/camera2basic/tests/SampleTests.java
 
-This sample uses TextureView to show the camera preview. Create a
-[CameraCaptureSession][5] and set a repeating [CaptureRequest][6] to it.
+## Getting Started
 
-Still image capture takes several steps. First, you need to lock the
-focus of the camera by updating the CaptureRequest for the camera
-preview. Then, in a similar way, you need to run a precapture
-sequence. After that, it is ready to capture a picture. Create a new
-CaptureRequest and call [capture][7]. Don't forget to unlock the focus
-when you are done.
+### Prerequisites
 
-[1]: https://developer.android.com/reference/android/hardware/camera2/package-summary.html
-[2]: https://developer.android.com/reference/android/hardware/camera2/CameraManager.html#getCameraIdList()
-[3]: https://developer.android.com/reference/android/hardware/camera2/CameraManager.html#getCameraCharacteristics(java.lang.String)
-[4]: https://developer.android.com/reference/android/hardware/camera2/CameraDevice.StateCallback.html
-[5]: https://developer.android.com/reference/android/hardware/camera2/CameraCaptureSession.html
-[6]: https://developer.android.com/reference/android/hardware/camera2/CaptureRequest.html
-[7]: https://developer.android.com/reference/android/hardware/camera2/CameraCaptureSession.html#capture(android.hardware.camera2.CaptureRequest, android.hardware.camera2.CameraCaptureSession.CaptureCallback, android.os.Handler)
+- Git
+- Android Studio or a compatible Android SDK
+- Gradle or the checked-in Gradle wrapper when present
 
-Pre-requisites
---------------
+### Setup
 
-- Android SDK v21
-- Android Build Tools v24.0.3
-- Android Support Repository
-
-Repository Baseline
--------------------
-
-This repository intentionally does not track machine-local Gradle output,
-Android Studio metadata, generated APK intermediates, or `local.properties`.
-Set `ANDROID_HOME` or create your own untracked `local.properties` before
-building.
-The current source baseline also guards camera/file/thread lifecycle edges that
-can be unavailable on devices without Camera2-compatible outputs.
-
-The legacy build remains on Gradle 2.2.1, Android Gradle Plugin 1.0.0,
-compile SDK 21, min SDK 21, target SDK 21, and support libraries 21.0.2.
-Dependency resolution uses explicit HTTPS Maven Central and Google Maven
-repositories instead of JCenter. Lint only suppresses the legacy `LintError`
-infrastructure issue produced by this old toolchain.
-
-Run the SDK-free baseline guard before committing:
-
-```sh
-scripts/check-baseline.sh
+```bash
+git clone https://github.com/garethpaul/CameraApp.git
+cd CameraApp
 ```
 
-With the Android SDK available, verify the legacy Gradle project with:
+The setup commands above are derived from repository files. Legacy mobile, Python, or JavaScript samples may require older SDKs or package versions than a modern workstation uses by default.
 
-```sh
-ANDROID_HOME=/path/to/android-sdk ./gradlew tasks --no-daemon
-ANDROID_HOME=/path/to/android-sdk ./gradlew assembleDebug --no-daemon
-ANDROID_HOME=/path/to/android-sdk ./gradlew assembleDebugTest --no-daemon
-ANDROID_HOME=/path/to/android-sdk ./gradlew check --no-daemon
-```
+## Running or Using the Project
 
-Screenshots
--------------
+- Use Android Studio to open the project or run `./gradlew assembleDebug` when the Android SDK is configured.
 
-<img src="screenshots/main.png" height="400" alt="Screenshot"/> 
+## Testing and Verification
 
-Getting Started
----------------
+- `./gradlew test` or Android Studio's test runner when the SDK is configured
 
-This sample uses the Gradle build system. To build this project, use the
-"gradlew build" command or use "Import Project" in Android Studio.
+When the required SDK or runtime is unavailable, use static checks and source review first, then verify on a machine that has the matching platform toolchain.
 
-Support
--------
+## Configuration and Secrets
 
-- Google+ Community: https://plus.google.com/communities/105153134372062985968
-- Stack Overflow: https://stackoverflow.com/questions/tagged/android
+- Detected references to Twitter. Keep API keys, OAuth credentials, tokens, and account-specific values in local configuration only.
 
-If you've found an error in this sample, please file an issue:
-https://github.com/googlesamples/android-Camera2Basic
+## Security and Privacy Notes
 
-Patches are encouraged, and may be submitted by forking this project and
-submitting a pull request through GitHub. Please see CONTRIBUTING.md for more details.
+- Review changes touching authentication or token handling; examples from the scan include Application/src/main/java/com/example/android/camera2basic/Camera2BasicFragment.java, docs/plans/2026-06-08-cameraapp-build-hygiene-baseline.md, scripts/check-baseline.sh.
+- Review changes touching external API calls or credential-adjacent configuration; examples from the scan include docs/plans/2026-06-08-cameraapp-reproducible-build-baseline.md.
+- Review changes touching network requests, sockets, or service endpoints; examples from the scan include Application/build.gradle, Application/src/main/AndroidManifest.xml, Application/src/main/java/com/example/android/camera2basic/AutoFitTextureView.java, Application/src/main/java/com/example/android/camera2basic/Camera2BasicFragment.java, and 6 more.
+- Review changes touching mobile permissions or privacy-sensitive device data; examples from the scan include .google/packaging.yaml, Application/src/main/AndroidManifest.xml, Application/src/main/java/com/example/android/camera2basic/AutoFitTextureView.java, Application/src/main/java/com/example/android/camera2basic/Camera2BasicFragment.java, and 6 more.
+- Review changes touching file, media, JSON, XML, CSV, OCR, or data parsing; examples from the scan include Application/src/main/AndroidManifest.xml, Application/src/main/java/com/example/android/camera2basic/Camera2BasicFragment.java, Application/src/main/res/layout/activity_camera.xml, Application/src/main/res/layout/fragment_camera2_basic.xml, and 6 more.
+- Review changes touching database, model, or persistence code; examples from the scan include docs/plans/2026-06-08-cameraapp-build-hygiene-baseline.md, docs/plans/2026-06-08-cameraapp-reproducible-build-baseline.md.
 
-License
--------
+## Maintenance Notes
 
-Copyright 2014 The Android Open Source Project, Inc.
+- This looks like a legacy Android project or sample. Expect Android SDK, Gradle, and support-library versions to matter.
+- See `SECURITY.md` for vulnerability reporting and safe research guidance.
+- See `VISION.md` for project direction and contribution guardrails.
 
-Licensed to the Apache Software Foundation (ASF) under one or more contributor
-license agreements.  See the NOTICE file distributed with this work for
-additional information regarding copyright ownership.  The ASF licenses this
-file to you under the Apache License, Version 2.0 (the "License"); you may not
-use this file except in compliance with the License.  You may obtain a copy of
-the License at
+## Contributing
 
-https://www.apache.org/licenses/LICENSE-2.0
+Keep changes small and tied to the project that is already present in this repository. For code changes, document the toolchain used, avoid committing generated dependency directories or local configuration, and update this README when setup or verification steps change.
 
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
-WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
-License for the specific language governing permissions and limitations under
-the License.
+## Existing Project Notes
+
+Prior README summary:
+
+> CameraApp <!-- README-OVERVIEW-IMAGE --> Android Camera2Basic Sample =================================== This sample demonstrates how to use basic functionalities of Camera2 API. You can learn how to iterate through characteristics of all the cameras attached to the device, display a camera preview, and take pictures.
+
