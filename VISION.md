@@ -39,7 +39,6 @@ Canonical security policy and reporting:
 
 - [`SECURITY.md`](SECURITY.md)
 
-
 Camera access is sensitive. Changes must not upload, log, or retain captured
 images without explicit purpose and user control.
 
