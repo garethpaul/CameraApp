@@ -2,7 +2,7 @@
 
 ## Overview
 
-`garethpaul/CameraApp` is an Android application or sample. No GitHub description is currently set.
+`garethpaul/CameraApp` is an Android application or sample. The checked-in files describe a Android application or sample with the structure summarized below.
 
 This README is based on the checked-in source, manifests, scripts, and repository metadata on the `master` branch. The project language mix found during review was: Java (4), shell (1).
 
@@ -75,10 +75,4 @@ When the required SDK or runtime is unavailable, use static checks and source re
 ## Contributing
 
 Keep changes small and tied to the project that is already present in this repository. For code changes, document the toolchain used, avoid committing generated dependency directories or local configuration, and update this README when setup or verification steps change.
-
-## Existing Project Notes
-
-Prior README summary:
-
-> CameraApp <!-- README-OVERVIEW-IMAGE --> Android Camera2Basic Sample =================================== This sample demonstrates how to use basic functionalities of Camera2 API. You can learn how to iterate through characteristics of all the cameras attached to the device, display a camera preview, and take pictures.
 
