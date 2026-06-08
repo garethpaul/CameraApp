@@ -1,0 +1,49 @@
+## CameraApp Vision
+
+CameraApp is an Android Camera2Basic sample. It demonstrates Camera2 device
+selection, preview, focus locking, precapture, and still image capture.
+
+The repository is useful as a preserved Android camera API sample with the
+original multi-directory sample structure. Project background lives in
+[`README.md`](README.md).
+
+The goal is to keep the sample recognizable, buildable in the right legacy
+toolchain, and safe around camera permissions and captured images.
+
+The current focus is:
+
+Priority:
+
+- Preserve the Camera2 preview and still-capture flow
+- Keep the sample-origin source layout and attribution intact
+- Make Android SDK and build-tool requirements visible
+- Avoid changing camera behavior without device verification notes
+
+Next priorities:
+
+- Modernize Gradle, SDK levels, and support dependencies in a dedicated pass
+- Add README notes for current Android Studio import and build expectations
+- Add tests or manual verification steps for preview and capture behavior
+- Review runtime permission handling for modern Android versions
+
+Contribution rules:
+
+- One PR = one focused camera, build, or documentation change.
+- Preserve sample attribution and license text.
+- Verify camera behavior on hardware or emulator when changing capture logic.
+- Keep generated build artifacts and local SDK paths out of git.
+
+## Security And Privacy
+
+Camera access is sensitive. Changes must not upload, log, or retain captured
+images without explicit purpose and user control.
+
+Permission changes should request only the access needed for preview and still
+capture.
+
+## What We Will Not Merge For Now
+
+- Camera-data upload or analytics
+- Broad project migrations mixed with capture behavior changes
+- Attribution or license removals
+- Permission expansion without documentation
