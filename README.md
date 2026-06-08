@@ -1,3 +1,8 @@
+# CameraApp
+
+<!-- README-OVERVIEW-IMAGE -->
+![Project overview](docs/readme-overview.svg)
+
 Android Camera2Basic Sample
 ===================================
 
