@@ -41,7 +41,7 @@ images without explicit purpose and user control.
 Permission changes should request only the access needed for preview and still
 capture.
 
-## What We Will Not Merge For Now
+## What We Will Not Merge (For Now)
 
 - Camera-data upload or analytics
 - Broad project migrations mixed with capture behavior changes
