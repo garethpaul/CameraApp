@@ -14,6 +14,7 @@ TEXTURE_RESUME_PLAN="$ROOT_DIR/docs/plans/2026-06-09-cameraapp-texture-resume-gu
 SAVE_TOAST_PLAN="$ROOT_DIR/docs/plans/2026-06-09-cameraapp-save-toast-path-privacy.md"
 CONTROL_BINDING_PLAN="$ROOT_DIR/docs/plans/2026-06-09-cameraapp-control-binding-guard.md"
 ERROR_DIALOG_PLAN="$ROOT_DIR/docs/plans/2026-06-09-cameraapp-error-dialog-fragment-manager.md"
+ERROR_DIALOG_ACTIVITY_PLAN="$ROOT_DIR/docs/plans/2026-06-09-cameraapp-error-dialog-activity-guard.md"
 
 if [ ! -f "$ROOT_DIR/CHANGES.md" ]; then
   printf '%s\n' "CHANGES.md must document repository maintenance." >&2
@@ -43,6 +44,7 @@ for path in \
   "docs/plans/2026-06-09-cameraapp-save-toast-path-privacy.md" \
   "docs/plans/2026-06-09-cameraapp-control-binding-guard.md" \
   "docs/plans/2026-06-09-cameraapp-error-dialog-fragment-manager.md" \
+  "docs/plans/2026-06-09-cameraapp-error-dialog-activity-guard.md" \
   "gradlew" \
   "gradle/wrapper/gradle-wrapper.properties" \
   "settings.gradle" \
@@ -264,9 +266,13 @@ if grep -Fq 'new ErrorDialog().show(getFragmentManager(), "dialog");' "$FRAGMENT
 fi
 
 if ! grep -Fq "import android.app.FragmentManager;" "$FRAGMENT" ||
-  ! grep -Fq "FragmentManager fragmentManager = getFragmentManager();" "$FRAGMENT" ||
-  ! grep -Fq "if (fragmentManager != null)" "$FRAGMENT"; then
+  ! grep -Fq "FragmentManager fragmentManager = getFragmentManager();" "$FRAGMENT"; then
   printf '%s\n' "Unsupported-camera error dialog must guard detached fragment manager state." >&2
+  exit 1
+fi
+
+if ! grep -Fq "activity != null && fragmentManager != null" "$FRAGMENT"; then
+  printf '%s\n' "Unsupported-camera error dialog must require an attached activity before display." >&2
   exit 1
 fi
 
@@ -380,6 +386,11 @@ if ! grep -Fq "Unsupported-camera error dialogs require an attached fragment man
   exit 1
 fi
 
+if ! grep -Fq "Unsupported-camera dialogs also require an attached activity before display" "$README"; then
+  printf '%s\n' "README must document the unsupported-camera dialog activity guard." >&2
+  exit 1
+fi
+
 if ! grep -Fq "Status: Completed" "$ROOT_DIR/docs/plans/2026-06-09-cameraapp-image-reader-backpressure.md"; then
   printf '%s\n' "ImageReader backpressure plan must record completed status." >&2
   exit 1
@@ -437,6 +448,16 @@ fi
 
 if ! grep -Fq "make check" "$ERROR_DIALOG_PLAN"; then
   printf '%s\n' "CameraApp error dialog fragment manager plan must record make check verification." >&2
+  exit 1
+fi
+
+if ! grep -Fq "Status: Completed" "$ERROR_DIALOG_ACTIVITY_PLAN"; then
+  printf '%s\n' "CameraApp error dialog activity guard plan must record completed status." >&2
+  exit 1
+fi
+
+if ! grep -Fq "make check" "$ERROR_DIALOG_ACTIVITY_PLAN"; then
+  printf '%s\n' "CameraApp error dialog activity guard plan must record make check verification." >&2
   exit 1
 fi
 

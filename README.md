@@ -106,6 +106,7 @@ When the required SDK or runtime is unavailable, use static checks and source re
   layout.
 - Unsupported-camera error dialogs require an attached fragment manager before
   display.
+- Unsupported-camera dialogs also require an attached activity before display.
 - See `SECURITY.md` for vulnerability reporting and safe research guidance.
 - See `VISION.md` for project direction and contribution guardrails.
 - See `CHANGES.md` for the maintenance history.
@@ -117,6 +118,8 @@ When the required SDK or runtime is unavailable, use static checks and source re
   picture/info control binding guard.
 - See `docs/plans/2026-06-09-cameraapp-error-dialog-fragment-manager.md` for
   the unsupported-camera dialog manager guard.
+- See `docs/plans/2026-06-09-cameraapp-error-dialog-activity-guard.md` for the
+  unsupported-camera dialog activity guard.
 - See `docs/plans/2026-06-08-cameraapp-check-wrapper.md` for the root
   verification wrapper baseline.
 

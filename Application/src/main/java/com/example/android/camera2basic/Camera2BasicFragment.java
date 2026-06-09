@@ -523,7 +523,7 @@ public class Camera2BasicFragment extends Fragment implements View.OnClickListen
             // Currently an NPE is thrown when the Camera2API is used but not supported on the
             // device this code runs.
             FragmentManager fragmentManager = getFragmentManager();
-            if (fragmentManager != null) {
+            if (activity != null && fragmentManager != null) {
                 new ErrorDialog().show(fragmentManager, "dialog");
             } else {
                 showToast("Camera unavailable");
