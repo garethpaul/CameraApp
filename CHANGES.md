@@ -1,5 +1,12 @@
 # CameraApp Changes
 
+## 2026-06-09
+
+- Guarded `ImageReader.acquireNextImage()` against backpressure exceptions so
+  backed-up still-image callbacks are dropped instead of crashing capture.
+- Extended the SDK-free baseline and README notes for ImageReader
+  backpressure handling.
+
 ## 2026-06-08
 
 - Added `make check` as the root wrapper for CameraApp source, lint, and

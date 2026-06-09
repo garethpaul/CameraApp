@@ -33,6 +33,7 @@ for path in \
   ".gitignore" \
   "README.md" \
   "docs/plans/2026-06-08-cameraapp-build-hygiene-baseline.md" \
+  "docs/plans/2026-06-09-cameraapp-image-reader-backpressure.md" \
   "gradlew" \
   "gradle/wrapper/gradle-wrapper.properties" \
   "settings.gradle" \
@@ -169,6 +170,17 @@ if ! grep -Fq "mBackgroundHandler == null || mFile == null" "$FRAGMENT"; then
   exit 1
 fi
 
+if ! grep -Fq "Image image = null;" "$FRAGMENT" ||
+  ! grep -Fq "catch (IllegalStateException e)" "$FRAGMENT"; then
+  printf '%s\n' "ImageReader callback must guard acquireNextImage backpressure failures." >&2
+  exit 1
+fi
+
+if ! grep -Fq "Dropping image because ImageReader is full." "$FRAGMENT"; then
+  printf '%s\n' "ImageReader backpressure guard must document dropped frames without logging image data." >&2
+  exit 1
+fi
+
 if ! grep -Fq "activity == null ? null : activity.getExternalFilesDir(null)" "$FRAGMENT"; then
   printf '%s\n' "Output file setup must guard detached activity state." >&2
   exit 1
@@ -282,6 +294,21 @@ fi
 
 if ! grep -Fq "Camera background thread startup is idempotent" "$README"; then
   printf '%s\n' "README must document background thread lifecycle guard." >&2
+  exit 1
+fi
+
+if ! grep -Fq "ImageReader backpressure" "$README"; then
+  printf '%s\n' "README must document ImageReader backpressure handling." >&2
+  exit 1
+fi
+
+if ! grep -Fq "Status: Completed" "$ROOT_DIR/docs/plans/2026-06-09-cameraapp-image-reader-backpressure.md"; then
+  printf '%s\n' "ImageReader backpressure plan must record completed status." >&2
+  exit 1
+fi
+
+if ! grep -Fq "make check" "$ROOT_DIR/docs/plans/2026-06-09-cameraapp-image-reader-backpressure.md"; then
+  printf '%s\n' "ImageReader backpressure plan must record make check verification." >&2
   exit 1
 fi
 

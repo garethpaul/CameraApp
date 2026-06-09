@@ -224,7 +224,13 @@ public class Camera2BasicFragment extends Fragment implements View.OnClickListen
 
         @Override
         public void onImageAvailable(ImageReader reader) {
-            Image image = reader.acquireNextImage();
+            Image image = null;
+            try {
+                image = reader.acquireNextImage();
+            } catch (IllegalStateException e) {
+                Log.w(TAG, "Dropping image because ImageReader is full.", e);
+                return;
+            }
             if (mBackgroundHandler == null || mFile == null) {
                 if (image != null) {
                     image.close();

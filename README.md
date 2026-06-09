@@ -95,6 +95,8 @@ When the required SDK or runtime is unavailable, use static checks and source re
 - This looks like a legacy Android project or sample. Expect Android SDK, Gradle, and support-library versions to matter.
 - Camera background thread startup is idempotent; repeated resume/start paths
   must not replace an already-running handler thread.
+- ImageReader backpressure is handled by dropping a backed-up capture callback
+  before it can crash the still-image save path.
 - See `SECURITY.md` for vulnerability reporting and safe research guidance.
 - See `VISION.md` for project direction and contribution guardrails.
 - See `CHANGES.md` for the maintenance history.
