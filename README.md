@@ -102,6 +102,8 @@ When the required SDK or runtime is unavailable, use static checks and source re
 - Resume skips camera open until the texture view is recreated, avoiding retained
   fragment camera work before the view hierarchy exists.
 - Capture completion UI does not expose the app-private output file path.
+- Picture and info controls are listener-bound only when present in the current
+  layout.
 - See `SECURITY.md` for vulnerability reporting and safe research guidance.
 - See `VISION.md` for project direction and contribution guardrails.
 - See `CHANGES.md` for the maintenance history.
@@ -109,6 +111,8 @@ When the required SDK or runtime is unavailable, use static checks and source re
   retained-fragment texture resume guard.
 - See `docs/plans/2026-06-09-cameraapp-save-toast-path-privacy.md` for the
   capture saved-toast privacy baseline.
+- See `docs/plans/2026-06-09-cameraapp-control-binding-guard.md` for the
+  picture/info control binding guard.
 - See `docs/plans/2026-06-08-cameraapp-check-wrapper.md` for the root
   verification wrapper baseline.
 

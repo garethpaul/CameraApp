@@ -2,6 +2,8 @@
 
 ## 2026-06-09
 
+- Guarded picture and info control listener binding so layout drift does not
+  crash fragment view creation.
 - Replaced the capture completion toast with generic saved-copy so the UI does
   not expose the app-private output file path.
 - Guarded `onResume()` so retained fragments wait for the texture view before

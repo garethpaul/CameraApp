@@ -12,6 +12,7 @@ TEST_FIXTURE="$ROOT_DIR/Application/tests/src/com/example/android/camera2basic/t
 FRAGMENT="$ROOT_DIR/Application/src/main/java/com/example/android/camera2basic/Camera2BasicFragment.java"
 TEXTURE_RESUME_PLAN="$ROOT_DIR/docs/plans/2026-06-09-cameraapp-texture-resume-guard.md"
 SAVE_TOAST_PLAN="$ROOT_DIR/docs/plans/2026-06-09-cameraapp-save-toast-path-privacy.md"
+CONTROL_BINDING_PLAN="$ROOT_DIR/docs/plans/2026-06-09-cameraapp-control-binding-guard.md"
 
 if [ ! -f "$ROOT_DIR/CHANGES.md" ]; then
   printf '%s\n' "CHANGES.md must document repository maintenance." >&2
@@ -39,6 +40,7 @@ for path in \
   "docs/plans/2026-06-09-cameraapp-disable-backup.md" \
   "docs/plans/2026-06-09-cameraapp-texture-resume-guard.md" \
   "docs/plans/2026-06-09-cameraapp-save-toast-path-privacy.md" \
+  "docs/plans/2026-06-09-cameraapp-control-binding-guard.md" \
   "gradlew" \
   "gradle/wrapper/gradle-wrapper.properties" \
   "settings.gradle" \
@@ -226,6 +228,18 @@ if ! grep -Fq "if (mTextureView == null)" "$FRAGMENT"; then
   exit 1
 fi
 
+if ! grep -Fq "View pictureButton = view.findViewById(R.id.picture)" "$FRAGMENT" ||
+  ! grep -Fq "if (pictureButton != null)" "$FRAGMENT"; then
+  printf '%s\n' "onViewCreated must guard missing picture controls before listener binding." >&2
+  exit 1
+fi
+
+if ! grep -Fq "View infoButton = view.findViewById(R.id.info)" "$FRAGMENT" ||
+  ! grep -Fq "if (infoButton != null)" "$FRAGMENT"; then
+  printf '%s\n' "onViewCreated must guard missing info controls before listener binding." >&2
+  exit 1
+fi
+
 if ! grep -Fq "Integer afState = result.get(CaptureResult.CONTROL_AF_STATE)" "$FRAGMENT"; then
   printf '%s\n' "Autofocus callback state must not be unboxed when Camera2 reports null." >&2
   exit 1
@@ -342,6 +356,11 @@ if ! grep -Fq "Capture completion UI does not expose the app-private output file
   exit 1
 fi
 
+if ! grep -Fq "Picture and info controls are listener-bound only when present" "$README"; then
+  printf '%s\n' "README must document the control binding guard." >&2
+  exit 1
+fi
+
 if ! grep -Fq "Status: Completed" "$ROOT_DIR/docs/plans/2026-06-09-cameraapp-image-reader-backpressure.md"; then
   printf '%s\n' "ImageReader backpressure plan must record completed status." >&2
   exit 1
@@ -379,6 +398,16 @@ fi
 
 if ! grep -Fq "make check" "$SAVE_TOAST_PLAN"; then
   printf '%s\n' "CameraApp save toast privacy plan must record make check verification." >&2
+  exit 1
+fi
+
+if ! grep -Fq "Status: Completed" "$CONTROL_BINDING_PLAN"; then
+  printf '%s\n' "CameraApp control binding guard plan must record completed status." >&2
+  exit 1
+fi
+
+if ! grep -Fq "make check" "$CONTROL_BINDING_PLAN"; then
+  printf '%s\n' "CameraApp control binding guard plan must record make check verification." >&2
   exit 1
 fi
 
