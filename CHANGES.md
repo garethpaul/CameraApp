@@ -2,6 +2,8 @@
 
 ## 2026-06-09
 
+- Guarded the unsupported-camera error dialog so detached retained fragments do
+  not call `show()` with a missing fragment manager.
 - Guarded picture and info control listener binding so layout drift does not
   crash fragment view creation.
 - Replaced the capture completion toast with generic saved-copy so the UI does

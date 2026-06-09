@@ -21,6 +21,7 @@ import android.app.AlertDialog;
 import android.app.Dialog;
 import android.app.DialogFragment;
 import android.app.Fragment;
+import android.app.FragmentManager;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.res.Configuration;
@@ -521,7 +522,12 @@ public class Camera2BasicFragment extends Fragment implements View.OnClickListen
         } catch (NullPointerException e) {
             // Currently an NPE is thrown when the Camera2API is used but not supported on the
             // device this code runs.
-            new ErrorDialog().show(getFragmentManager(), "dialog");
+            FragmentManager fragmentManager = getFragmentManager();
+            if (fragmentManager != null) {
+                new ErrorDialog().show(fragmentManager, "dialog");
+            } else {
+                showToast("Camera unavailable");
+            }
         }
     }
 

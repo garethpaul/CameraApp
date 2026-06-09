@@ -13,6 +13,7 @@ FRAGMENT="$ROOT_DIR/Application/src/main/java/com/example/android/camera2basic/C
 TEXTURE_RESUME_PLAN="$ROOT_DIR/docs/plans/2026-06-09-cameraapp-texture-resume-guard.md"
 SAVE_TOAST_PLAN="$ROOT_DIR/docs/plans/2026-06-09-cameraapp-save-toast-path-privacy.md"
 CONTROL_BINDING_PLAN="$ROOT_DIR/docs/plans/2026-06-09-cameraapp-control-binding-guard.md"
+ERROR_DIALOG_PLAN="$ROOT_DIR/docs/plans/2026-06-09-cameraapp-error-dialog-fragment-manager.md"
 
 if [ ! -f "$ROOT_DIR/CHANGES.md" ]; then
   printf '%s\n' "CHANGES.md must document repository maintenance." >&2
@@ -41,6 +42,7 @@ for path in \
   "docs/plans/2026-06-09-cameraapp-texture-resume-guard.md" \
   "docs/plans/2026-06-09-cameraapp-save-toast-path-privacy.md" \
   "docs/plans/2026-06-09-cameraapp-control-binding-guard.md" \
+  "docs/plans/2026-06-09-cameraapp-error-dialog-fragment-manager.md" \
   "gradlew" \
   "gradle/wrapper/gradle-wrapper.properties" \
   "settings.gradle" \
@@ -256,6 +258,18 @@ if ! grep -Fq "mTextureView == null || mCameraDevice == null" "$FRAGMENT" ||
   exit 1
 fi
 
+if grep -Fq 'new ErrorDialog().show(getFragmentManager(), "dialog");' "$FRAGMENT"; then
+  printf '%s\n' "Unsupported-camera error dialog must not use getFragmentManager() without a null guard." >&2
+  exit 1
+fi
+
+if ! grep -Fq "import android.app.FragmentManager;" "$FRAGMENT" ||
+  ! grep -Fq "FragmentManager fragmentManager = getFragmentManager();" "$FRAGMENT" ||
+  ! grep -Fq "if (fragmentManager != null)" "$FRAGMENT"; then
+  printf '%s\n' "Unsupported-camera error dialog must guard detached fragment manager state." >&2
+  exit 1
+fi
+
 if ! grep -Fq "mPreviewRequestBuilder == null || mCaptureSession == null" "$FRAGMENT"; then
   printf '%s\n' "Focus and precapture calls must guard closed session state." >&2
   exit 1
@@ -361,6 +375,11 @@ if ! grep -Fq "Picture and info controls are listener-bound only when present" "
   exit 1
 fi
 
+if ! grep -Fq "Unsupported-camera error dialogs require an attached fragment manager" "$README"; then
+  printf '%s\n' "README must document the unsupported-camera dialog fragment manager guard." >&2
+  exit 1
+fi
+
 if ! grep -Fq "Status: Completed" "$ROOT_DIR/docs/plans/2026-06-09-cameraapp-image-reader-backpressure.md"; then
   printf '%s\n' "ImageReader backpressure plan must record completed status." >&2
   exit 1
@@ -408,6 +427,16 @@ fi
 
 if ! grep -Fq "make check" "$CONTROL_BINDING_PLAN"; then
   printf '%s\n' "CameraApp control binding guard plan must record make check verification." >&2
+  exit 1
+fi
+
+if ! grep -Fq "Status: Completed" "$ERROR_DIALOG_PLAN"; then
+  printf '%s\n' "CameraApp error dialog fragment manager plan must record completed status." >&2
+  exit 1
+fi
+
+if ! grep -Fq "make check" "$ERROR_DIALOG_PLAN"; then
+  printf '%s\n' "CameraApp error dialog fragment manager plan must record make check verification." >&2
   exit 1
 fi
 
