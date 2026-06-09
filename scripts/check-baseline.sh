@@ -34,6 +34,7 @@ for path in \
   "README.md" \
   "docs/plans/2026-06-08-cameraapp-build-hygiene-baseline.md" \
   "docs/plans/2026-06-09-cameraapp-image-reader-backpressure.md" \
+  "docs/plans/2026-06-09-cameraapp-disable-backup.md" \
   "gradlew" \
   "gradle/wrapper/gradle-wrapper.properties" \
   "settings.gradle" \
@@ -142,6 +143,11 @@ fi
 
 if ! grep -Fq "android.permission.CAMERA" "$MANIFEST"; then
   printf '%s\n' "Camera permission must remain declared." >&2
+  exit 1
+fi
+
+if ! grep -Fq 'android:allowBackup="false"' "$MANIFEST"; then
+  printf '%s\n' "CameraApp backup must stay disabled for captured camera state." >&2
   exit 1
 fi
 
@@ -302,6 +308,11 @@ if ! grep -Fq "ImageReader backpressure" "$README"; then
   exit 1
 fi
 
+if ! grep -Fq "Android backup is disabled" "$README"; then
+  printf '%s\n' "README must document the disabled-backup privacy baseline." >&2
+  exit 1
+fi
+
 if ! grep -Fq "Status: Completed" "$ROOT_DIR/docs/plans/2026-06-09-cameraapp-image-reader-backpressure.md"; then
   printf '%s\n' "ImageReader backpressure plan must record completed status." >&2
   exit 1
@@ -309,6 +320,16 @@ fi
 
 if ! grep -Fq "make check" "$ROOT_DIR/docs/plans/2026-06-09-cameraapp-image-reader-backpressure.md"; then
   printf '%s\n' "ImageReader backpressure plan must record make check verification." >&2
+  exit 1
+fi
+
+if ! grep -Fq "Status: Completed" "$ROOT_DIR/docs/plans/2026-06-09-cameraapp-disable-backup.md"; then
+  printf '%s\n' "CameraApp disable-backup plan must record completed status." >&2
+  exit 1
+fi
+
+if ! grep -Fq "make check" "$ROOT_DIR/docs/plans/2026-06-09-cameraapp-disable-backup.md"; then
+  printf '%s\n' "CameraApp disable-backup plan must record make check verification." >&2
   exit 1
 fi
 

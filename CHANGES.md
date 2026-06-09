@@ -2,6 +2,8 @@
 
 ## 2026-06-09
 
+- Disabled Android backup for the camera sample so camera-capture app state is
+  not opt-in to platform backup by default.
 - Guarded `ImageReader.acquireNextImage()` against backpressure exceptions so
   backed-up still-image callbacks are dropped instead of crashing capture.
 - Extended the SDK-free baseline and README notes for ImageReader

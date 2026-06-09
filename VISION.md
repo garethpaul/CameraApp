@@ -21,6 +21,7 @@ Priority:
 - Preserve the Camera2 preview and still-capture flow
 - Keep the sample-origin source layout and attribution intact
 - Keep image capture callbacks tolerant of lifecycle and backpressure edges
+- Keep camera app data out of platform backup by default
 - Make Android SDK and build-tool requirements visible
 - Avoid changing camera behavior without device verification notes
 
