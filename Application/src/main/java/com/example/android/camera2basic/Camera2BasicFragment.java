@@ -789,7 +789,7 @@ public class Camera2BasicFragment extends Fragment implements View.OnClickListen
                 @Override
                 public void onCaptureCompleted(CameraCaptureSession session, CaptureRequest request,
                                                TotalCaptureResult result) {
-                    showToast("Saved: " + mFile);
+                    showToast("Picture saved");
                     unlockFocus();
                 }
             };

@@ -11,6 +11,7 @@ TEST_MANIFEST="$ROOT_DIR/Application/tests/AndroidManifest.xml"
 TEST_FIXTURE="$ROOT_DIR/Application/tests/src/com/example/android/camera2basic/tests/SampleTests.java"
 FRAGMENT="$ROOT_DIR/Application/src/main/java/com/example/android/camera2basic/Camera2BasicFragment.java"
 TEXTURE_RESUME_PLAN="$ROOT_DIR/docs/plans/2026-06-09-cameraapp-texture-resume-guard.md"
+SAVE_TOAST_PLAN="$ROOT_DIR/docs/plans/2026-06-09-cameraapp-save-toast-path-privacy.md"
 
 if [ ! -f "$ROOT_DIR/CHANGES.md" ]; then
   printf '%s\n' "CHANGES.md must document repository maintenance." >&2
@@ -37,6 +38,7 @@ for path in \
   "docs/plans/2026-06-09-cameraapp-image-reader-backpressure.md" \
   "docs/plans/2026-06-09-cameraapp-disable-backup.md" \
   "docs/plans/2026-06-09-cameraapp-texture-resume-guard.md" \
+  "docs/plans/2026-06-09-cameraapp-save-toast-path-privacy.md" \
   "gradlew" \
   "gradle/wrapper/gradle-wrapper.properties" \
   "settings.gradle" \
@@ -250,6 +252,16 @@ if ! grep -Fq "mImageReader == null || mCaptureSession == null" "$FRAGMENT"; the
   exit 1
 fi
 
+if grep -Fq 'showToast("Saved: " + mFile)' "$FRAGMENT"; then
+  printf '%s\n' "Capture completion toast must not expose the app-private output file path." >&2
+  exit 1
+fi
+
+if ! grep -Fq 'showToast("Picture saved")' "$FRAGMENT"; then
+  printf '%s\n' "Capture completion toast must use generic saved-copy." >&2
+  exit 1
+fi
+
 if ! grep -Fq "mPreviewRequestBuilder == null || mCaptureSession == null || mPreviewRequest == null" "$FRAGMENT"; then
   printf '%s\n' "Focus unlock must guard closed preview state." >&2
   exit 1
@@ -325,6 +337,11 @@ if ! grep -Fq "Resume skips camera open until the texture view is recreated" "$R
   exit 1
 fi
 
+if ! grep -Fq "Capture completion UI does not expose the app-private output file path" "$README"; then
+  printf '%s\n' "README must document the capture saved-toast privacy guard." >&2
+  exit 1
+fi
+
 if ! grep -Fq "Status: Completed" "$ROOT_DIR/docs/plans/2026-06-09-cameraapp-image-reader-backpressure.md"; then
   printf '%s\n' "ImageReader backpressure plan must record completed status." >&2
   exit 1
@@ -352,6 +369,16 @@ fi
 
 if ! grep -Fq "make check" "$TEXTURE_RESUME_PLAN"; then
   printf '%s\n' "CameraApp texture resume guard plan must record make check verification." >&2
+  exit 1
+fi
+
+if ! grep -Fq "Status: Completed" "$SAVE_TOAST_PLAN"; then
+  printf '%s\n' "CameraApp save toast privacy plan must record completed status." >&2
+  exit 1
+fi
+
+if ! grep -Fq "make check" "$SAVE_TOAST_PLAN"; then
+  printf '%s\n' "CameraApp save toast privacy plan must record make check verification." >&2
   exit 1
 fi
 

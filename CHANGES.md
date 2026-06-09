@@ -2,6 +2,8 @@
 
 ## 2026-06-09
 
+- Replaced the capture completion toast with generic saved-copy so the UI does
+  not expose the app-private output file path.
 - Guarded `onResume()` so retained fragments wait for the texture view before
   starting camera background work.
 - Disabled Android backup for the camera sample so camera-capture app state is

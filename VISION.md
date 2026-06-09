@@ -23,6 +23,7 @@ Priority:
 - Keep camera lifecycle startup tied to an available texture view
 - Keep image capture callbacks tolerant of lifecycle and backpressure edges
 - Keep camera app data out of platform backup by default
+- Keep UI copy from exposing app-private captured-image paths
 - Make Android SDK and build-tool requirements visible
 - Avoid changing camera behavior without device verification notes
 
