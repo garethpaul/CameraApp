@@ -570,6 +570,9 @@ public class Camera2BasicFragment extends Fragment implements View.OnClickListen
      * Starts a background thread and its {@link Handler}.
      */
     private void startBackgroundThread() {
+        if (mBackgroundThread != null) {
+            return;
+        }
         mBackgroundThread = new HandlerThread("CameraBackground");
         mBackgroundThread.start();
         mBackgroundHandler = new Handler(mBackgroundThread.getLooper());

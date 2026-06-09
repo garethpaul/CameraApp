@@ -189,6 +189,11 @@ if ! grep -Fq "mBackgroundThread == null" "$FRAGMENT"; then
   exit 1
 fi
 
+if ! grep -Fq "if (mBackgroundThread != null)" "$FRAGMENT"; then
+  printf '%s\n' "Background thread startup must avoid duplicate handler threads." >&2
+  exit 1
+fi
+
 if ! grep -Fq "mCameraDevice == null || mCaptureSession == null" "$FRAGMENT"; then
   printf '%s\n' "takePicture must guard unavailable camera session state." >&2
   exit 1
@@ -272,6 +277,11 @@ fi
 
 if ! grep -Fq "CHANGES.md" "$README"; then
   printf '%s\n' "README must point to CHANGES.md." >&2
+  exit 1
+fi
+
+if ! grep -Fq "Camera background thread startup is idempotent" "$README"; then
+  printf '%s\n' "README must document background thread lifecycle guard." >&2
   exit 1
 fi
 
