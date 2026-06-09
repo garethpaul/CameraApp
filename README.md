@@ -99,9 +99,13 @@ When the required SDK or runtime is unavailable, use static checks and source re
   before it can crash the still-image save path.
 - Android backup is disabled for the app because the sample handles camera
   capture state and app-specific image output.
+- Resume skips camera open until the texture view is recreated, avoiding retained
+  fragment camera work before the view hierarchy exists.
 - See `SECURITY.md` for vulnerability reporting and safe research guidance.
 - See `VISION.md` for project direction and contribution guardrails.
 - See `CHANGES.md` for the maintenance history.
+- See `docs/plans/2026-06-09-cameraapp-texture-resume-guard.md` for the
+  retained-fragment texture resume guard.
 - See `docs/plans/2026-06-08-cameraapp-check-wrapper.md` for the root
   verification wrapper baseline.
 

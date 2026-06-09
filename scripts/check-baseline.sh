@@ -10,6 +10,7 @@ GITIGNORE="$ROOT_DIR/.gitignore"
 TEST_MANIFEST="$ROOT_DIR/Application/tests/AndroidManifest.xml"
 TEST_FIXTURE="$ROOT_DIR/Application/tests/src/com/example/android/camera2basic/tests/SampleTests.java"
 FRAGMENT="$ROOT_DIR/Application/src/main/java/com/example/android/camera2basic/Camera2BasicFragment.java"
+TEXTURE_RESUME_PLAN="$ROOT_DIR/docs/plans/2026-06-09-cameraapp-texture-resume-guard.md"
 
 if [ ! -f "$ROOT_DIR/CHANGES.md" ]; then
   printf '%s\n' "CHANGES.md must document repository maintenance." >&2
@@ -35,6 +36,7 @@ for path in \
   "docs/plans/2026-06-08-cameraapp-build-hygiene-baseline.md" \
   "docs/plans/2026-06-09-cameraapp-image-reader-backpressure.md" \
   "docs/plans/2026-06-09-cameraapp-disable-backup.md" \
+  "docs/plans/2026-06-09-cameraapp-texture-resume-guard.md" \
   "gradlew" \
   "gradle/wrapper/gradle-wrapper.properties" \
   "settings.gradle" \
@@ -217,6 +219,11 @@ if ! grep -Fq "mCameraDevice == null || mCaptureSession == null" "$FRAGMENT"; th
   exit 1
 fi
 
+if ! grep -Fq "if (mTextureView == null)" "$FRAGMENT"; then
+  printf '%s\n' "onResume must guard retained fragments before the texture view is recreated." >&2
+  exit 1
+fi
+
 if ! grep -Fq "Integer afState = result.get(CaptureResult.CONTROL_AF_STATE)" "$FRAGMENT"; then
   printf '%s\n' "Autofocus callback state must not be unboxed when Camera2 reports null." >&2
   exit 1
@@ -313,6 +320,11 @@ if ! grep -Fq "Android backup is disabled" "$README"; then
   exit 1
 fi
 
+if ! grep -Fq "Resume skips camera open until the texture view is recreated" "$README"; then
+  printf '%s\n' "README must document the retained-fragment texture resume guard." >&2
+  exit 1
+fi
+
 if ! grep -Fq "Status: Completed" "$ROOT_DIR/docs/plans/2026-06-09-cameraapp-image-reader-backpressure.md"; then
   printf '%s\n' "ImageReader backpressure plan must record completed status." >&2
   exit 1
@@ -330,6 +342,16 @@ fi
 
 if ! grep -Fq "make check" "$ROOT_DIR/docs/plans/2026-06-09-cameraapp-disable-backup.md"; then
   printf '%s\n' "CameraApp disable-backup plan must record make check verification." >&2
+  exit 1
+fi
+
+if ! grep -Fq "Status: Completed" "$TEXTURE_RESUME_PLAN"; then
+  printf '%s\n' "CameraApp texture resume guard plan must record completed status." >&2
+  exit 1
+fi
+
+if ! grep -Fq "make check" "$TEXTURE_RESUME_PLAN"; then
+  printf '%s\n' "CameraApp texture resume guard plan must record make check verification." >&2
   exit 1
 fi
 

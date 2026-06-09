@@ -421,6 +421,9 @@ public class Camera2BasicFragment extends Fragment implements View.OnClickListen
     @Override
     public void onResume() {
         super.onResume();
+        if (mTextureView == null) {
+            return;
+        }
         startBackgroundThread();
 
         // When the screen is turned off and turned back on, the SurfaceTexture is already
