@@ -2,6 +2,8 @@
 
 ## 2026-06-08
 
+- Added `make check` as the root wrapper for CameraApp source, lint, and
+  debug build verification.
 - Made camera background-thread startup idempotent to avoid duplicate handler
   threads during repeated lifecycle starts.
 - Guarded Camera2 autofocus, preview session, still capture, and image-plane
