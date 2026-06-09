@@ -194,8 +194,44 @@ if ! grep -Fq "mCameraDevice == null || mCaptureSession == null" "$FRAGMENT"; th
   exit 1
 fi
 
+if ! grep -Fq "Integer afState = result.get(CaptureResult.CONTROL_AF_STATE)" "$FRAGMENT"; then
+  printf '%s\n' "Autofocus callback state must not be unboxed when Camera2 reports null." >&2
+  exit 1
+fi
+
+if ! grep -Fq "afState == null" "$FRAGMENT"; then
+  printf '%s\n' "Autofocus callback state must guard null values." >&2
+  exit 1
+fi
+
+if ! grep -Fq "mTextureView == null || mCameraDevice == null" "$FRAGMENT" ||
+  ! grep -Fq "if (texture == null)" "$FRAGMENT"; then
+  printf '%s\n' "Preview session creation must guard missing texture and camera state." >&2
+  exit 1
+fi
+
+if ! grep -Fq "mPreviewRequestBuilder == null || mCaptureSession == null" "$FRAGMENT"; then
+  printf '%s\n' "Focus and precapture calls must guard closed session state." >&2
+  exit 1
+fi
+
+if ! grep -Fq "mImageReader == null || mCaptureSession == null" "$FRAGMENT"; then
+  printf '%s\n' "Still capture must guard closed image reader and capture session state." >&2
+  exit 1
+fi
+
+if ! grep -Fq "mPreviewRequestBuilder == null || mCaptureSession == null || mPreviewRequest == null" "$FRAGMENT"; then
+  printf '%s\n' "Focus unlock must guard closed preview state." >&2
+  exit 1
+fi
+
 if ! grep -Fq "mImage == null || mFile == null" "$FRAGMENT"; then
   printf '%s\n' "ImageSaver must guard missing image/file state." >&2
+  exit 1
+fi
+
+if ! grep -Fq "planes == null || planes.length == 0 || planes[0] == null" "$FRAGMENT"; then
+  printf '%s\n' "ImageSaver must guard missing image planes." >&2
   exit 1
 fi
 

@@ -271,8 +271,11 @@ public class Camera2BasicFragment extends Fragment implements View.OnClickListen
                     break;
                 }
                 case STATE_WAITING_LOCK: {
-                    int afState = result.get(CaptureResult.CONTROL_AF_STATE);
-                    if (CaptureResult.CONTROL_AF_STATE_FOCUSED_LOCKED == afState ||
+                    Integer afState = result.get(CaptureResult.CONTROL_AF_STATE);
+                    if (afState == null) {
+                        mState = STATE_WAITING_NON_PRECAPTURE;
+                        captureStillPicture();
+                    } else if (CaptureResult.CONTROL_AF_STATE_FOCUSED_LOCKED == afState ||
                             CaptureResult.CONTROL_AF_STATE_NOT_FOCUSED_LOCKED == afState) {
                         // CONTROL_AE_STATE can be null on some devices
                         Integer aeState = result.get(CaptureResult.CONTROL_AE_STATE);
@@ -594,9 +597,15 @@ public class Camera2BasicFragment extends Fragment implements View.OnClickListen
      * Creates a new {@link CameraCaptureSession} for camera preview.
      */
     private void createCameraPreviewSession() {
+        if (mTextureView == null || mCameraDevice == null ||
+                mImageReader == null || mPreviewSize == null) {
+            return;
+        }
         try {
             SurfaceTexture texture = mTextureView.getSurfaceTexture();
-            assert texture != null;
+            if (texture == null) {
+                return;
+            }
 
             // We configure the size of default buffer to be the size of camera preview we want.
             texture.setDefaultBufferSize(mPreviewSize.getWidth(), mPreviewSize.getHeight());
@@ -697,6 +706,10 @@ public class Camera2BasicFragment extends Fragment implements View.OnClickListen
      * Lock the focus as the first step for a still image capture.
      */
     private void lockFocus() {
+        if (mPreviewRequestBuilder == null || mCaptureSession == null) {
+            showToast("Camera unavailable");
+            return;
+        }
         try {
             // This is how to tell the camera to lock focus.
             mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AF_TRIGGER,
@@ -715,6 +728,10 @@ public class Camera2BasicFragment extends Fragment implements View.OnClickListen
      * get a response in {@link #mCaptureCallback} from {@link #lockFocus()}.
      */
     private void runPrecaptureSequence() {
+        if (mPreviewRequestBuilder == null || mCaptureSession == null) {
+            showToast("Camera unavailable");
+            return;
+        }
         try {
             // This is how to tell the camera to trigger.
             mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER,
@@ -735,7 +752,8 @@ public class Camera2BasicFragment extends Fragment implements View.OnClickListen
     private void captureStillPicture() {
         try {
             final Activity activity = getActivity();
-            if (null == activity || null == mCameraDevice) {
+            if (null == activity || null == mCameraDevice ||
+                    mImageReader == null || mCaptureSession == null) {
                 return;
             }
             // This is the CaptureRequest.Builder that we use to take a picture.
@@ -775,6 +793,9 @@ public class Camera2BasicFragment extends Fragment implements View.OnClickListen
      * Unlock the focus. This method should be called when still image capture sequence is finished.
      */
     private void unlockFocus() {
+        if (mPreviewRequestBuilder == null || mCaptureSession == null || mPreviewRequest == null) {
+            return;
+        }
         try {
             // Reset the autofucos trigger
             mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AF_TRIGGER,
@@ -839,7 +860,16 @@ public class Camera2BasicFragment extends Fragment implements View.OnClickListen
                 }
                 return;
             }
-            ByteBuffer buffer = mImage.getPlanes()[0].getBuffer();
+            Image.Plane[] planes = mImage.getPlanes();
+            if (planes == null || planes.length == 0 || planes[0] == null) {
+                mImage.close();
+                return;
+            }
+            ByteBuffer buffer = planes[0].getBuffer();
+            if (buffer == null) {
+                mImage.close();
+                return;
+            }
             byte[] bytes = new byte[buffer.remaining()];
             buffer.get(bytes);
             FileOutputStream output = null;
