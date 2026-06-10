@@ -12,6 +12,7 @@ This README is based on the checked-in source, manifests, scripts, and repositor
 ## Repository Contents
 
 - `README.md` - project overview and local usage notes
+- `.github/workflows/check.yml` - GitHub Actions baseline for `make check`
 - `build.gradle` - Android or Gradle build configuration
 - `.google` - source or example code
 - `Application` - source or example code
@@ -65,6 +66,12 @@ Run the SDK-free source baseline check first:
 make check
 scripts/check-baseline.sh
 ```
+
+GitHub Actions runs `make check` on pushes, pull requests, and manual
+dispatches. The workflow uses a commit-pinned checkout action, read-only
+repository access, and a bounded runtime. It explicitly clears hosted Android
+SDK variables so the legacy Gradle 2.2.1 project takes the documented SDK-free
+path instead of running against an incompatible modern toolchain.
 
 Then run Gradle after Android SDK configuration is available:
 
@@ -122,6 +129,8 @@ When the required SDK or runtime is unavailable, use static checks and source re
   unsupported-camera dialog activity guard.
 - See `docs/plans/2026-06-08-cameraapp-check-wrapper.md` for the root
   verification wrapper baseline.
+- See `docs/plans/2026-06-10-ci-baseline.md` for the lightweight GitHub
+  Actions baseline.
 
 ## Contributing
 

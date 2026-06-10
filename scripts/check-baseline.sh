@@ -15,6 +15,7 @@ SAVE_TOAST_PLAN="$ROOT_DIR/docs/plans/2026-06-09-cameraapp-save-toast-path-priva
 CONTROL_BINDING_PLAN="$ROOT_DIR/docs/plans/2026-06-09-cameraapp-control-binding-guard.md"
 ERROR_DIALOG_PLAN="$ROOT_DIR/docs/plans/2026-06-09-cameraapp-error-dialog-fragment-manager.md"
 ERROR_DIALOG_ACTIVITY_PLAN="$ROOT_DIR/docs/plans/2026-06-09-cameraapp-error-dialog-activity-guard.md"
+CI_PLAN="$ROOT_DIR/docs/plans/2026-06-10-ci-baseline.md"
 
 if [ ! -f "$ROOT_DIR/CHANGES.md" ]; then
   printf '%s\n' "CHANGES.md must document repository maintenance." >&2
@@ -36,6 +37,7 @@ require_file() {
 
 for path in \
   ".gitignore" \
+  ".github/workflows/check.yml" \
   "README.md" \
   "docs/plans/2026-06-08-cameraapp-build-hygiene-baseline.md" \
   "docs/plans/2026-06-09-cameraapp-image-reader-backpressure.md" \
@@ -45,6 +47,7 @@ for path in \
   "docs/plans/2026-06-09-cameraapp-control-binding-guard.md" \
   "docs/plans/2026-06-09-cameraapp-error-dialog-fragment-manager.md" \
   "docs/plans/2026-06-09-cameraapp-error-dialog-activity-guard.md" \
+  "docs/plans/2026-06-10-ci-baseline.md" \
   "gradlew" \
   "gradle/wrapper/gradle-wrapper.properties" \
   "settings.gradle" \
@@ -316,6 +319,35 @@ if ! grep -Fq "scripts/check-baseline.sh" "$README"; then
   exit 1
 fi
 
+if ! grep -Fq "GitHub Actions" "$README"; then
+  printf '%s\n' "README must document the GitHub Actions check." >&2
+  exit 1
+fi
+
+if ! grep -Fq "actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10" "$ROOT_DIR/.github/workflows/check.yml" ||
+  ! grep -Fq "make check" "$ROOT_DIR/.github/workflows/check.yml"; then
+  printf '%s\n' "GitHub Actions check workflow must check out the repository and run make check." >&2
+  exit 1
+fi
+
+if ! grep -Fq "permissions:" "$ROOT_DIR/.github/workflows/check.yml" ||
+  ! grep -Fq "contents: read" "$ROOT_DIR/.github/workflows/check.yml"; then
+  printf '%s\n' "GitHub Actions check workflow must keep repository access read-only." >&2
+  exit 1
+fi
+
+if ! grep -Fq 'ANDROID_HOME: ""' "$ROOT_DIR/.github/workflows/check.yml" ||
+  ! grep -Fq 'ANDROID_SDK_ROOT: ""' "$ROOT_DIR/.github/workflows/check.yml"; then
+  printf '%s\n' "GitHub Actions must clear hosted Android SDK variables for the legacy SDK-free baseline." >&2
+  exit 1
+fi
+
+if ! grep -Fq "workflow_dispatch:" "$ROOT_DIR/.github/workflows/check.yml" ||
+  ! grep -Fq "timeout-minutes: 5" "$ROOT_DIR/.github/workflows/check.yml"; then
+  printf '%s\n' "GitHub Actions check workflow must support bounded manual verification." >&2
+  exit 1
+fi
+
 if ! grep -Fq "local.properties" "$README"; then
   printf '%s\n' "README must document local SDK configuration." >&2
   exit 1
@@ -463,6 +495,11 @@ fi
 
 if ! grep -Fq "status: completed" "$PLAN"; then
   printf '%s\n' "Plan must be marked completed once the baseline is implemented." >&2
+  exit 1
+fi
+
+if ! grep -Fq "Status: Completed" "$CI_PLAN" || ! grep -Fq "make check" "$CI_PLAN"; then
+  printf '%s\n' "CameraApp CI baseline plan must record completed status and make check verification." >&2
   exit 1
 fi
 

@@ -1,5 +1,14 @@
 # CameraApp Changes
 
+## 2026-06-10
+
+- Added a lightweight GitHub Actions workflow that runs `make check` for the
+  Camera2 source baseline.
+- Pinned the checkout action, limited repository access to read-only, and
+  cleared hosted Android SDK variables for deterministic SDK-free checks.
+- Extended the SDK-free baseline to require the CI workflow and completed CI
+  plan.
+
 ## 2026-06-09
 
 - Guarded unsupported-camera dialog creation when retained fragments have no

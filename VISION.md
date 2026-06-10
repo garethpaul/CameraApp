@@ -28,6 +28,7 @@ Priority:
 - Keep camera app data out of platform backup by default
 - Keep UI copy from exposing app-private captured-image paths
 - Make Android SDK and build-tool requirements visible
+- Keep the SDK-free `make check` baseline running in GitHub Actions
 - Avoid changing camera behavior without device verification notes
 
 Next priorities:
