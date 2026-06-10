@@ -16,6 +16,7 @@ CONTROL_BINDING_PLAN="$ROOT_DIR/docs/plans/2026-06-09-cameraapp-control-binding-
 ERROR_DIALOG_PLAN="$ROOT_DIR/docs/plans/2026-06-09-cameraapp-error-dialog-fragment-manager.md"
 ERROR_DIALOG_ACTIVITY_PLAN="$ROOT_DIR/docs/plans/2026-06-09-cameraapp-error-dialog-activity-guard.md"
 CI_PLAN="$ROOT_DIR/docs/plans/2026-06-10-ci-baseline.md"
+CAMERA_OPEN_LOCK_PLAN="$ROOT_DIR/docs/plans/2026-06-10-cameraapp-open-lock-release.md"
 
 if [ ! -f "$ROOT_DIR/CHANGES.md" ]; then
   printf '%s\n' "CHANGES.md must document repository maintenance." >&2
@@ -48,6 +49,7 @@ for path in \
   "docs/plans/2026-06-09-cameraapp-error-dialog-fragment-manager.md" \
   "docs/plans/2026-06-09-cameraapp-error-dialog-activity-guard.md" \
   "docs/plans/2026-06-10-ci-baseline.md" \
+  "docs/plans/2026-06-10-cameraapp-open-lock-release.md" \
   "gradlew" \
   "gradle/wrapper/gradle-wrapper.properties" \
   "settings.gradle" \
@@ -212,6 +214,33 @@ fi
 
 if ! grep -Fq "mCameraId == null || mImageReader == null || mPreviewSize == null" "$FRAGMENT"; then
   printf '%s\n' "openCamera must guard unavailable camera setup." >&2
+  exit 1
+fi
+
+if ! grep -Fq "boolean cameraLockAcquired = false;" "$FRAGMENT"; then
+  printf '%s\n' "openCamera must track whether the caller still owns the camera semaphore." >&2
+  exit 1
+fi
+
+if ! grep -Fq "cameraLockAcquired = mCameraOpenCloseLock.tryAcquire" "$FRAGMENT"; then
+  printf '%s\n' "openCamera must record successful camera semaphore acquisition." >&2
+  exit 1
+fi
+
+if ! grep -Fq "manager.openCamera(mCameraId, mStateCallback, mBackgroundHandler);" "$FRAGMENT" || \
+   ! grep -Fq "cameraLockAcquired = false;" "$FRAGMENT"; then
+  printf '%s\n' "openCamera must transfer semaphore release ownership after asynchronous open starts." >&2
+  exit 1
+fi
+
+if [ "$(grep -Fc "cameraLockAcquired = false;" "$FRAGMENT")" -ne 2 ]; then
+  printf '%s\n' "openCamera must initialize and then transfer camera semaphore ownership exactly once." >&2
+  exit 1
+fi
+
+if ! grep -Fq "if (cameraLockAcquired)" "$FRAGMENT" || \
+   ! grep -A3 -F "if (cameraLockAcquired)" "$FRAGMENT" | grep -Fq "mCameraOpenCloseLock.release();"; then
+  printf '%s\n' "openCamera must release the camera semaphore after synchronous failures." >&2
   exit 1
 fi
 
@@ -423,6 +452,34 @@ if ! grep -Fq "Unsupported-camera dialogs also require an attached activity befo
   exit 1
 fi
 
+if ! grep -Fq "Synchronous camera-open failures release the open/close semaphore" "$README"; then
+  printf '%s\n' "README must document camera open semaphore recovery." >&2
+  exit 1
+fi
+
+if [ ! -f "$ROOT_DIR/Makefile" ]; then
+  printf '%s\n' "Makefile must remain available as the root verification entry point." >&2
+  exit 1
+fi
+
+if ! grep -Fq 'ROOT := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))' "$ROOT_DIR/Makefile" || \
+   ! grep -Fq 'GRADLE_COMMAND :=' "$ROOT_DIR/Makefile" || \
+   ! grep -Fq '$(GRADLE_COMMAND) -p "$(ROOT)"' "$ROOT_DIR/Makefile"; then
+  printf '%s\n' "Makefile must run Gradle relative to its own repository root." >&2
+  exit 1
+fi
+
+if [ "$(grep -Fc '$(GRADLE_COMMAND) -p "$(ROOT)"' "$ROOT_DIR/Makefile")" -ne 2 ]; then
+  printf '%s\n' "Makefile must root both lint and build Gradle tasks." >&2
+  exit 1
+fi
+
+if ! grep -Fq "runs-on: ubuntu-24.04" "$ROOT_DIR/.github/workflows/check.yml" || \
+   ! grep -Fq "cancel-in-progress: true" "$ROOT_DIR/.github/workflows/check.yml"; then
+  printf '%s\n' "GitHub Actions must use a stable runner and cancel superseded checks." >&2
+  exit 1
+fi
+
 if ! grep -Fq "Status: Completed" "$ROOT_DIR/docs/plans/2026-06-09-cameraapp-image-reader-backpressure.md"; then
   printf '%s\n' "ImageReader backpressure plan must record completed status." >&2
   exit 1
@@ -500,6 +557,11 @@ fi
 
 if ! grep -Fq "Status: Completed" "$CI_PLAN" || ! grep -Fq "make check" "$CI_PLAN"; then
   printf '%s\n' "CameraApp CI baseline plan must record completed status and make check verification." >&2
+  exit 1
+fi
+
+if ! grep -Fq "Status: Completed" "$CAMERA_OPEN_LOCK_PLAN" || ! grep -Fq "make check" "$CAMERA_OPEN_LOCK_PLAN"; then
+  printf '%s\n' "CameraApp camera open lock plan must record completed status and make check verification." >&2
   exit 1
 fi
 

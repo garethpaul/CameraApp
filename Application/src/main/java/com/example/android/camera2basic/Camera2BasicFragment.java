@@ -550,15 +550,22 @@ public class Camera2BasicFragment extends Fragment implements View.OnClickListen
             showToast("Camera unavailable");
             return;
         }
+        boolean cameraLockAcquired = false;
         try {
-            if (!mCameraOpenCloseLock.tryAcquire(2500, TimeUnit.MILLISECONDS)) {
+            cameraLockAcquired = mCameraOpenCloseLock.tryAcquire(2500, TimeUnit.MILLISECONDS);
+            if (!cameraLockAcquired) {
                 throw new RuntimeException("Time out waiting to lock camera opening.");
             }
             manager.openCamera(mCameraId, mStateCallback, mBackgroundHandler);
+            cameraLockAcquired = false;
         } catch (CameraAccessException e) {
             e.printStackTrace();
         } catch (InterruptedException e) {
             throw new RuntimeException("Interrupted while trying to lock camera opening.", e);
+        } finally {
+            if (cameraLockAcquired) {
+                mCameraOpenCloseLock.release();
+            }
         }
     }
 

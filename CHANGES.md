@@ -2,6 +2,10 @@
 
 ## 2026-06-10
 
+- Released the camera open/close semaphore when `openCamera` fails before its
+  asynchronous state callback takes ownership, preventing pause-time deadlock.
+- Made Gradle verification location-independent and pinned CI to the stable
+  Ubuntu 24.04 runner image.
 - Added a lightweight GitHub Actions workflow that runs `make check` for the
   Camera2 source baseline.
 - Pinned the checkout action, limited repository access to read-only, and

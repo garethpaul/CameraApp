@@ -21,6 +21,7 @@ Priority:
 - Preserve the Camera2 preview and still-capture flow
 - Keep the sample-origin source layout and attribution intact
 - Keep camera lifecycle startup tied to an available texture view
+- Keep camera open/close semaphore ownership balanced across failure paths
 - Keep layout control binding tolerant of missing optional controls
 - Keep unsupported-camera recovery tolerant of detached fragments
 - Keep unsupported-camera dialogs tolerant of detached activities

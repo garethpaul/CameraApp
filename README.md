@@ -102,6 +102,8 @@ When the required SDK or runtime is unavailable, use static checks and source re
 - This looks like a legacy Android project or sample. Expect Android SDK, Gradle, and support-library versions to matter.
 - Camera background thread startup is idempotent; repeated resume/start paths
   must not replace an already-running handler thread.
+- Synchronous camera-open failures release the open/close semaphore before
+  pause or teardown can wait on it.
 - ImageReader backpressure is handled by dropping a backed-up capture callback
   before it can crash the still-image save path.
 - Android backup is disabled for the app because the sample handles camera
@@ -114,6 +116,8 @@ When the required SDK or runtime is unavailable, use static checks and source re
 - Unsupported-camera error dialogs require an attached fragment manager before
   display.
 - Unsupported-camera dialogs also require an attached activity before display.
+- Root Makefile and Gradle wrapper commands resolve the repository path from the
+  Makefile itself, including out-of-tree `make -f` verification.
 - See `SECURITY.md` for vulnerability reporting and safe research guidance.
 - See `VISION.md` for project direction and contribution guardrails.
 - See `CHANGES.md` for the maintenance history.
@@ -131,6 +135,8 @@ When the required SDK or runtime is unavailable, use static checks and source re
   verification wrapper baseline.
 - See `docs/plans/2026-06-10-ci-baseline.md` for the lightweight GitHub
   Actions baseline.
+- See `docs/plans/2026-06-10-cameraapp-open-lock-release.md` for the synchronous
+  camera-open semaphore recovery guard.
 
 ## Contributing
 
