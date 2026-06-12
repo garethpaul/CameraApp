@@ -104,6 +104,8 @@ When the required SDK or runtime is unavailable, use static checks and source re
   must not replace an already-running handler thread.
 - Synchronous camera-open failures release the open/close semaphore before
   pause or teardown can wait on it.
+- Camera close releases the semaphore only after successful acquisition and
+  restores interrupt status when acquisition is interrupted.
 - ImageReader backpressure is handled by dropping a backed-up capture callback
   before it can crash the still-image save path.
 - Android backup is disabled for the app because the sample handles camera
