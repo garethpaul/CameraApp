@@ -17,6 +17,7 @@ ERROR_DIALOG_PLAN="$ROOT_DIR/docs/plans/2026-06-09-cameraapp-error-dialog-fragme
 ERROR_DIALOG_ACTIVITY_PLAN="$ROOT_DIR/docs/plans/2026-06-09-cameraapp-error-dialog-activity-guard.md"
 CI_PLAN="$ROOT_DIR/docs/plans/2026-06-10-ci-baseline.md"
 CAMERA_OPEN_LOCK_PLAN="$ROOT_DIR/docs/plans/2026-06-10-cameraapp-open-lock-release.md"
+CAMERA_CLOSE_LOCK_PLAN="$ROOT_DIR/docs/plans/2026-06-12-cameraapp-close-lock-ownership.md"
 
 if [ ! -f "$ROOT_DIR/CHANGES.md" ]; then
   printf '%s\n' "CHANGES.md must document repository maintenance." >&2
@@ -50,6 +51,7 @@ for path in \
   "docs/plans/2026-06-09-cameraapp-error-dialog-activity-guard.md" \
   "docs/plans/2026-06-10-ci-baseline.md" \
   "docs/plans/2026-06-10-cameraapp-open-lock-release.md" \
+  "docs/plans/2026-06-12-cameraapp-close-lock-ownership.md" \
   "gradlew" \
   "gradle/wrapper/gradle-wrapper.properties" \
   "settings.gradle" \
@@ -244,6 +246,23 @@ if ! grep -Fq "if (cameraLockAcquired)" "$FRAGMENT" || \
   exit 1
 fi
 
+if ! grep -Fq "boolean closeLockAcquired = false;" "$FRAGMENT" || \
+   ! grep -Fq "closeLockAcquired = true;" "$FRAGMENT"; then
+  printf '%s\n' "closeCamera must track successful camera semaphore acquisition." >&2
+  exit 1
+fi
+
+if ! grep -Fq "if (closeLockAcquired)" "$FRAGMENT" || \
+   ! grep -A3 -F "if (closeLockAcquired)" "$FRAGMENT" | grep -Fq "mCameraOpenCloseLock.release();"; then
+  printf '%s\n' "closeCamera must release the semaphore only while it owns the permit." >&2
+  exit 1
+fi
+
+if ! grep -Fq "Thread.currentThread().interrupt();" "$FRAGMENT"; then
+  printf '%s\n' "closeCamera must restore interrupt status after interrupted lock acquisition." >&2
+  exit 1
+fi
+
 if ! grep -Fq "mBackgroundThread == null" "$FRAGMENT"; then
   printf '%s\n' "Background thread shutdown must be null-safe." >&2
   exit 1
@@ -417,6 +436,11 @@ if ! grep -Fq "Camera background thread startup is idempotent" "$README"; then
   exit 1
 fi
 
+if ! grep -Fq "Camera close releases the semaphore only after successful acquisition" "$README"; then
+  printf '%s\n' "README must document camera close semaphore ownership." >&2
+  exit 1
+fi
+
 if ! grep -Fq "ImageReader backpressure" "$README"; then
   printf '%s\n' "README must document ImageReader backpressure handling." >&2
   exit 1
@@ -562,6 +586,11 @@ fi
 
 if ! grep -Fq "Status: Completed" "$CAMERA_OPEN_LOCK_PLAN" || ! grep -Fq "make check" "$CAMERA_OPEN_LOCK_PLAN"; then
   printf '%s\n' "CameraApp camera open lock plan must record completed status and make check verification." >&2
+  exit 1
+fi
+
+if ! grep -Fq "Status: Completed" "$CAMERA_CLOSE_LOCK_PLAN" || ! grep -Fq "make check" "$CAMERA_CLOSE_LOCK_PLAN"; then
+  printf '%s\n' "CameraApp camera close lock plan must record completed status and make check verification." >&2
   exit 1
 fi
 

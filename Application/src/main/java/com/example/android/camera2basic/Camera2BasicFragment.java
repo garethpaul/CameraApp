@@ -573,8 +573,10 @@ public class Camera2BasicFragment extends Fragment implements View.OnClickListen
      * Closes the current {@link CameraDevice}.
      */
     private void closeCamera() {
+        boolean closeLockAcquired = false;
         try {
             mCameraOpenCloseLock.acquire();
+            closeLockAcquired = true;
             if (null != mCaptureSession) {
                 mCaptureSession.close();
                 mCaptureSession = null;
@@ -588,9 +590,12 @@ public class Camera2BasicFragment extends Fragment implements View.OnClickListen
                 mImageReader = null;
             }
         } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
             throw new RuntimeException("Interrupted while trying to lock camera closing.", e);
         } finally {
-            mCameraOpenCloseLock.release();
+            if (closeLockAcquired) {
+                mCameraOpenCloseLock.release();
+            }
         }
     }
 

@@ -1,5 +1,12 @@
 # CameraApp Changes
 
+## 2026-06-12
+
+- Balanced `closeCamera` semaphore ownership so interrupted acquisition no
+  longer adds an extra permit to the camera lifecycle lock.
+- Restored the current thread's interrupt flag before propagating close-lock
+  interruption and extended the SDK-free regression baseline.
+
 ## 2026-06-10
 
 - Released the camera open/close semaphore when `openCamera` fails before its
