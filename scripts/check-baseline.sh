@@ -19,6 +19,35 @@ CI_PLAN="$ROOT_DIR/docs/plans/2026-06-10-ci-baseline.md"
 CAMERA_OPEN_LOCK_PLAN="$ROOT_DIR/docs/plans/2026-06-10-cameraapp-open-lock-release.md"
 CAMERA_CLOSE_LOCK_PLAN="$ROOT_DIR/docs/plans/2026-06-12-cameraapp-close-lock-ownership.md"
 TOAST_HANDLER_PLAN="$ROOT_DIR/docs/plans/2026-06-12-cameraapp-toast-handler-lifecycle.md"
+WRAPPER_PLAN="$ROOT_DIR/docs/plans/2026-06-12-gradle-wrapper-verification.md"
+WRAPPER_PROPERTIES="$ROOT_DIR/gradle/wrapper/gradle-wrapper.properties"
+GRADLEW="$ROOT_DIR/gradlew"
+GRADLEW_BAT="$ROOT_DIR/gradlew.bat"
+WRAPPER_JAR="$ROOT_DIR/gradle/wrapper/gradle-wrapper.jar"
+CI_WORKFLOW="$ROOT_DIR/.github/workflows/check.yml"
+
+require_sha256() {
+  file=$1
+  expected=$2
+  message=$3
+  if [ "$(sha256sum "$file" | awk '{print $1}')" != "$expected" ]; then
+    printf '%s\n' "$message" >&2
+    exit 1
+  fi
+}
+
+expected_wrapper_properties() {
+  cat <<'EOF'
+distributionBase=GRADLE_USER_HOME
+distributionPath=wrapper/dists
+distributionSha256Sum=1d7c28b3731906fd1b2955946c1d052303881585fc14baedd675e4cf2bc1ecab
+distributionUrl=https\://services.gradle.org/distributions/gradle-2.2.1-all.zip
+networkTimeout=10000
+validateDistributionUrl=true
+zipStoreBase=GRADLE_USER_HOME
+zipStorePath=wrapper/dists
+EOF
+}
 
 if [ ! -f "$ROOT_DIR/CHANGES.md" ]; then
   printf '%s\n' "CHANGES.md must document repository maintenance." >&2
@@ -54,8 +83,11 @@ for path in \
   "docs/plans/2026-06-10-cameraapp-open-lock-release.md" \
   "docs/plans/2026-06-12-cameraapp-close-lock-ownership.md" \
   "docs/plans/2026-06-12-cameraapp-toast-handler-lifecycle.md" \
+  "docs/plans/2026-06-12-gradle-wrapper-verification.md" \
   "gradlew" \
+  "gradlew.bat" \
   "gradle/wrapper/gradle-wrapper.properties" \
+  "gradle/wrapper/gradle-wrapper.jar" \
   "settings.gradle" \
   "Application/build.gradle" \
   "Application/src/main/AndroidManifest.xml" \
@@ -94,8 +126,23 @@ if [ ! -x "$ROOT_DIR/gradlew" ]; then
   exit 1
 fi
 
-if ! grep -Fq "distributionUrl=https\\://services.gradle.org/distributions/gradle-2.2.1-all.zip" "$ROOT_DIR/gradle/wrapper/gradle-wrapper.properties"; then
-  printf '%s\n' "Gradle wrapper must keep the legacy 2.2.1 distribution pin." >&2
+if [ ! -x "$GRADLEW" ] || [ "$(cat "$WRAPPER_PROPERTIES")" != "$(expected_wrapper_properties)" ]; then
+  printf '%s\n' "Generated wrapper must retain the reviewed Gradle 2.2.1 URL and checksum." >&2
+  exit 1
+fi
+
+require_sha256 "$GRADLEW" "b187b4c52e749f5760afdd6fadc31b2a98ad35fb249bf0dff03b72650f320409" "Unix wrapper must match the reviewed generated script."
+require_sha256 "$GRADLEW_BAT" "94102713eb8fb22d032397924c0f38ab2da783ba60d07054339f1190a0c4e2cd" "Windows wrapper must match the reviewed generated script."
+require_sha256 "$WRAPPER_JAR" "7d3a4ac4de1c32b59bc6a4eb8ecb8e612ccd0cf1ae1e99f66902da64df296172" "Wrapper JAR must match Gradle's published 8.14.5 checksum."
+require_sha256 "$WRAPPER_PROPERTIES" "42874592f15508aa0a9135568ad3f9705b5f35bf987591bc73dd428f2250de5d" "Wrapper properties must match the reviewed checksum contract."
+
+if [ ! -f "$WRAPPER_PLAN" ] || ! grep -Fq "status: completed" "$WRAPPER_PLAN" || \
+   ! grep -Fq "fresh temporary Gradle user home" "$WRAPPER_PLAN" || \
+   ! grep -Fq "incorrect checksum was rejected" "$WRAPPER_PLAN" || \
+   ! grep -Fq 'SDK-backed `make check` passed' "$WRAPPER_PLAN" || \
+   ! grep -Fq "external working directory" "$WRAPPER_PLAN" || \
+   ! grep -Fq "hostile mutations rejected" "$WRAPPER_PLAN"; then
+  printf '%s\n' "Gradle wrapper plan must record completed local verification." >&2
   exit 1
 fi
 
@@ -390,6 +437,13 @@ if ! grep -Fq "actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10" "$ROOT
   exit 1
 fi
 
+if [ "$(grep -Fc 'uses: actions/checkout@' "$CI_WORKFLOW")" -ne 1 ] || \
+   [ "$(grep -Fc 'persist-credentials: false' "$CI_WORKFLOW")" -ne 1 ] || \
+   grep -E '^[[:space:]]*(-[[:space:]]+)?uses:' "$CI_WORKFLOW" | grep -Ev '@[0-9a-f]{40}([[:space:]]+#.*)?$' >/dev/null; then
+  printf '%s\n' "The only checkout step must be immutable and must not persist credentials." >&2
+  exit 1
+fi
+
 if ! grep -Fq "permissions:" "$ROOT_DIR/.github/workflows/check.yml" ||
   ! grep -Fq "contents: read" "$ROOT_DIR/.github/workflows/check.yml"; then
   printf '%s\n' "GitHub Actions check workflow must keep repository access read-only." >&2
@@ -405,6 +459,23 @@ fi
 if ! grep -Fq "workflow_dispatch:" "$ROOT_DIR/.github/workflows/check.yml" ||
   ! grep -Fq "timeout-minutes: 5" "$ROOT_DIR/.github/workflows/check.yml"; then
   printf '%s\n' "GitHub Actions check workflow must support bounded manual verification." >&2
+  exit 1
+fi
+
+if [ "$(grep -Ec '^[[:space:]]*permissions:' "$CI_WORKFLOW")" -ne 1 ] || \
+   [ "$(grep -Ec '^[[:space:]]+contents:[[:space:]]*read[[:space:]]*$' "$CI_WORKFLOW")" -ne 1 ] || \
+   grep -Eq 'write-all|:[[:space:]]*write|continue-on-error:[[:space:]]*true|if:[[:space:]]*false' "$CI_WORKFLOW" || \
+   [ "$(grep -Ec '^[[:space:]]*(-[[:space:]]+)?run:' "$CI_WORKFLOW")" -ne 1 ]; then
+  printf '%s\n' "Check workflow must keep exact read-only permissions and one required command." >&2
+  exit 1
+fi
+
+if ! grep -Fq "distributionSha256Sum" "$README" || \
+   ! grep -Fq "does not persist checkout credentials" "$README" || \
+   ! grep -Fq "generated Gradle 8.14.5 bootstrap" "$ROOT_DIR/SECURITY.md" || \
+   ! grep -Fq "checksum-verified direct wrapper" "$ROOT_DIR/VISION.md" || \
+   ! grep -Fq "authenticated Gradle wrapper" "$ROOT_DIR/CHANGES.md"; then
+  printf '%s\n' "Documentation must describe authenticated wrapper and checkout boundaries." >&2
   exit 1
 fi
 

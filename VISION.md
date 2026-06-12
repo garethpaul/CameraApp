@@ -31,6 +31,7 @@ Priority:
 - Keep UI copy from exposing app-private captured-image paths
 - Make Android SDK and build-tool requirements visible
 - Keep the SDK-free `make check` baseline running in GitHub Actions
+- Keep the legacy Gradle runtime behind a checksum-verified direct wrapper
 - Avoid changing camera behavior without device verification notes
 
 Next priorities:

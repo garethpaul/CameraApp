@@ -72,6 +72,7 @@ dispatches. The workflow uses a commit-pinned checkout action, read-only
 repository access, and a bounded runtime. It explicitly clears hosted Android
 SDK variables so the legacy Gradle 2.2.1 project takes the documented SDK-free
 path instead of running against an incompatible modern toolchain.
+The job does not persist checkout credentials after source retrieval.
 
 Then run Gradle after Android SDK configuration is available:
 
@@ -79,6 +80,11 @@ Then run Gradle after Android SDK configuration is available:
 ANDROID_HOME=/home/gjones/android-sdk ./gradlew lint --no-daemon
 ANDROID_HOME=/home/gjones/android-sdk ./gradlew assembleDebug --no-daemon
 ```
+
+The direct wrapper uses a Gradle 8.14.5-generated bootstrap while retaining the
+legacy Gradle 2.2.1 runtime. Its `distributionSha256Sum` authenticates the
+official archive before execution; an empty wrapper cache therefore requires
+access to Gradle's HTTPS distribution service.
 
 The Gradle lint configuration suppresses only the legacy `LintError` for the missing API database infrastructure issue. Instrumentation tests require an Android device or emulator with camera support.
 

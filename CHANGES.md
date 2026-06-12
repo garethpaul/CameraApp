@@ -2,6 +2,8 @@
 
 ## 2026-06-12
 
+- Added an authenticated Gradle wrapper bootstrap for the legacy 2.2.1 runtime
+  and disabled hosted checkout credential persistence.
 - Balanced `closeCamera` semaphore ownership so interrupted acquisition no
   longer adds an extra permit to the camera lifecycle lock.
 - Restored the current thread's interrupt flag before propagating close-lock
