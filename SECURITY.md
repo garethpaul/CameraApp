@@ -42,6 +42,11 @@ If this project requests device permissions such as location, camera, microphone
 
 ## Dependency and Supply Chain Security
 
+The generated Gradle 8.14.5 bootstrap retains the legacy Gradle 2.2.1 runtime
+and authenticates its official archive before execution. Review all four
+wrapper files together. Hosted Check also uses a read-only, non-persisted
+checkout token so later steps cannot reuse repository credentials.
+
 Dependency updates should come from trusted package managers and should keep lockfiles in sync when lockfiles exist. Do not commit credentials, private keys, tokens, generated secrets, or machine-local configuration. If a vulnerability depends on a compromised package, typosquatting risk, insecure transitive dependency, or unsafe build step, include the package name, affected version, and the path through which it is used.
 
 ## Safe Research Guidelines
