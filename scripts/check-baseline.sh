@@ -22,8 +22,10 @@ TOAST_HANDLER_PLAN="$ROOT_DIR/docs/plans/2026-06-12-cameraapp-toast-handler-life
 WRAPPER_PLAN="$ROOT_DIR/docs/plans/2026-06-12-gradle-wrapper-verification.md"
 RTL_LAYOUT_PLAN="$ROOT_DIR/docs/plans/2026-06-13-cameraapp-rtl-layout.md"
 LANDSCAPE_OVERLAP_PLAN="$ROOT_DIR/docs/plans/2026-06-13-cameraapp-landscape-overlap.md"
+INACTIVE_TEMPLATE_PLAN="$ROOT_DIR/docs/plans/2026-06-13-cameraapp-inactive-template-resources.md"
 PORTRAIT_LAYOUT="$ROOT_DIR/Application/src/main/res/layout/fragment_camera2_basic.xml"
 LANDSCAPE_LAYOUT="$ROOT_DIR/Application/src/main/res/layout-land/fragment_camera2_basic.xml"
+ACTIVE_STYLES="$ROOT_DIR/Application/src/main/res/values/styles.xml"
 WRAPPER_PROPERTIES="$ROOT_DIR/gradle/wrapper/gradle-wrapper.properties"
 GRADLEW="$ROOT_DIR/gradlew"
 GRADLEW_BAT="$ROOT_DIR/gradlew.bat"
@@ -90,6 +92,7 @@ for path in \
   "docs/plans/2026-06-12-gradle-wrapper-verification.md" \
   "docs/plans/2026-06-13-cameraapp-rtl-layout.md" \
   "docs/plans/2026-06-13-cameraapp-landscape-overlap.md" \
+  "docs/plans/2026-06-13-cameraapp-inactive-template-resources.md" \
   "gradlew" \
   "gradlew.bat" \
   "gradle/wrapper/gradle-wrapper.properties" \
@@ -168,6 +171,54 @@ for overlap_plan_contract in \
   "screenshot coverage is claimed"; do
   if ! grep -Fq "$overlap_plan_contract" "$LANDSCAPE_OVERLAP_PLAN"; then
     printf '%s\n' "Landscape preview separation plan must record completed verification: $overlap_plan_contract" >&2
+    exit 1
+  fi
+done
+
+for pruned_resource in \
+  "Application/src/main/res/layout/activity_main.xml" \
+  "Application/src/main/res/values/template-dimens.xml" \
+  "Application/src/main/res/values-sw600dp/template-dimens.xml" \
+  "Application/src/main/res/values-sw600dp/template-styles.xml" \
+  "Application/src/main/res/values/template-styles.xml" \
+  "Application/src/main/res/values-v11/template-styles.xml" \
+  "Application/src/main/res/values-v21/base-template-styles.xml" \
+  "Application/src/main/res/drawable-hdpi/tile.9.png"; do
+  if [ -e "$ROOT_DIR/$pruned_resource" ]; then
+    printf '%s\n' "Inactive sample-template resource must remain pruned: $pruned_resource" >&2
+    exit 1
+  fi
+done
+
+if [ "$(grep -Fc '<style name="MaterialTheme" parent="android:Theme.Material.Light.NoActionBar.Fullscreen" />' "$ACTIVE_STYLES")" -ne 1 ] || \
+  [ "$(grep -Fc 'android:theme="@style/MaterialTheme"' "$MANIFEST")" -ne 1 ]; then
+  printf '%s\n' "CameraApp must retain its active application theme after template pruning." >&2
+  exit 1
+fi
+
+if grep -REn 'Widget\.SampleMessage|@drawable/tile|margin_(tiny|small|large)|horizontal_page_margin|vertical_page_margin' \
+  "$ROOT_DIR/Application/src/main/res" >/dev/null 2>&1; then
+  printf '%s\n' "Template-only widget, tile, and dimension references must remain pruned." >&2
+  exit 1
+fi
+
+if ! grep -Fq "Unreachable Android sample-template resources are not packaged" "$README" || \
+  ! grep -Fq "unreachable template resource surface" "$ROOT_DIR/VISION.md" || \
+  ! grep -Fq "Pruned the unreachable sample-template layout" "$ROOT_DIR/CHANGES.md" || \
+  ! grep -Fq "R5. Android lint must report exactly two findings" "$INACTIVE_TEMPLATE_PLAN"; then
+  printf '%s\n' "Inactive template resource documentation and plan contracts must remain checked in." >&2
+  exit 1
+fi
+
+for inactive_template_plan_contract in \
+  "status: completed" \
+  "## Status: Completed" \
+  "make verify" \
+  "2 issues for both debug and release" \
+  "isolated hostile source mutations were rejected" \
+  "No emulator, physical-device camera, or rendered screenshot coverage"; do
+  if ! grep -Fq "$inactive_template_plan_contract" "$INACTIVE_TEMPLATE_PLAN"; then
+    printf '%s\n' "Inactive template resource plan must record completed verification: $inactive_template_plan_contract" >&2
     exit 1
   fi
 done

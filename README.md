@@ -127,6 +127,8 @@ When the required SDK or runtime is unavailable, use static checks and source re
   controls use logical end-side anchors for right-to-left locales.
 - The preview reserves a separate end-side control rail in landscape, preventing
   localized picture/info controls from overlapping the camera surface.
+- Unreachable Android sample-template resources are not packaged; the active
+  camera layouts, application theme, and dialog copy remain intact.
 - Unsupported-camera error dialogs require an attached fragment manager before
   display.
 - Unsupported-camera dialogs also require an attached activity before display.
@@ -155,6 +157,8 @@ When the required SDK or runtime is unavailable, use static checks and source re
   control placement baseline.
 - See `docs/plans/2026-06-13-cameraapp-landscape-overlap.md` for landscape
   preview/control region separation.
+- See `docs/plans/2026-06-13-cameraapp-inactive-template-resources.md` for the
+  inactive sample-template resource boundary.
 
 ## Contributing
 
