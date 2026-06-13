@@ -23,6 +23,8 @@ WRAPPER_PLAN="$ROOT_DIR/docs/plans/2026-06-12-gradle-wrapper-verification.md"
 RTL_LAYOUT_PLAN="$ROOT_DIR/docs/plans/2026-06-13-cameraapp-rtl-layout.md"
 LANDSCAPE_OVERLAP_PLAN="$ROOT_DIR/docs/plans/2026-06-13-cameraapp-landscape-overlap.md"
 INACTIVE_TEMPLATE_PLAN="$ROOT_DIR/docs/plans/2026-06-13-cameraapp-inactive-template-resources.md"
+WINDOW_BACKGROUND_PLAN="$ROOT_DIR/docs/plans/2026-06-13-cameraapp-window-background-overdraw.md"
+ACTIVITY_LAYOUT="$ROOT_DIR/Application/src/main/res/layout/activity_camera.xml"
 PORTRAIT_LAYOUT="$ROOT_DIR/Application/src/main/res/layout/fragment_camera2_basic.xml"
 LANDSCAPE_LAYOUT="$ROOT_DIR/Application/src/main/res/layout-land/fragment_camera2_basic.xml"
 ACTIVE_STYLES="$ROOT_DIR/Application/src/main/res/values/styles.xml"
@@ -93,6 +95,7 @@ for path in \
   "docs/plans/2026-06-13-cameraapp-rtl-layout.md" \
   "docs/plans/2026-06-13-cameraapp-landscape-overlap.md" \
   "docs/plans/2026-06-13-cameraapp-inactive-template-resources.md" \
+  "docs/plans/2026-06-13-cameraapp-window-background-overdraw.md" \
   "gradlew" \
   "gradlew.bat" \
   "gradle/wrapper/gradle-wrapper.properties" \
@@ -190,9 +193,13 @@ for pruned_resource in \
   fi
 done
 
-if [ "$(grep -Fc '<style name="MaterialTheme" parent="android:Theme.Material.Light.NoActionBar.Fullscreen" />' "$ACTIVE_STYLES")" -ne 1 ] || \
+if [ "$(grep -Fc '<style name="MaterialTheme" parent="android:Theme.Material.Light.NoActionBar.Fullscreen">' "$ACTIVE_STYLES")" -ne 1 ] || \
+  [ "$(grep -Fc '<item name="android:windowBackground">@android:color/black</item>' "$ACTIVE_STYLES")" -ne 1 ] || \
+  [ "$(grep -Fc 'tools:ignore="MergeRootFrame"' "$ACTIVITY_LAYOUT")" -ne 1 ] || \
+  [ "$(grep -Fc '.replace(R.id.container, Camera2BasicFragment.newInstance())' "$ROOT_DIR/Application/src/main/java/com/example/android/camera2basic/CameraActivity.java")" -ne 1 ] || \
+  grep -Fq 'android:background=' "$ACTIVITY_LAYOUT" || \
   [ "$(grep -Fc 'android:theme="@style/MaterialTheme"' "$MANIFEST")" -ne 1 ]; then
-  printf '%s\n' "CameraApp must retain its active application theme after template pruning." >&2
+  printf '%s\n' "CameraApp must keep one black window background and its required fragment container contract." >&2
   exit 1
 fi
 
@@ -219,6 +226,27 @@ for inactive_template_plan_contract in \
   "No emulator, physical-device camera, or rendered screenshot coverage"; do
   if ! grep -Fq "$inactive_template_plan_contract" "$INACTIVE_TEMPLATE_PLAN"; then
     printf '%s\n' "Inactive template resource plan must record completed verification: $inactive_template_plan_contract" >&2
+    exit 1
+  fi
+done
+
+if ! grep -Fq "single black window background" "$README" || \
+  ! grep -Fq "single-owner camera window background" "$ROOT_DIR/VISION.md" || \
+  ! grep -Fq "Moved the black camera launch surface" "$ROOT_DIR/CHANGES.md" || \
+  ! grep -Fq "R3. Android lint must report only the existing" "$WINDOW_BACKGROUND_PLAN"; then
+  printf '%s\n' "Window-background ownership documentation and plan contracts must remain checked in." >&2
+  exit 1
+fi
+
+for window_background_plan_contract in \
+  "status: completed" \
+  "## Status: Completed" \
+  "make verify" \
+  "exactly 1 issue for both debug and release" \
+  "isolated hostile mutations were rejected" \
+  "No emulator, physical-device camera, or rendered screenshot coverage"; do
+  if ! grep -Fq "$window_background_plan_contract" "$WINDOW_BACKGROUND_PLAN"; then
+    printf '%s\n' "Window-background plan must record completed verification: $window_background_plan_contract" >&2
     exit 1
   fi
 done
