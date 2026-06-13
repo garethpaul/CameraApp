@@ -123,6 +123,8 @@ When the required SDK or runtime is unavailable, use static checks and source re
 - Capture completion UI does not expose the app-private output file path.
 - Picture and info controls are listener-bound only when present in the current
   layout.
+- The application enables RTL mirroring, and portrait and landscape camera
+  controls use logical end-side anchors for right-to-left locales.
 - Unsupported-camera error dialogs require an attached fragment manager before
   display.
 - Unsupported-camera dialogs also require an attached activity before display.
@@ -147,6 +149,8 @@ When the required SDK or runtime is unavailable, use static checks and source re
   Actions baseline.
 - See `docs/plans/2026-06-10-cameraapp-open-lock-release.md` for the synchronous
   camera-open semaphore recovery guard.
+- See `docs/plans/2026-06-13-cameraapp-rtl-layout.md` for the logical camera
+  control placement baseline.
 
 ## Contributing
 

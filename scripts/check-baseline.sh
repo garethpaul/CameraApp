@@ -20,6 +20,9 @@ CAMERA_OPEN_LOCK_PLAN="$ROOT_DIR/docs/plans/2026-06-10-cameraapp-open-lock-relea
 CAMERA_CLOSE_LOCK_PLAN="$ROOT_DIR/docs/plans/2026-06-12-cameraapp-close-lock-ownership.md"
 TOAST_HANDLER_PLAN="$ROOT_DIR/docs/plans/2026-06-12-cameraapp-toast-handler-lifecycle.md"
 WRAPPER_PLAN="$ROOT_DIR/docs/plans/2026-06-12-gradle-wrapper-verification.md"
+RTL_LAYOUT_PLAN="$ROOT_DIR/docs/plans/2026-06-13-cameraapp-rtl-layout.md"
+PORTRAIT_LAYOUT="$ROOT_DIR/Application/src/main/res/layout/fragment_camera2_basic.xml"
+LANDSCAPE_LAYOUT="$ROOT_DIR/Application/src/main/res/layout-land/fragment_camera2_basic.xml"
 WRAPPER_PROPERTIES="$ROOT_DIR/gradle/wrapper/gradle-wrapper.properties"
 GRADLEW="$ROOT_DIR/gradlew"
 GRADLEW_BAT="$ROOT_DIR/gradlew.bat"
@@ -84,6 +87,7 @@ for path in \
   "docs/plans/2026-06-12-cameraapp-close-lock-ownership.md" \
   "docs/plans/2026-06-12-cameraapp-toast-handler-lifecycle.md" \
   "docs/plans/2026-06-12-gradle-wrapper-verification.md" \
+  "docs/plans/2026-06-13-cameraapp-rtl-layout.md" \
   "gradlew" \
   "gradlew.bat" \
   "gradle/wrapper/gradle-wrapper.properties" \
@@ -91,11 +95,38 @@ for path in \
   "settings.gradle" \
   "Application/build.gradle" \
   "Application/src/main/AndroidManifest.xml" \
+  "Application/src/main/res/layout/fragment_camera2_basic.xml" \
+  "Application/src/main/res/layout-land/fragment_camera2_basic.xml" \
   "Application/tests/AndroidManifest.xml" \
   "Application/tests/src/com/example/android/camera2basic/tests/SampleTests.java" \
   "Application/src/main/java/com/example/android/camera2basic/Camera2BasicFragment.java"; do
   require_file "$path"
 done
+
+if [ "$(grep -Fc 'android:layout_gravity="center_vertical|end"' "$PORTRAIT_LAYOUT")" -ne 1 ] || \
+   grep -Fq 'android:layout_gravity="center_vertical|right"' "$PORTRAIT_LAYOUT"; then
+  printf '%s\n' "Portrait camera controls must use logical end-side gravity." >&2
+  exit 1
+fi
+
+if [ "$(grep -Fc 'android:layout_toEndOf="@id/texture"' "$LANDSCAPE_LAYOUT")" -ne 1 ] || \
+   grep -Fq 'android:layout_toRightOf="@id/texture"' "$LANDSCAPE_LAYOUT"; then
+  printf '%s\n' "Landscape camera controls must use logical end-side positioning." >&2
+  exit 1
+fi
+
+if [ "$(grep -Fc 'android:supportsRtl="true"' "$MANIFEST")" -ne 1 ]; then
+  printf '%s\n' "Application manifest must explicitly enable RTL resource mirroring." >&2
+  exit 1
+fi
+
+if ! grep -Fq "logical end-side anchors" "$README" || \
+   ! grep -Fq "right-to-left camera control placement" "$ROOT_DIR/VISION.md" || \
+   ! grep -Fq "RTL lint findings" "$ROOT_DIR/CHANGES.md" || \
+   ! grep -Fq "R5. The static baseline must reject restoration" "$RTL_LAYOUT_PLAN"; then
+  printf '%s\n' "RTL layout documentation and plan contracts must remain checked in." >&2
+  exit 1
+fi
 
 for ignored in \
   ".gradle/" \
