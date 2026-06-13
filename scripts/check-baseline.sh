@@ -21,6 +21,7 @@ CAMERA_CLOSE_LOCK_PLAN="$ROOT_DIR/docs/plans/2026-06-12-cameraapp-close-lock-own
 TOAST_HANDLER_PLAN="$ROOT_DIR/docs/plans/2026-06-12-cameraapp-toast-handler-lifecycle.md"
 WRAPPER_PLAN="$ROOT_DIR/docs/plans/2026-06-12-gradle-wrapper-verification.md"
 RTL_LAYOUT_PLAN="$ROOT_DIR/docs/plans/2026-06-13-cameraapp-rtl-layout.md"
+LANDSCAPE_OVERLAP_PLAN="$ROOT_DIR/docs/plans/2026-06-13-cameraapp-landscape-overlap.md"
 PORTRAIT_LAYOUT="$ROOT_DIR/Application/src/main/res/layout/fragment_camera2_basic.xml"
 LANDSCAPE_LAYOUT="$ROOT_DIR/Application/src/main/res/layout-land/fragment_camera2_basic.xml"
 WRAPPER_PROPERTIES="$ROOT_DIR/gradle/wrapper/gradle-wrapper.properties"
@@ -88,6 +89,7 @@ for path in \
   "docs/plans/2026-06-12-cameraapp-toast-handler-lifecycle.md" \
   "docs/plans/2026-06-12-gradle-wrapper-verification.md" \
   "docs/plans/2026-06-13-cameraapp-rtl-layout.md" \
+  "docs/plans/2026-06-13-cameraapp-landscape-overlap.md" \
   "gradlew" \
   "gradlew.bat" \
   "gradle/wrapper/gradle-wrapper.properties" \
@@ -109,9 +111,37 @@ if [ "$(grep -Fc 'android:layout_gravity="center_vertical|end"' "$PORTRAIT_LAYOU
   exit 1
 fi
 
-if [ "$(grep -Fc 'android:layout_toEndOf="@id/texture"' "$LANDSCAPE_LAYOUT")" -ne 1 ] || \
+landscape_texture_block=$(sed -n '/<com.example.android.camera2basic.AutoFitTextureView/,/\/>/p' "$LANDSCAPE_LAYOUT")
+landscape_controls_block=$(sed -n '/<FrameLayout/,/android:orientation="horizontal">/p' "$LANDSCAPE_LAYOUT")
+
+for texture_contract in \
+  'android:layout_width="match_parent"' \
+  'android:layout_height="match_parent"' \
+  'android:layout_alignParentStart="true"' \
+  'android:layout_toStartOf="@+id/controls"'; do
+  if ! printf '%s\n' "$landscape_texture_block" | grep -Fq "$texture_contract"; then
+    printf '%s\n' "Landscape camera preview must reserve space before the control rail: $texture_contract" >&2
+    exit 1
+  fi
+done
+
+for controls_contract in \
+  'android:id="@id/controls"' \
+  'android:layout_width="wrap_content"' \
+  'android:layout_height="match_parent"' \
+  'android:layout_alignParentEnd="true"'; do
+  if ! printf '%s\n' "$landscape_controls_block" | grep -Fq "$controls_contract"; then
+    printf '%s\n' "Landscape control rail must keep independent end-side bounds: $controls_contract" >&2
+    exit 1
+  fi
+done
+
+if [ "$(grep -Fc '@+id/controls' "$LANDSCAPE_LAYOUT")" -ne 1 ] || \
+   [ "$(grep -Fc 'android:id="@id/controls"' "$LANDSCAPE_LAYOUT")" -ne 1 ] || \
+   grep -Fq 'android:layout_below="@id/texture"' "$LANDSCAPE_LAYOUT" || \
+   grep -Fq 'android:layout_toEndOf="@id/texture"' "$LANDSCAPE_LAYOUT" || \
    grep -Fq 'android:layout_toRightOf="@id/texture"' "$LANDSCAPE_LAYOUT"; then
-  printf '%s\n' "Landscape camera controls must use logical end-side positioning." >&2
+  printf '%s\n' "Landscape camera preview and controls must not retain overlapping or physical-direction constraints." >&2
   exit 1
 fi
 
@@ -119,6 +149,28 @@ if [ "$(grep -Fc 'android:supportsRtl="true"' "$MANIFEST")" -ne 1 ]; then
   printf '%s\n' "Application manifest must explicitly enable RTL resource mirroring." >&2
   exit 1
 fi
+
+if ! grep -Fq "reserves a separate end-side control rail in landscape" "$README" || \
+   ! grep -Fq "non-overlapping landscape preview and control regions" "$ROOT_DIR/VISION.md" || \
+   ! grep -Fq "Removed the landscape preview/control overlap warning" "$ROOT_DIR/CHANGES.md" || \
+   ! grep -Fq "2026-06-13-cameraapp-landscape-overlap.md" "$README"; then
+  printf '%s\n' "Landscape preview separation documentation and plan link must remain checked in." >&2
+  exit 1
+fi
+
+for overlap_plan_contract in \
+  "status: completed" \
+  "## Status: Completed" \
+  "make check" \
+  "10 issues" \
+  "isolated hostile mutations were rejected" \
+  "no emulator, physical-device camera, or rendered" \
+  "screenshot coverage is claimed"; do
+  if ! grep -Fq "$overlap_plan_contract" "$LANDSCAPE_OVERLAP_PLAN"; then
+    printf '%s\n' "Landscape preview separation plan must record completed verification: $overlap_plan_contract" >&2
+    exit 1
+  fi
+done
 
 if ! grep -Fq "logical end-side anchors" "$README" || \
    ! grep -Fq "right-to-left camera control placement" "$ROOT_DIR/VISION.md" || \
