@@ -24,6 +24,7 @@ Priority:
 - Keep camera open/close semaphore ownership balanced across failure paths
 - Keep interrupted camera close attempts from releasing unowned permits
 - Keep layout control binding tolerant of missing optional controls
+- Keep right-to-left camera control placement tied to logical layout anchors
 - Keep unsupported-camera recovery tolerant of detached fragments
 - Keep unsupported-camera dialogs tolerant of detached activities
 - Keep image capture callbacks tolerant of lifecycle and backpressure edges

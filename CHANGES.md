@@ -1,5 +1,13 @@
 # CameraApp Changes
 
+## 2026-06-13
+
+- Enabled RTL mirroring and replaced physical right-side camera control
+  attributes with logical end-side anchors, resolving the RTL lint findings
+  while preserving left-to-right placement.
+- Added SDK-backed lint and static regression coverage for the two layout
+  attributes.
+
 ## 2026-06-12
 
 - Added an authenticated Gradle wrapper bootstrap for the legacy 2.2.1 runtime
