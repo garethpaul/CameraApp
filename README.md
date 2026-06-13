@@ -129,6 +129,8 @@ When the required SDK or runtime is unavailable, use static checks and source re
   localized picture/info controls from overlapping the camera surface.
 - Unreachable Android sample-template resources are not packaged; the active
   camera layouts, application theme, and dialog copy remain intact.
+- The active theme owns a single black window background, avoiding a redundant
+  activity-root paint while preserving the camera launch/fallback surface.
 - Unsupported-camera error dialogs require an attached fragment manager before
   display.
 - Unsupported-camera dialogs also require an attached activity before display.
@@ -159,6 +161,8 @@ When the required SDK or runtime is unavailable, use static checks and source re
   preview/control region separation.
 - See `docs/plans/2026-06-13-cameraapp-inactive-template-resources.md` for the
   inactive sample-template resource boundary.
+- See `docs/plans/2026-06-13-cameraapp-window-background-overdraw.md` for the
+  camera window background ownership boundary.
 
 ## Contributing
 

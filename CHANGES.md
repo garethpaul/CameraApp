@@ -2,6 +2,8 @@
 
 ## 2026-06-13
 
+- Moved the black camera launch surface into the active window theme and removed
+  the redundant activity-root background paint.
 - Pruned the unreachable sample-template layout, dimensions, widget styles, and
   tile asset while retaining the active application theme and camera resources.
 - Removed the landscape preview/control overlap warning by giving the camera
