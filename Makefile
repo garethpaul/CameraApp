@@ -9,6 +9,11 @@ lint:
 	$(ROOT)scripts/check-baseline.sh
 	@if [ -d "$(ANDROID_HOME)" ]; then \
 		ANDROID_HOME="$(ANDROID_HOME)" $(GRADLE_COMMAND) -p "$(ROOT)" lint --no-daemon; \
+		report="$(ROOT)Application/build/outputs/lint-results.xml"; \
+		if [ ! -f "$$report" ] || grep -Eq '^[[:space:]]*<issue[[:space:]]*$$' "$$report"; then \
+			echo "Android lint must produce a zero-finding XML report." >&2; \
+			exit 1; \
+		fi; \
 	else \
 		echo "Android SDK not found at $(ANDROID_HOME); Gradle lint skipped."; \
 	fi

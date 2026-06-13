@@ -28,6 +28,7 @@ Priority:
 - Keep non-overlapping landscape preview and control regions under localization
 - Keep unreachable template resource surface out of the packaged camera sample
 - Keep a single-owner camera window background without redundant full-screen paint
+- Keep a complete xxxhdpi icon family and a zero-finding Android lint gate
 - Keep unsupported-camera recovery tolerant of detached fragments
 - Keep unsupported-camera dialogs tolerant of detached activities
 - Keep image capture callbacks tolerant of lifecycle and backpressure edges

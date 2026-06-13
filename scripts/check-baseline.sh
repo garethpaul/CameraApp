@@ -24,6 +24,9 @@ RTL_LAYOUT_PLAN="$ROOT_DIR/docs/plans/2026-06-13-cameraapp-rtl-layout.md"
 LANDSCAPE_OVERLAP_PLAN="$ROOT_DIR/docs/plans/2026-06-13-cameraapp-landscape-overlap.md"
 INACTIVE_TEMPLATE_PLAN="$ROOT_DIR/docs/plans/2026-06-13-cameraapp-inactive-template-resources.md"
 WINDOW_BACKGROUND_PLAN="$ROOT_DIR/docs/plans/2026-06-13-cameraapp-window-background-overdraw.md"
+XXXHDPI_ICON_PLAN="$ROOT_DIR/docs/plans/2026-06-13-cameraapp-xxxhdpi-icons.md"
+XXXHDPI_LAUNCHER="$ROOT_DIR/Application/src/main/res/drawable-xxxhdpi/ic_launcher.png"
+XXXHDPI_INFO="$ROOT_DIR/Application/src/main/res/drawable-xxxhdpi/ic_action_info.png"
 ACTIVITY_LAYOUT="$ROOT_DIR/Application/src/main/res/layout/activity_camera.xml"
 PORTRAIT_LAYOUT="$ROOT_DIR/Application/src/main/res/layout/fragment_camera2_basic.xml"
 LANDSCAPE_LAYOUT="$ROOT_DIR/Application/src/main/res/layout-land/fragment_camera2_basic.xml"
@@ -96,6 +99,9 @@ for path in \
   "docs/plans/2026-06-13-cameraapp-landscape-overlap.md" \
   "docs/plans/2026-06-13-cameraapp-inactive-template-resources.md" \
   "docs/plans/2026-06-13-cameraapp-window-background-overdraw.md" \
+  "docs/plans/2026-06-13-cameraapp-xxxhdpi-icons.md" \
+  "Application/src/main/res/drawable-xxxhdpi/ic_launcher.png" \
+  "Application/src/main/res/drawable-xxxhdpi/ic_action_info.png" \
   "gradlew" \
   "gradlew.bat" \
   "gradle/wrapper/gradle-wrapper.properties" \
@@ -109,6 +115,45 @@ for path in \
   "Application/tests/src/com/example/android/camera2basic/tests/SampleTests.java" \
   "Application/src/main/java/com/example/android/camera2basic/Camera2BasicFragment.java"; do
   require_file "$path"
+done
+
+require_sha256 "$XXXHDPI_LAUNCHER" \
+  "bc7526f26217f5a41e01253cf46b90964ec5b02f2e442bacff06acd8c3050505" \
+  "The reviewed xxxhdpi launcher icon bytes changed."
+require_sha256 "$XXXHDPI_INFO" \
+  "e82ce6692ea558584be4f6c52a8ab3677f8f77da6dc9597ccbd67f6f3750baf8" \
+  "The reviewed xxxhdpi info icon bytes changed."
+
+if ! file "$XXXHDPI_LAUNCHER" | grep -Fq "192 x 192" || \
+   ! file "$XXXHDPI_INFO" | grep -Fq "128 x 128"; then
+  printf '%s\n' "CameraApp xxxhdpi icons must retain their exact launcher and action dimensions." >&2
+  exit 1
+fi
+
+if ! grep -Fq "Android lint must produce a zero-finding XML report." "$ROOT_DIR/Makefile" || \
+   ! grep -Fq "grep -Eq '^[[:space:]]*<issue[[:space:]]*\$\$'" "$ROOT_DIR/Makefile"; then
+  printf '%s\n' "Make lint must reject every Android lint finding without suppression." >&2
+  exit 1
+fi
+
+for xxxhdpi_doc in "$ROOT_DIR/AGENTS.md" "$README" "$ROOT_DIR/CHANGES.md" "$ROOT_DIR/VISION.md"; do
+  if ! tr '\n' ' ' < "$xxxhdpi_doc" | tr -s '[:space:]' ' ' | \
+      grep -Fiq "complete xxxhdpi icon family"; then
+    printf '%s\n' "$xxxhdpi_doc must document the complete xxxhdpi icon family." >&2
+    exit 1
+  fi
+done
+
+for xxxhdpi_plan_contract in \
+  "Status: Completed" \
+  "Verification: Completed" \
+  "make check" \
+  "focused hostile mutations" \
+  "zero Android lint findings"; do
+  if ! grep -Fq "$xxxhdpi_plan_contract" "$XXXHDPI_ICON_PLAN"; then
+    printf '%s\n' "Xxxhdpi icon plan must record completed verification: $xxxhdpi_plan_contract" >&2
+    exit 1
+  fi
 done
 
 if [ "$(grep -Fc 'android:layout_gravity="center_vertical|end"' "$PORTRAIT_LAYOUT")" -ne 1 ] || \
