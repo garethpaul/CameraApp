@@ -54,6 +54,9 @@
 
 ## Agent workflow
 
+- Preserve the complete xxxhdpi icon family and the zero-finding Android lint
+  gate when changing active camera resources.
+
 1. Inspect the README, Makefile, manifests, and the files directly related to the request.
 2. Make the smallest source or docs change that satisfies the task; avoid generated, vendored, or local-environment files unless required.
 3. Run the narrowest useful validation first, then `make check` or the documented package/platform gate when available.

@@ -131,6 +131,8 @@ When the required SDK or runtime is unavailable, use static checks and source re
   camera layouts, application theme, and dialog copy remain intact.
 - The active theme owns a single black window background, avoiding a redundant
   activity-root paint while preserving the camera launch/fallback surface.
+- The active launcher and info resources include a complete xxxhdpi icon family,
+  and SDK-backed verification requires a zero-finding Android lint report.
 - Unsupported-camera error dialogs require an attached fragment manager before
   display.
 - Unsupported-camera dialogs also require an attached activity before display.
@@ -163,6 +165,8 @@ When the required SDK or runtime is unavailable, use static checks and source re
   inactive sample-template resource boundary.
 - See `docs/plans/2026-06-13-cameraapp-window-background-overdraw.md` for the
   camera window background ownership boundary.
+- See `docs/plans/2026-06-13-cameraapp-xxxhdpi-icons.md` for the active icon
+  density and zero-finding lint boundary.
 
 ## Contributing
 

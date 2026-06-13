@@ -2,6 +2,8 @@
 
 ## 2026-06-13
 
+- Added a complete xxxhdpi icon family and made SDK-backed `make lint` reject
+  every remaining Android lint finding.
 - Moved the black camera launch surface into the active window theme and removed
   the redundant activity-root background paint.
 - Pruned the unreachable sample-template layout, dimensions, widget styles, and
