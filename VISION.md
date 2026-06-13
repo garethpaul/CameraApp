@@ -26,6 +26,7 @@ Priority:
 - Keep layout control binding tolerant of missing optional controls
 - Keep right-to-left camera control placement tied to logical layout anchors
 - Keep non-overlapping landscape preview and control regions under localization
+- Keep unreachable template resource surface out of the packaged camera sample
 - Keep unsupported-camera recovery tolerant of detached fragments
 - Keep unsupported-camera dialogs tolerant of detached activities
 - Keep image capture callbacks tolerant of lifecycle and backpressure edges

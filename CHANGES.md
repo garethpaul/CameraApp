@@ -2,6 +2,8 @@
 
 ## 2026-06-13
 
+- Pruned the unreachable sample-template layout, dimensions, widget styles, and
+  tile asset while retaining the active application theme and camera resources.
 - Removed the landscape preview/control overlap warning by giving the camera
   surface and end-side control rail independent relative-layout bounds.
 - Enabled RTL mirroring and replaced physical right-side camera control
