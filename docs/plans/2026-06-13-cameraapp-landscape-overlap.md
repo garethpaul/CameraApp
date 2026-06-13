@@ -1,13 +1,13 @@
 ---
 title: CameraApp Landscape Preview Separation
 type: fix
-status: planned
+status: completed
 date: 2026-06-13
 ---
 
 # CameraApp Landscape Preview Separation
 
-## Status: Planned
+## Status: Completed
 
 ## Problem Frame
 
@@ -63,13 +63,17 @@ Approach:
 - Record completed plan, hostile mutation, assembly, and limited visual
   verification evidence.
 
-## Verification Plan
+## Verification
 
-- Run focused `make lint`, then `make check` and `make verify` with the configured
+- Focused Gradle lint, `make check`, and `make verify` passed with the configured
   Android SDK and checked-in Gradle wrapper.
-- Run absolute-path `make check` from `/tmp`, `sh -n`, and `git diff --check`.
-- Parse lint XML to confirm 10 issues per variant and no `RelativeOverlap` ID.
-- Require isolated hostile mutations of IDs, dimensions, anchors, removed
-  constraints, lint evidence, and documentation to fail.
-- Record emulator, physical-device camera, and rendered screenshot verification
-  as unavailable rather than inferred.
+- Debug APK assembly and absolute-path `make check` from `/tmp` passed.
+- `sh -n scripts/check-baseline.sh` and `git diff --check` passed.
+- Lint reported 10 issues per debug/release variant with zero `RelativeOverlap`
+  findings; the remaining IDs are unchanged overdraw, unused-resource,
+  density, and useless-parent findings.
+- Ten isolated hostile mutations were rejected across preview width/height,
+  logical anchor, AAPT-compatible ID declaration, control ID/width/height,
+  removed below constraint, README evidence, and lint evidence.
+- Tooling is unavailable; no emulator, physical-device camera, or rendered
+  screenshot coverage is claimed.

@@ -2,6 +2,8 @@
 
 ## 2026-06-13
 
+- Removed the landscape preview/control overlap warning by giving the camera
+  surface and end-side control rail independent relative-layout bounds.
 - Enabled RTL mirroring and replaced physical right-side camera control
   attributes with logical end-side anchors, resolving the RTL lint findings
   while preserving left-to-right placement.

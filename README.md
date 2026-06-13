@@ -125,6 +125,8 @@ When the required SDK or runtime is unavailable, use static checks and source re
   layout.
 - The application enables RTL mirroring, and portrait and landscape camera
   controls use logical end-side anchors for right-to-left locales.
+- The preview reserves a separate end-side control rail in landscape, preventing
+  localized picture/info controls from overlapping the camera surface.
 - Unsupported-camera error dialogs require an attached fragment manager before
   display.
 - Unsupported-camera dialogs also require an attached activity before display.
@@ -151,6 +153,8 @@ When the required SDK or runtime is unavailable, use static checks and source re
   camera-open semaphore recovery guard.
 - See `docs/plans/2026-06-13-cameraapp-rtl-layout.md` for the logical camera
   control placement baseline.
+- See `docs/plans/2026-06-13-cameraapp-landscape-overlap.md` for landscape
+  preview/control region separation.
 
 ## Contributing
 
