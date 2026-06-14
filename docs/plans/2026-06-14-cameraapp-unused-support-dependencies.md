@@ -1,6 +1,6 @@
 # Remove Unused Android Support Dependencies
 
-Status: Planned
+Status: Completed (Verified No-op)
 
 ## Problem
 
@@ -65,3 +65,41 @@ runtime behavior.
   legacy and should be modernized in a separate compatibility-focused change.
 - No emulator or physical camera session is exercised by this dependency-only
   cleanup.
+
+## Verified Outcome
+
+No dependency-removal implementation is being shipped from this plan. The
+source scan confirmed that application code does not import support-library or
+AndroidX APIs, but the legacy lint behavior couples the support manifests to the
+current target-SDK baseline:
+
+- Before removal, `:Application:dependencies` showed support-v4,
+  support-annotations, support-v13, and cardview-v7 on the compile graph.
+- With the declarations removed, the compile graph reported `No dependencies`,
+  debug and release Java compilation succeeded, and the debug/release lint task
+  completed.
+- The reduced graph exposed one `OldTargetApi` warning for `targetSdkVersion
+  21`, causing the established zero-finding lint gate and `make check` to fail.
+- Re-running `make lint` on the exact PR #7 head with the support graph intact
+  produced zero findings under the same JDK and Android SDK.
+
+Restoring unused artifacts would not improve the repository, while suppressing
+`OldTargetApi` would weaken the zero-finding gate. The experiment was therefore
+removed without changing source, Gradle, checker, or guidance files.
+
+## Follow-up Boundary
+
+Retire the support graph as part of a dedicated Gradle/Android Gradle Plugin,
+compile SDK, and target SDK compatibility migration. That follow-up must retain
+zero-finding lint, debug APK assembly, Camera2 behavior, and explicit emulator
+or device validation for modern target-SDK behavior changes.
+
+## Verification Results
+
+- `sh scripts/check-baseline.sh` passed before and during the experiment.
+- The dependency-free experimental build compiled but correctly failed the
+  existing full gate on the single `OldTargetApi` finding.
+- The exact predecessor `make lint` remained zero-finding under the same local
+  Android SDK and Corretto 8 runtime.
+- `git diff --check` passed after removing the experiment; only this plan
+  records the verified no-op and follow-up boundary.
