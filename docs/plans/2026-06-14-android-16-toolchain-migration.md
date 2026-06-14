@@ -218,7 +218,8 @@ explicit risk in the plan, PR, and tracker.
   and device-transfer exclusions, a current instrumentation smoke test, and a
   full hosted SDK-backed gate.
 - Kept hosted provisioning within repository policy by using the runner's
-  preinstalled `sdkmanager` rather than an unapproved third-party setup action.
+  preinstalled `$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager` rather than
+  an unapproved third-party setup action.
 
 ## Verification Results
 

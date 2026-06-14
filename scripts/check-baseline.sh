@@ -500,7 +500,7 @@ done
 for workflow_contract in \
   'actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654' \
   'java-version: "17"' \
-  'sdkmanager "platforms;android-36" "build-tools;36.1.0"' \
+  '"$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" "build-tools;36.1.0"' \
   'timeout 12m make check'; do
   if ! grep -Fq "$workflow_contract" "$CI_WORKFLOW"; then
     printf '%s\n' "CI must preserve Android 16 toolchain contract: $workflow_contract" >&2
