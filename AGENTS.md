@@ -60,6 +60,8 @@
   system-bar insets without shrinking the full-bleed preview.
 - Camera background thread startup is idempotent; repeated resume/start paths must not replace an already-running handler thread.
 - ImageReader backpressure is handled by dropping a backed-up capture callback before it can crash the still-image save path.
+- During background-thread shutdown, rejected image-save handoffs close the
+  callback-owned image instead of consuming `ImageReader` capacity.
 - Android backup is disabled for the app because the sample handles camera capture state and app-specific image output.
 - Resume skips camera open until the texture view is recreated, avoiding retained fragment camera work before the view hierarchy exists.
 

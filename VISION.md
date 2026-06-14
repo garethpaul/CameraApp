@@ -34,6 +34,7 @@ Priority:
 - Keep unsupported-camera recovery tolerant of detached fragments
 - Keep unsupported-camera dialogs tolerant of detached activities
 - Keep image capture callbacks tolerant of lifecycle and backpressure edges
+- Keep rejected image-save handoffs from leaking reader capacity
 - Keep camera app data out of platform backup by default
 - Keep UI copy from exposing app-private captured-image paths
 - Make Android SDK and build-tool requirements visible
