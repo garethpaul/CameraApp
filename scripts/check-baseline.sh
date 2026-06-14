@@ -499,7 +499,6 @@ done
 
 for workflow_contract in \
   'actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654' \
-  'android-actions/setup-android@9fc6c4e9069bf8d3d10b2204b1fb8f6ef7065407' \
   'java-version: "17"' \
   'sdkmanager "platforms;android-36" "build-tools;36.1.0"' \
   'timeout 12m make check'; do
@@ -508,6 +507,11 @@ for workflow_contract in \
     exit 1
   fi
 done
+
+if grep -Fq 'android-actions/setup-android@' "$CI_WORKFLOW"; then
+  printf '%s\n' "CI must not use actions outside this repository's allowed Actions policy." >&2
+  exit 1
+fi
 
 if ! grep -Fq "mBackgroundHandler == null || mFile == null" "$FRAGMENT"; then
   printf '%s\n' "ImageReader callback must guard missing handler/file state." >&2

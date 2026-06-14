@@ -35,6 +35,9 @@ Helpful reports include:
   checkout action, read-only repository access, JDK 17, and pinned Android SDK
   components; review workflow, Gradle, and checker changes as part of the
   supply-chain surface.
+- Hosted Android packages are installed with the runner's preinstalled
+  `sdkmanager`; the workflow does not depend on a third-party SDK setup action
+  outside the repository's allowed Actions policy.
 - Camera access is requested at runtime on API 23 and newer. Camera output
   configuration and `CameraManager.openCamera` must remain unreachable until
   permission is granted.
