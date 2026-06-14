@@ -46,6 +46,8 @@ Priority:
 
 Next priorities:
 
+- Execute the CameraApp device verification matrix against an exact commit on
+  a camera-capable emulator and physical device
 - Exercise permission grant, denial, resume, preview, and capture behavior on a
   camera-capable API-23+ device or emulator
 - Add instrumentation coverage for runtime flows when a deterministic
