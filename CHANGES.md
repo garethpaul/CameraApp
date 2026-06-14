@@ -1,5 +1,20 @@
 # CameraApp Changes
 
+## 2026-06-14
+
+- Migrated the build to Android Gradle Plugin 9.2.0, Gradle 9.5.1, JDK 17,
+  compile/target SDK 36, and Android Build Tools 36.1.0.
+- Removed unused support-library runtime dependencies while retaining
+  AndroidX only for the compiled instrumentation smoke test.
+- Added runtime camera permission ordering for API 23+, target-36 system-bar
+  inset protection, and explicit Android 12+ backup rules.
+- Cleared retained texture-view references at view teardown so delayed
+  permission results cannot reopen the camera against a stale hierarchy.
+- Expanded `make check` and hosted CI to require zero-finding debug/release
+  lint, app APK assembly, and instrumentation APK assembly.
+- Retained an authenticated Gradle wrapper and non-persisted, read-only hosted
+  checkout credentials on the modern toolchain.
+
 ## 2026-06-13
 
 - Added a complete xxxhdpi icon family and made SDK-backed `make lint` reject

@@ -3,6 +3,9 @@ set -eu
 
 ROOT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 APP_BUILD="$ROOT_DIR/Application/build.gradle"
+ROOT_BUILD="$ROOT_DIR/build.gradle"
+SETTINGS="$ROOT_DIR/settings.gradle"
+GRADLE_PROPERTIES="$ROOT_DIR/gradle.properties"
 MANIFEST="$ROOT_DIR/Application/src/main/AndroidManifest.xml"
 README="$ROOT_DIR/README.md"
 PLAN="$ROOT_DIR/docs/plans/2026-06-08-cameraapp-build-hygiene-baseline.md"
@@ -25,6 +28,7 @@ LANDSCAPE_OVERLAP_PLAN="$ROOT_DIR/docs/plans/2026-06-13-cameraapp-landscape-over
 INACTIVE_TEMPLATE_PLAN="$ROOT_DIR/docs/plans/2026-06-13-cameraapp-inactive-template-resources.md"
 WINDOW_BACKGROUND_PLAN="$ROOT_DIR/docs/plans/2026-06-13-cameraapp-window-background-overdraw.md"
 XXXHDPI_ICON_PLAN="$ROOT_DIR/docs/plans/2026-06-13-cameraapp-xxxhdpi-icons.md"
+ANDROID_16_PLAN="$ROOT_DIR/docs/plans/2026-06-14-android-16-toolchain-migration.md"
 XXXHDPI_LAUNCHER="$ROOT_DIR/Application/src/main/res/drawable-xxxhdpi/ic_launcher.png"
 XXXHDPI_INFO="$ROOT_DIR/Application/src/main/res/drawable-xxxhdpi/ic_action_info.png"
 ACTIVITY_LAYOUT="$ROOT_DIR/Application/src/main/res/layout/activity_camera.xml"
@@ -36,6 +40,8 @@ GRADLEW="$ROOT_DIR/gradlew"
 GRADLEW_BAT="$ROOT_DIR/gradlew.bat"
 WRAPPER_JAR="$ROOT_DIR/gradle/wrapper/gradle-wrapper.jar"
 CI_WORKFLOW="$ROOT_DIR/.github/workflows/check.yml"
+BACKUP_RULES="$ROOT_DIR/Application/src/main/res/xml/backup_rules.xml"
+DATA_EXTRACTION_RULES="$ROOT_DIR/Application/src/main/res/xml/data_extraction_rules.xml"
 
 require_sha256() {
   file=$1
@@ -51,8 +57,8 @@ expected_wrapper_properties() {
   cat <<'EOF'
 distributionBase=GRADLE_USER_HOME
 distributionPath=wrapper/dists
-distributionSha256Sum=1d7c28b3731906fd1b2955946c1d052303881585fc14baedd675e4cf2bc1ecab
-distributionUrl=https\://services.gradle.org/distributions/gradle-2.2.1-all.zip
+distributionSha256Sum=bafc141b619ad6350fd975fc903156dd5c151998cc8b058e8c1044ab5f7b031f
+distributionUrl=https\://services.gradle.org/distributions/gradle-9.5.1-bin.zip
 networkTimeout=10000
 validateDistributionUrl=true
 zipStoreBase=GRADLE_USER_HOME
@@ -100,6 +106,7 @@ for path in \
   "docs/plans/2026-06-13-cameraapp-inactive-template-resources.md" \
   "docs/plans/2026-06-13-cameraapp-window-background-overdraw.md" \
   "docs/plans/2026-06-13-cameraapp-xxxhdpi-icons.md" \
+  "docs/plans/2026-06-14-android-16-toolchain-migration.md" \
   "Application/src/main/res/drawable-xxxhdpi/ic_launcher.png" \
   "Application/src/main/res/drawable-xxxhdpi/ic_action_info.png" \
   "gradlew" \
@@ -107,8 +114,12 @@ for path in \
   "gradle/wrapper/gradle-wrapper.properties" \
   "gradle/wrapper/gradle-wrapper.jar" \
   "settings.gradle" \
+  "build.gradle" \
+  "gradle.properties" \
   "Application/build.gradle" \
   "Application/src/main/AndroidManifest.xml" \
+  "Application/src/main/res/xml/backup_rules.xml" \
+  "Application/src/main/res/xml/data_extraction_rules.xml" \
   "Application/src/main/res/layout/fragment_camera2_basic.xml" \
   "Application/src/main/res/layout-land/fragment_camera2_basic.xml" \
   "Application/tests/AndroidManifest.xml" \
@@ -130,8 +141,9 @@ if ! file "$XXXHDPI_LAUNCHER" | grep -Fq "192 x 192" || \
   exit 1
 fi
 
-if ! grep -Fq "Android lint must produce a zero-finding XML report." "$ROOT_DIR/Makefile" || \
-   ! grep -Fq "grep -Eq '^[[:space:]]*<issue[[:space:]]*\$\$'" "$ROOT_DIR/Makefile"; then
+if ! grep -Fq "Android lint must produce zero-finding debug and release XML reports." "$ROOT_DIR/Makefile" || \
+   ! grep -Fq "grep -Eq '<issue([[:space:]>])'" "$ROOT_DIR/Makefile" || \
+   ! grep -Fq ":Application:assembleDebugAndroidTest" "$ROOT_DIR/Makefile"; then
   printf '%s\n' "Make lint must reject every Android lint finding without suppression." >&2
   exit 1
 fi
@@ -334,83 +346,66 @@ if [ ! -x "$ROOT_DIR/gradlew" ]; then
 fi
 
 if [ ! -x "$GRADLEW" ] || [ "$(cat "$WRAPPER_PROPERTIES")" != "$(expected_wrapper_properties)" ]; then
-  printf '%s\n' "Generated wrapper must retain the reviewed Gradle 2.2.1 URL and checksum." >&2
+  printf '%s\n' "Generated wrapper must retain the reviewed Gradle 9.5.1 URL and checksum." >&2
   exit 1
 fi
 
 require_sha256 "$GRADLEW" "b187b4c52e749f5760afdd6fadc31b2a98ad35fb249bf0dff03b72650f320409" "Unix wrapper must match the reviewed generated script."
 require_sha256 "$GRADLEW_BAT" "94102713eb8fb22d032397924c0f38ab2da783ba60d07054339f1190a0c4e2cd" "Windows wrapper must match the reviewed generated script."
-require_sha256 "$WRAPPER_JAR" "7d3a4ac4de1c32b59bc6a4eb8ecb8e612ccd0cf1ae1e99f66902da64df296172" "Wrapper JAR must match Gradle's published 8.14.5 checksum."
-require_sha256 "$WRAPPER_PROPERTIES" "42874592f15508aa0a9135568ad3f9705b5f35bf987591bc73dd428f2250de5d" "Wrapper properties must match the reviewed checksum contract."
+require_sha256 "$WRAPPER_JAR" "7d3a4ac4de1c32b59bc6a4eb8ecb8e612ccd0cf1ae1e99f66902da64df296172" "Wrapper JAR must match the reviewed generated artifact."
+require_sha256 "$WRAPPER_PROPERTIES" "dc61433ab2b0a18b8fd92d5f0f0b72ba2401b0393fd9d24a3d4fc3b63a314cd6" "Wrapper properties must match the reviewed checksum contract."
 
-if [ ! -f "$WRAPPER_PLAN" ] || ! grep -Fq "status: completed" "$WRAPPER_PLAN" || \
-   ! grep -Fq "fresh temporary Gradle user home" "$WRAPPER_PLAN" || \
-   ! grep -Fq "incorrect checksum was rejected" "$WRAPPER_PLAN" || \
-   ! grep -Fq 'SDK-backed `make check` passed' "$WRAPPER_PLAN" || \
-   ! grep -Fq "external working directory" "$WRAPPER_PLAN" || \
-   ! grep -Fq "hostile mutations rejected" "$WRAPPER_PLAN"; then
-  printf '%s\n' "Gradle wrapper plan must record completed local verification." >&2
-  exit 1
-fi
-
-if ! grep -Fq "classpath 'com.android.tools.build:gradle:1.0.0'" "$APP_BUILD"; then
-  printf '%s\n' "Android Gradle plugin 1.0.0 pin must remain explicit." >&2
-  exit 1
-fi
-
-for repo in "https://repo1.maven.org/maven2" "https://dl.google.com/dl/android/maven2"; do
-  if ! grep -Fq "$repo" "$APP_BUILD"; then
-    printf '%s\n' "Application build must include repository: $repo" >&2
+for contract in \
+  "id 'com.android.application' version '9.2.0' apply false"; do
+  if ! grep -Fq "$contract" "$ROOT_BUILD"; then
+    printf '%s\n' "Root build must preserve Android Gradle Plugin contract: $contract" >&2
     exit 1
   fi
 done
 
-if grep -Fq "jcenter()" "$APP_BUILD"; then
-  printf '%s\n' "Application build must not use JCenter." >&2
-  exit 1
-fi
-
-if grep -Fq "com.google.android:support-v4" "$APP_BUILD"; then
-  printf '%s\n' "Obsolete com.google.android support-v4 artifact must not be declared with Android support-v4." >&2
-  exit 1
-fi
-
-if ! grep -Fq 'compile "com.android.support:support-v4:21.0.2"' "$APP_BUILD"; then
-  printf '%s\n' "Android support-v4 21.0.2 dependency must remain explicit." >&2
-  exit 1
-fi
-
-for dep in \
-  'compile "com.android.support:support-v13:21.0.2"' \
-  'compile "com.android.support:cardview-v7:21.0.2"'; do
-  if ! grep -Fq "$dep" "$APP_BUILD"; then
-    printf '%s\n' "Missing support dependency: $dep" >&2
+for repository_contract in "google()" "mavenCentral()" "gradlePluginPortal()"; do
+  if ! grep -Fq "$repository_contract" "$SETTINGS"; then
+    printf '%s\n' "Settings must preserve supported repository contract: $repository_contract" >&2
     exit 1
   fi
 done
 
-if ! grep -Fq 'buildToolsVersion "24.0.3"' "$APP_BUILD"; then
-  printf '%s\n' "Application build must use the installed build-tools 24.0.3 baseline." >&2
+if grep -Eq 'jcenter\(\)|repo1\.maven\.org|dl\.google\.com/dl/android/maven2' \
+    "$ROOT_BUILD" "$SETTINGS" "$APP_BUILD"; then
+  printf '%s\n' "Build configuration must not restore legacy repository declarations." >&2
   exit 1
 fi
 
-if ! grep -Fq "disable 'LintError'" "$APP_BUILD"; then
-  printf '%s\n' "Legacy lint must suppress only the missing API database infrastructure issue." >&2
+for build_contract in \
+  "namespace = 'com.example.android.camera2basic'" \
+  "testNamespace = 'com.example.android.camera2basic.tests'" \
+  "enableKotlin = false" \
+  "compileSdk = 36" \
+  "buildToolsVersion = '36.1.0'" \
+  "applicationId = 'com.example.android.camera2basic'" \
+  "minSdk = 21" \
+  "targetSdk = 36" \
+  "testInstrumentationRunner = 'androidx.test.runner.AndroidJUnitRunner'" \
+  "sourceCompatibility = JavaVersion.VERSION_17" \
+  "targetCompatibility = JavaVersion.VERSION_17" \
+  "warningsAsErrors = true" \
+  "androidTestImplementation 'androidx.test:core:1.7.0'" \
+  "androidTestImplementation 'androidx.test.ext:junit:1.3.0'" \
+  "androidTestImplementation 'androidx.test:runner:1.7.0'"; do
+  if ! grep -Fq "$build_contract" "$APP_BUILD"; then
+    printf '%s\n' "Application build must preserve modern contract: $build_contract" >&2
+    exit 1
+  fi
+done
+
+if grep -Eq '(^|[[:space:]])(compile|implementation|api)[[:space:]]+['"'"']' "$APP_BUILD" || \
+   grep -Eq 'com\.android\.support|androidx\.(appcompat|fragment|cardview)' "$APP_BUILD"; then
+  printf '%s\n' "Application runtime dependency graph must remain empty." >&2
   exit 1
 fi
 
-if ! grep -Fq "compileSdkVersion 21" "$APP_BUILD"; then
-  printf '%s\n' "compileSdkVersion 21 must remain explicit." >&2
-  exit 1
-fi
-
-if ! grep -Fq "minSdkVersion 21" "$APP_BUILD"; then
-  printf '%s\n' "minSdkVersion 21 must remain explicit." >&2
-  exit 1
-fi
-
-if ! grep -Fq "targetSdkVersion 21" "$APP_BUILD"; then
-  printf '%s\n' "targetSdkVersion 21 must remain explicit." >&2
+if ! grep -Fq 'android.useAndroidX=true' "$GRADLE_PROPERTIES"; then
+  printf '%s\n' "AndroidX must be enabled for the instrumentation-only test graph." >&2
   exit 1
 fi
 
@@ -419,28 +414,103 @@ if ! grep -Fq "android.permission.CAMERA" "$MANIFEST"; then
   exit 1
 fi
 
+for manifest_contract in \
+  'android:name="android.hardware.camera.any"' \
+  'android:required="true"' \
+  'android:exported="true"' \
+  'android:dataExtractionRules="@xml/data_extraction_rules"' \
+  'android:fullBackupContent="@xml/backup_rules"'; do
+  if ! grep -Fq "$manifest_contract" "$MANIFEST"; then
+    printf '%s\n' "Manifest must preserve Android 16 contract: $manifest_contract" >&2
+    exit 1
+  fi
+done
+
 if ! grep -Fq 'android:allowBackup="false"' "$MANIFEST"; then
   printf '%s\n' "CameraApp backup must stay disabled for captured camera state." >&2
   exit 1
 fi
 
-if ! grep -Fq 'package="com.example.android.camera2basic"' "$MANIFEST"; then
-  printf '%s\n' "Manifest package must remain com.example.android.camera2basic." >&2
+if grep -Fq 'package=' "$MANIFEST"; then
+  printf '%s\n' "Application package identity must be owned by the Gradle namespace DSL." >&2
   exit 1
 fi
 
-if [ "$(grep -c '^<?xml' "$TEST_MANIFEST")" -ne 1 ]; then
-  printf '%s\n' "Instrumentation manifest must contain exactly one XML declaration." >&2
+if ! grep -Fq '<manifest />' "$TEST_MANIFEST" || \
+   grep -Eq '<instrumentation|package=' "$TEST_MANIFEST"; then
+  printf '%s\n' "Instrumentation manifest must remain namespace-owned without legacy runner metadata." >&2
   exit 1
 fi
 
-if grep -Fq "getSupportFragmentManager()" "$TEST_FIXTURE"; then
-  printf '%s\n' "Instrumentation fixture must use platform fragments." >&2
+if grep -Eq 'android\.test|ActivityInstrumentationTestCase2' "$TEST_FIXTURE"; then
+  printf '%s\n' "Instrumentation fixture must not restore removed platform test APIs." >&2
   exit 1
 fi
 
-if ! grep -Fq "getFragmentManager().findFragmentById(R.id.container)" "$TEST_FIXTURE"; then
-  printf '%s\n' "Instrumentation fixture must locate the platform fragment by container ID." >&2
+for test_contract in \
+  '@RunWith(AndroidJUnit4.class)' \
+  'ActivityScenario.launch(CameraActivity.class)' \
+  'getFragmentManager().findFragmentById(R.id.container)' \
+  'assertNotNull("Camera fragment is null", fragment)'; do
+  if ! grep -Fq "$test_contract" "$TEST_FIXTURE"; then
+    printf '%s\n' "Instrumentation fixture must preserve current smoke contract: $test_contract" >&2
+    exit 1
+  fi
+done
+
+ensure_line=$(grep -n 'if (!ensureCameraPermission(activity))' "$FRAGMENT" | head -n 1 | cut -d: -f1)
+setup_line=$(grep -n 'setUpCameraOutputs(width, height);' "$FRAGMENT" | head -n 1 | cut -d: -f1)
+lock_line=$(grep -n 'mCameraOpenCloseLock.tryAcquire' "$FRAGMENT" | head -n 1 | cut -d: -f1)
+recheck_line=$(grep -n 'activity.checkSelfPermission(Manifest.permission.CAMERA)' "$FRAGMENT" | head -n 1 | cut -d: -f1)
+if [ -z "$ensure_line" ] || [ -z "$setup_line" ] || [ -z "$recheck_line" ] || [ -z "$lock_line" ] || \
+   [ "$ensure_line" -ge "$setup_line" ] || [ "$recheck_line" -ge "$lock_line" ]; then
+  printf '%s\n' "Camera permission must be checked before output setup and lock acquisition." >&2
+  exit 1
+fi
+
+for permission_contract in \
+  'mCameraPermissionRequestPending' \
+  'requestPermissions(new String[]{Manifest.permission.CAMERA}, REQUEST_CAMERA_PERMISSION)' \
+  'public void onRequestPermissionsResult' \
+  'mCameraPermissionRequestPending = false' \
+  'public void onDestroyView()' \
+  'mTextureView = null' \
+  'isResumed() && mTextureView != null && mTextureView.isAvailable()' \
+  'R.string.camera_permission_denied'; do
+  if ! grep -Fq "$permission_contract" "$FRAGMENT"; then
+    printf '%s\n' "Camera permission flow must preserve contract: $permission_contract" >&2
+    exit 1
+  fi
+done
+
+if [ "$(grep -Foc 'android:id="@+id/controls"' "$PORTRAIT_LAYOUT")" -ne 1 ] || \
+   ! grep -Fq 'setOnApplyWindowInsetsListener' "$FRAGMENT" || \
+   ! grep -Fq 'getSystemWindowInsetBottom()' "$FRAGMENT"; then
+  printf '%s\n' "Camera controls must preserve target-36 system-inset protection." >&2
+  exit 1
+fi
+
+for backup_file in "$BACKUP_RULES" "$DATA_EXTRACTION_RULES"; do
+  if ! grep -Fq '<exclude domain="root" path="." />' "$backup_file"; then
+    printf '%s\n' "Backup and device-transfer rules must exclude app camera state." >&2
+    exit 1
+  fi
+done
+
+for workflow_contract in \
+  'actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654' \
+  'java-version: "17"' \
+  'run: |' \
+  '"$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" "build-tools;36.1.0"' \
+  'timeout 12m make check'; do
+  if ! grep -Fq "$workflow_contract" "$CI_WORKFLOW"; then
+    printf '%s\n' "CI must preserve Android 16 toolchain contract: $workflow_contract" >&2
+    exit 1
+  fi
+done
+
+if grep -Fq 'android-actions/setup-android@' "$CI_WORKFLOW"; then
+  printf '%s\n' "CI must not use actions outside this repository's allowed Actions policy." >&2
   exit 1
 fi
 
@@ -657,14 +727,8 @@ if ! grep -Fq "permissions:" "$ROOT_DIR/.github/workflows/check.yml" ||
   exit 1
 fi
 
-if ! grep -Fq 'ANDROID_HOME: ""' "$ROOT_DIR/.github/workflows/check.yml" ||
-  ! grep -Fq 'ANDROID_SDK_ROOT: ""' "$ROOT_DIR/.github/workflows/check.yml"; then
-  printf '%s\n' "GitHub Actions must clear hosted Android SDK variables for the legacy SDK-free baseline." >&2
-  exit 1
-fi
-
 if ! grep -Fq "workflow_dispatch:" "$ROOT_DIR/.github/workflows/check.yml" ||
-  ! grep -Fq "timeout-minutes: 5" "$ROOT_DIR/.github/workflows/check.yml"; then
+  ! grep -Fq "timeout-minutes: 15" "$ROOT_DIR/.github/workflows/check.yml"; then
   printf '%s\n' "GitHub Actions check workflow must support bounded manual verification." >&2
   exit 1
 fi
@@ -672,14 +736,14 @@ fi
 if [ "$(grep -Ec '^[[:space:]]*permissions:' "$CI_WORKFLOW")" -ne 1 ] || \
    [ "$(grep -Ec '^[[:space:]]+contents:[[:space:]]*read[[:space:]]*$' "$CI_WORKFLOW")" -ne 1 ] || \
    grep -Eq 'write-all|:[[:space:]]*write|continue-on-error:[[:space:]]*true|if:[[:space:]]*false' "$CI_WORKFLOW" || \
-   [ "$(grep -Ec '^[[:space:]]*(-[[:space:]]+)?run:' "$CI_WORKFLOW")" -ne 1 ]; then
-  printf '%s\n' "Check workflow must keep exact read-only permissions and one required command." >&2
+   [ "$(grep -Ec '^[[:space:]]*(-[[:space:]]+)?run:' "$CI_WORKFLOW")" -ne 2 ]; then
+  printf '%s\n' "Check workflow must keep exact read-only permissions and two required commands." >&2
   exit 1
 fi
 
 if ! grep -Fq "distributionSha256Sum" "$README" || \
    ! grep -Fq "does not persist checkout credentials" "$README" || \
-   ! grep -Fq "generated Gradle 8.14.5 bootstrap" "$ROOT_DIR/SECURITY.md" || \
+   ! grep -Fq "Gradle 9.5.1 wrapper authenticates" "$ROOT_DIR/SECURITY.md" || \
    ! grep -Fq "checksum-verified direct wrapper" "$ROOT_DIR/VISION.md" || \
    ! grep -Fq "authenticated Gradle wrapper" "$ROOT_DIR/CHANGES.md"; then
   printf '%s\n' "Documentation must describe authenticated wrapper and checkout boundaries." >&2
@@ -691,22 +755,35 @@ if ! grep -Fq "local.properties" "$README"; then
   exit 1
 fi
 
-if ! grep -Fq "Android Build Tools v24.0.3" "$README"; then
+for plan_contract in \
+  "status: completed" \
+  "## Status: Completed" \
+  "## Verification Results" \
+  "make -f /absolute/path/to/Makefile check" \
+  "Thirteen isolated hostile mutations were rejected" \
+  "No camera-capable emulator or physical device was available"; do
+  if ! grep -Fq "$plan_contract" "$ANDROID_16_PLAN"; then
+    printf '%s\n' "Android 16 migration plan must preserve completion evidence: $plan_contract" >&2
+    exit 1
+  fi
+done
+
+if ! grep -Fq "Android Build Tools 36.1.0" "$README"; then
   printf '%s\n' "README must document the build-tools baseline." >&2
   exit 1
 fi
 
-if ! grep -Fq "LintError" "$README"; then
-  printf '%s\n' "README must document the scoped legacy lint suppression." >&2
+if ! grep -Fq "only preview-SDK availability advisories are disabled" "$README"; then
+  printf '%s\n' "README must document the scoped preview-SDK lint suppression." >&2
   exit 1
 fi
 
-if ! grep -Fq "./gradlew lint --no-daemon" "$README"; then
+if ! grep -Fq "./gradlew :Application:lintDebug :Application:lintRelease --no-daemon" "$README"; then
   printf '%s\n' "README must document the lint gate." >&2
   exit 1
 fi
 
-if ! grep -Fq "./gradlew assembleDebug --no-daemon" "$README"; then
+if ! grep -Fq "./gradlew :Application:assembleDebug --no-daemon" "$README"; then
   printf '%s\n' "README must document the debug assemble gate." >&2
   exit 1
 fi
@@ -788,8 +865,8 @@ if ! grep -Fq 'ROOT := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))' "$ROOT_DI
   exit 1
 fi
 
-if [ "$(grep -Fc '$(GRADLE_COMMAND) -p "$(ROOT)"' "$ROOT_DIR/Makefile")" -ne 2 ]; then
-  printf '%s\n' "Makefile must root both lint and build Gradle tasks." >&2
+if [ "$(grep -Fc '$(GRADLE_COMMAND) -p "$(ROOT)"' "$ROOT_DIR/Makefile")" -ne 3 ]; then
+  printf '%s\n' "Makefile must root lint, test, and build Gradle tasks." >&2
   exit 1
 fi
 
