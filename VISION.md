@@ -35,6 +35,8 @@ Priority:
 - Keep unsupported-camera dialogs tolerant of detached activities
 - Keep image capture callbacks tolerant of lifecycle and backpressure edges
 - Keep rejected image-save handoffs from leaking reader capacity
+- CameraApp reports picture-save success only after file output closes
+  successfully
 - Keep camera app data out of platform backup by default
 - Keep UI copy from exposing app-private captured-image paths
 - Make Android SDK and build-tool requirements visible

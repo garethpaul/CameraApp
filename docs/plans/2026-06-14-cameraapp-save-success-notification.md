@@ -1,6 +1,6 @@
 # CameraApp Save Success Notification
 
-Status: Planned
+Status: Completed
 
 ## Problem
 
@@ -67,6 +67,20 @@ events and that only the latter produces the success notification.
   closure, documentation drift, and incomplete plan evidence.
 - Audit the exact intended diff, generated Gradle artifacts, whitespace,
   conflict markers, and credential-shaped additions.
+
+## Verification Completed
+
+- `sh -n scripts/check-baseline.sh` and the focused portable checker passed.
+- SDK-backed repository-root and external-directory `make check` passed with
+  JDK 17, SDK 36, Build Tools 36.1.0, zero-finding debug/release lint,
+  instrumentation APK assembly, and debug app APK assembly.
+- Seven isolated mutations were rejected for premature notification, missing
+  result-handler transfer, success before cleanup, success on I/O failure,
+  missing image closure, documentation drift, and reopened plan status.
+- Exact diff, generated-artifact, whitespace, conflict-marker, and
+  credential-pattern audits passed.
+- No camera hardware, storage-failure injection, emulator, or physical-device
+  scenario was executed.
 
 ## Scope Boundaries
 
