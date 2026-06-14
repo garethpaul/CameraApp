@@ -29,6 +29,7 @@ INACTIVE_TEMPLATE_PLAN="$ROOT_DIR/docs/plans/2026-06-13-cameraapp-inactive-templ
 WINDOW_BACKGROUND_PLAN="$ROOT_DIR/docs/plans/2026-06-13-cameraapp-window-background-overdraw.md"
 XXXHDPI_ICON_PLAN="$ROOT_DIR/docs/plans/2026-06-13-cameraapp-xxxhdpi-icons.md"
 ANDROID_16_PLAN="$ROOT_DIR/docs/plans/2026-06-14-android-16-toolchain-migration.md"
+IMAGE_HANDOFF_PLAN="$ROOT_DIR/docs/plans/2026-06-14-cameraapp-image-handoff-ownership.md"
 XXXHDPI_LAUNCHER="$ROOT_DIR/Application/src/main/res/drawable-xxxhdpi/ic_launcher.png"
 XXXHDPI_INFO="$ROOT_DIR/Application/src/main/res/drawable-xxxhdpi/ic_action_info.png"
 ACTIVITY_LAYOUT="$ROOT_DIR/Application/src/main/res/layout/activity_camera.xml"
@@ -514,7 +515,7 @@ if grep -Fq 'android-actions/setup-android@' "$CI_WORKFLOW"; then
   exit 1
 fi
 
-if ! grep -Fq "mBackgroundHandler == null || mFile == null" "$FRAGMENT"; then
+if ! grep -Fq "backgroundHandler == null || mFile == null" "$FRAGMENT"; then
   printf '%s\n' "ImageReader callback must guard missing handler/file state." >&2
   exit 1
 fi
@@ -690,6 +691,40 @@ fi
 
 if ! grep -Fq "mImage == null || mFile == null" "$FRAGMENT"; then
   printf '%s\n' "ImageSaver must guard missing image/file state." >&2
+  exit 1
+fi
+
+image_callback=$(sed -n '/public void onImageAvailable(ImageReader reader)/,/^        }$/p' "$FRAGMENT")
+image_callback_compact=$(printf '%s\n' "$image_callback" | tr '\n' ' ' | tr -s '[:space:]' ' ')
+for image_handoff_contract in \
+  'Handler backgroundHandler = mBackgroundHandler;' \
+  'if (backgroundHandler == null || mFile == null)' \
+  'if (!backgroundHandler.post(new ImageSaver(image, mFile)) && image != null)' \
+  'image.close();'; do
+  if ! printf '%s\n' "$image_callback" | grep -Fq "$image_handoff_contract"; then
+    printf '%s\n' "Image callback handoff ownership changed: $image_handoff_contract" >&2
+    exit 1
+  fi
+done
+if ! printf '%s\n' "$image_callback_compact" | grep -Fq \
+    'if (!backgroundHandler.post(new ImageSaver(image, mFile)) && image != null) { image.close(); }' || \
+   [ "$(printf '%s\n' "$image_callback" | grep -Fc 'backgroundHandler.post(new ImageSaver(image, mFile))')" -ne 1 ] || \
+   printf '%s\n' "$image_callback" | grep -Fq 'mBackgroundHandler.post(new ImageSaver(image, mFile))'; then
+  printf '%s\n' "Rejected image-save posts must close the callback-owned image exactly once." >&2
+  exit 1
+fi
+if [ ! -f "$IMAGE_HANDOFF_PLAN" ] || \
+   ! grep -Fq 'Status: Completed' "$IMAGE_HANDOFF_PLAN" || \
+   ! grep -Fq 'make check' "$IMAGE_HANDOFF_PLAN" || \
+   ! grep -Fq 'hostile mutations' "$IMAGE_HANDOFF_PLAN"; then
+  printf '%s\n' "Camera image handoff plan must record completed verification." >&2
+  exit 1
+fi
+if ! tr '\n' ' ' < "$ROOT_DIR/AGENTS.md" | tr -s '[:space:]' ' ' | grep -Fq 'rejected image-save handoffs close the callback-owned image' || \
+   ! tr '\n' ' ' < "$README" | tr -s '[:space:]' ' ' | grep -Fq 'rejected background-handler handoffs close the acquired image' || \
+   ! grep -Fq 'Closed callback-owned images when the background handler rejects' "$ROOT_DIR/CHANGES.md" || \
+   ! grep -Fq 'Keep rejected image-save handoffs from leaking reader capacity' "$ROOT_DIR/VISION.md"; then
+  printf '%s\n' "Camera image handoff ownership documentation is incomplete." >&2
   exit 1
 fi
 

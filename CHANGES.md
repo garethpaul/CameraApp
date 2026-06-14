@@ -14,6 +14,8 @@
   lint, app APK assembly, and instrumentation APK assembly.
 - Retained an authenticated Gradle wrapper and non-persisted, read-only hosted
   checkout credentials on the modern toolchain.
+- Closed callback-owned images when the background handler rejects a save
+  runnable during lifecycle shutdown.
 
 ## 2026-06-13
 

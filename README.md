@@ -131,6 +131,9 @@ retain the lint, APK, manifest, and static ordering evidence.
   so queued UI messages do not retain a detached camera fragment.
 - ImageReader backpressure is handled by dropping a backed-up capture callback
   before it can crash the still-image save path.
+- During background-thread shutdown, rejected background-handler handoffs close
+  the acquired image so the two-slot reader cannot be exhausted by an ownerless
+  capture.
 - Android backup is disabled for the app because the sample handles camera
   capture state and app-specific image output.
 - Resume skips camera open until the texture view is recreated, avoiding retained

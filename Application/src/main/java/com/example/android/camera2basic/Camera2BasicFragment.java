@@ -242,13 +242,16 @@ public class Camera2BasicFragment extends Fragment implements View.OnClickListen
                 Log.w(TAG, "Dropping image because ImageReader is full.", e);
                 return;
             }
-            if (mBackgroundHandler == null || mFile == null) {
+            Handler backgroundHandler = mBackgroundHandler;
+            if (backgroundHandler == null || mFile == null) {
                 if (image != null) {
                     image.close();
                 }
                 return;
             }
-            mBackgroundHandler.post(new ImageSaver(image, mFile));
+            if (!backgroundHandler.post(new ImageSaver(image, mFile)) && image != null) {
+                image.close();
+            }
         }
 
     };
