@@ -2,6 +2,8 @@
 
 ## 2026-06-14
 
+- Added an exact-head CameraApp device verification matrix with privacy-safe
+  evidence fields and every runtime row explicitly unexecuted.
 - Migrated the build to Android Gradle Plugin 9.2.0, Gradle 9.5.1, JDK 17,
   compile/target SDK 36, and Android Build Tools 36.1.0.
 - Removed unused support-library runtime dependencies while retaining

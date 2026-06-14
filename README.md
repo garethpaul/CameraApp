@@ -105,6 +105,11 @@ When a camera-capable runtime is unavailable, do not claim preview, permission,
 or capture behavior was exercised. Record the missing device validation and
 retain the lint, APK, manifest, and static ordering evidence.
 
+Use [`DEVICE_VERIFICATION.md`](DEVICE_VERIFICATION.md) to record exact-head
+emulator or physical-camera evidence. Keep unavailable runtime scenarios as
+explicit unexecuted rows rather than treating lint, APK assembly, or static
+contracts as camera execution.
+
 ## Configuration and Secrets
 
 - Detected references to Twitter. Keep API keys, OAuth credentials, tokens, and account-specific values in local configuration only.

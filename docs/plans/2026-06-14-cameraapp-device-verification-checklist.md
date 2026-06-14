@@ -1,6 +1,6 @@
 # CameraApp Device Verification Checklist
 
-Status: In Progress
+Status: Completed
 
 ## Problem
 
@@ -33,4 +33,9 @@ exact-head evidence for camera-capable emulator or physical-device behavior.
 
 ## Verification
 
-- Pending implementation and bounded repository validation.
+- `sh -n scripts/check-baseline.sh` and the focused baseline checker passed.
+- SDK-backed `make check` passed from the repository and from an external
+  working directory with JDK 17, SDK 36, and Build Tools 36.1.0.
+- Twelve isolated hostile mutations of the checklist, guidance, and completed
+  plan contracts were rejected by `scripts/check-baseline.sh`.
+- No Android emulator, physical camera, permission interaction, live preview, capture, orientation, or lifecycle scenario was executed; every runtime row remains `not run`.
