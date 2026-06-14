@@ -11,7 +11,7 @@ The repository is useful as a preserved Android camera API sample with the
 original multi-directory sample structure. Project background lives in
 [`README.md`](README.md).
 
-The goal is to keep the sample recognizable, buildable in the right legacy
+The goal is to keep the sample recognizable, buildable with a supported Android
 toolchain, and safe around camera permissions and captured images.
 
 The current focus is:
@@ -29,22 +29,27 @@ Priority:
 - Keep unreachable template resource surface out of the packaged camera sample
 - Keep a single-owner camera window background without redundant full-screen paint
 - Keep a complete xxxhdpi icon family and a zero-finding Android lint gate
+- Keep Android 16 edge-to-edge insets away from interactive camera controls
+- Keep camera open and output setup behind the runtime permission grant
 - Keep unsupported-camera recovery tolerant of detached fragments
 - Keep unsupported-camera dialogs tolerant of detached activities
 - Keep image capture callbacks tolerant of lifecycle and backpressure edges
 - Keep camera app data out of platform backup by default
 - Keep UI copy from exposing app-private captured-image paths
 - Make Android SDK and build-tool requirements visible
-- Keep the SDK-free `make check` baseline running in GitHub Actions
-- Keep the legacy Gradle runtime behind a checksum-verified direct wrapper
+- Keep the SDK-free source checker available for focused mutation tests
+- Keep the full JDK 17, SDK 36, lint, test-APK, and app-APK gate in GitHub Actions
+- Keep Gradle 9.5.1 behind a checksum-verified direct wrapper
+- Keep the application runtime dependency graph empty
 - Avoid changing camera behavior without device verification notes
 
 Next priorities:
 
-- Modernize Gradle, SDK levels, and support dependencies in a dedicated pass
-- Add README notes for current Android Studio import and build expectations
-- Add tests or manual verification steps for preview and capture behavior
-- Review runtime permission handling for modern Android versions
+- Exercise permission grant, denial, resume, preview, and capture behavior on a
+  camera-capable API-23+ device or emulator
+- Add instrumentation coverage for runtime flows when a deterministic
+  camera-capable CI environment is available
+- Reassess the two preview-SDK lint advisories when Android API 37 is stable
 
 Contribution rules:
 
@@ -68,7 +73,7 @@ capture.
 ## What We Will Not Merge (For Now)
 
 - Camera-data upload or analytics
-- Broad project migrations mixed with capture behavior changes
+- Broad unrelated migrations mixed with capture behavior changes
 - Attribution or license removals
 - Permission expansion without documentation
 

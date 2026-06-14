@@ -33,47 +33,36 @@
 */
 package com.example.android.camera2basic.tests;
 
-import com.example.android.camera2basic.*;
+import static org.junit.Assert.assertNotNull;
 
-import android.test.ActivityInstrumentationTestCase2;
+import androidx.test.core.app.ActivityScenario;
+import androidx.test.ext.junit.runners.AndroidJUnit4;
+
+import com.example.android.camera2basic.Camera2BasicFragment;
+import com.example.android.camera2basic.CameraActivity;
+import com.example.android.camera2basic.R;
+
+import org.junit.Test;
+import org.junit.runner.RunWith;
 
 /**
 * Tests for Camera2Basic sample.
 */
-public class SampleTests extends ActivityInstrumentationTestCase2<CameraActivity> {
-
-    private CameraActivity mTestActivity;
-    private Camera2BasicFragment mTestFragment;
-
-    public SampleTests() {
-        super(CameraActivity.class);
-    }
-
-    @Override
-    protected void setUp() throws Exception {
-        super.setUp();
-
-        // Starts the activity under test using the default Intent with:
-        // action = {@link Intent#ACTION_MAIN}
-        // flags = {@link Intent#FLAG_ACTIVITY_NEW_TASK}
-        // All other fields are null or empty.
-        mTestActivity = getActivity();
-        mTestFragment = (Camera2BasicFragment)
-            mTestActivity.getFragmentManager().findFragmentById(R.id.container);
-    }
+@RunWith(AndroidJUnit4.class)
+public class SampleTests {
 
     /**
     * Test if the test fixture has been set up correctly.
     */
-    public void testPreconditions() {
-        //Try to add a message to add context to your assertions. These messages will be shown if
-        //a tests fails and make it easy to understand why a test failed
-        assertNotNull("mTestActivity is null", mTestActivity);
-        assertNotNull("mTestFragment is null", mTestFragment);
+    @Test
+    public void activityCreatesCameraFragmentBeforePermissionGrant() {
+        try (ActivityScenario<CameraActivity> scenario =
+                     ActivityScenario.launch(CameraActivity.class)) {
+            scenario.onActivity(activity -> {
+                Camera2BasicFragment fragment = (Camera2BasicFragment)
+                        activity.getFragmentManager().findFragmentById(R.id.container);
+                assertNotNull("Camera fragment is null", fragment);
+            });
+        }
     }
-
-    /**
-    * Add more tests below.
-    */
-
 }

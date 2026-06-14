@@ -21,9 +21,11 @@
 - Lint/static checks: `make lint`
 - Tests: `make test`
 - Build: `make build`
-- Android unit tests when the SDK is configured: `./gradlew test`
-- Android debug build when the SDK is configured: `./gradlew assembleDebug`
-- If a command above skips because a platform toolchain is missing, verify on a machine with that SDK before claiming platform behavior is tested.
+- Source-only contract: `scripts/check-baseline.sh`
+- Android instrumentation APK: `./gradlew :Application:assembleDebugAndroidTest`
+- Android debug build: `./gradlew :Application:assembleDebug`
+- Use JDK 17, SDK platform 36, and Build Tools 36.1.0. Runtime permission,
+  preview, and capture claims additionally require a camera-capable device.
 
 ## Coding conventions
 
@@ -46,7 +48,16 @@
 ## Safety and gotchas
 
 - Detected references to Twitter. Keep API keys, OAuth credentials, tokens, and account-specific values in local configuration only.
-- This looks like a legacy Android project or sample. Expect Android SDK, Gradle, and support-library versions to matter.
+- This is a preserved Camera2 sample on AGP 9.2.0 and Gradle 9.5.1. Keep JDK
+  17, SDK 36, Build Tools 36.1.0, and the wrapper checksum aligned.
+- The application runtime dependency graph is empty; AndroidX belongs only in
+  instrumentation test configurations.
+- API-23+ camera setup and open operations must remain ordered after the
+  runtime permission grant.
+- Retained fragments must clear texture-view references in `onDestroyView`
+  before delayed permission results can be delivered.
+- Target-36 edge-to-edge behavior must keep interactive camera controls inside
+  system-bar insets without shrinking the full-bleed preview.
 - Camera background thread startup is idempotent; repeated resume/start paths must not replace an already-running handler thread.
 - ImageReader backpressure is handled by dropping a backed-up capture callback before it can crash the still-image save path.
 - Android backup is disabled for the app because the sample handles camera capture state and app-specific image output.

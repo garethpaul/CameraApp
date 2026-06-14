@@ -32,9 +32,14 @@ Helpful reports include:
 - Review found file, document, data, or media parsing flows; changes in those areas should receive security-focused review before merge.
 - Dependency manifests detected: build.gradle. Dependency updates should preserve lockfiles when present and avoid introducing packages without a clear maintenance reason.
 - GitHub Actions runs the guarded `make check` baseline with a commit-pinned
-  checkout action, read-only repository access, and hosted Android SDK
-  variables cleared; review workflow, Gradle, and checker changes as part of
-  the supply-chain surface.
+  checkout action, read-only repository access, JDK 17, and pinned Android SDK
+  components; review workflow, Gradle, and checker changes as part of the
+  supply-chain surface.
+- Camera access is requested at runtime on API 23 and newer. Camera output
+  configuration and `CameraManager.openCamera` must remain unreachable until
+  permission is granted.
+- Application runtime dependencies are intentionally absent. AndroidX
+  dependencies are limited to the instrumentation test configuration.
 
 ## Mobile Privacy Notes
 
@@ -42,10 +47,10 @@ If this project requests device permissions such as location, camera, microphone
 
 ## Dependency and Supply Chain Security
 
-The generated Gradle 8.14.5 bootstrap retains the legacy Gradle 2.2.1 runtime
-and authenticates its official archive before execution. Review all four
-wrapper files together. Hosted Check also uses a read-only, non-persisted
-checkout token so later steps cannot reuse repository credentials.
+The Gradle 9.5.1 wrapper authenticates its official binary distribution with a
+checked-in SHA-256 before execution. Review all four wrapper files together.
+Hosted Check also uses read-only permissions and a non-persisted checkout token
+so later steps cannot reuse repository credentials.
 
 Dependency updates should come from trusted package managers and should keep lockfiles in sync when lockfiles exist. Do not commit credentials, private keys, tokens, generated secrets, or machine-local configuration. If a vulnerability depends on a compromised package, typosquatting risk, insecure transitive dependency, or unsafe build step, include the package name, affected version, and the path through which it is used.
 

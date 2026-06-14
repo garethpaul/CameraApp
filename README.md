@@ -35,8 +35,9 @@ Additional scan context:
 ### Prerequisites
 
 - Git
-- Android Studio or a compatible Android SDK
-- Gradle or the checked-in Gradle wrapper when present
+- JDK 17
+- Android SDK platform 36 and Android Build Tools 36.1.0
+- The checked-in Gradle wrapper; a system Gradle installation is not required
 
 ### Setup
 
@@ -51,44 +52,58 @@ Configure the Android SDK with `ANDROID_HOME` or an untracked `local.properties`
 sdk.dir=/path/to/android-sdk
 ```
 
-The setup commands above are derived from repository files. Legacy mobile, Python, or JavaScript samples may require older SDKs or package versions than a modern workstation uses by default.
+Set `JAVA_HOME` to JDK 17 and `ANDROID_HOME` (or `ANDROID_SDK_ROOT`) to the
+Android SDK before invoking the verification targets.
 
 ## Running or Using the Project
 
-- Use Android Studio to open the project or run `./gradlew assembleDebug` when the Android SDK is configured.
-- This legacy sample uses Gradle 2.2.1, Android Gradle Plugin 1.0.0, compile/min/target SDK 21, and Android Build Tools v24.0.3.
+- Use Android Studio to open the project or run the checked-in wrapper when the
+  Android SDK is configured.
+- The project uses Gradle 9.5.1, Android Gradle Plugin 9.2.0, compile/target SDK
+  36, min SDK 21, and Android Build Tools 36.1.0.
+- The application runtime dependency graph is intentionally empty. AndroidX is
+  used only by the instrumentation smoke test.
 
 ## Testing and Verification
 
 Run the SDK-free source baseline check first:
 
 ```sh
-make check
 scripts/check-baseline.sh
 ```
 
-GitHub Actions runs `make check` on pushes, pull requests, and manual
-dispatches. The workflow uses a commit-pinned checkout action, read-only
-repository access, and a bounded runtime. It explicitly clears hosted Android
-SDK variables so the legacy Gradle 2.2.1 project takes the documented SDK-free
-path instead of running against an incompatible modern toolchain.
-The job does not persist checkout credentials after source retrieval.
-
-Then run Gradle after Android SDK configuration is available:
+Run the complete build gate with explicit toolchain paths:
 
 ```sh
-ANDROID_HOME=/home/gjones/android-sdk ./gradlew lint --no-daemon
-ANDROID_HOME=/home/gjones/android-sdk ./gradlew assembleDebug --no-daemon
+JAVA_HOME=/path/to/jdk-17 ANDROID_HOME=/path/to/android-sdk make check
 ```
 
-The direct wrapper uses a Gradle 8.14.5-generated bootstrap while retaining the
-legacy Gradle 2.2.1 runtime. Its `distributionSha256Sum` authenticates the
-official archive before execution; an empty wrapper cache therefore requires
+`make check` runs the source contract, debug and release lint, instrumentation
+APK assembly, and debug APK assembly. The lint gate requires zero findings;
+only preview-SDK availability advisories are disabled while API 37 remains a
+preview. Instrumentation tests require an Android device or emulator with
+camera support for runtime execution; the build gate compiles the test APK.
+
+Focused Gradle commands are available after Android SDK configuration:
+
+```sh
+./gradlew :Application:lintDebug :Application:lintRelease --no-daemon
+./gradlew :Application:assembleDebugAndroidTest --no-daemon
+./gradlew :Application:assembleDebug --no-daemon
+```
+
+The wrapper pins the official Gradle 9.5.1 binary distribution and authenticates
+it with `distributionSha256Sum`; an empty wrapper cache therefore requires
 access to Gradle's HTTPS distribution service.
 
-The Gradle lint configuration suppresses only the legacy `LintError` for the missing API database infrastructure issue. Instrumentation tests require an Android device or emulator with camera support.
+GitHub Actions installs JDK 17, Android SDK platform 36, and Build Tools 36.1.0,
+then runs the same `make check` gate on pushes, pull requests, and manual
+dispatches. The workflow uses commit-pinned actions, read-only repository
+access, a bounded runtime, and does not persist checkout credentials.
 
-When the required SDK or runtime is unavailable, use static checks and source review first, then verify on a machine that has the matching platform toolchain.
+When a camera-capable runtime is unavailable, do not claim preview, permission,
+or capture behavior was exercised. Record the missing device validation and
+retain the lint, APK, manifest, and static ordering evidence.
 
 ## Configuration and Secrets
 
@@ -120,6 +135,8 @@ When the required SDK or runtime is unavailable, use static checks and source re
   capture state and app-specific image output.
 - Resume skips camera open until the texture view is recreated, avoiding retained
   fragment camera work before the view hierarchy exists.
+- Retained fragments clear the texture view at view teardown, so delayed camera
+  permission results cannot reopen against a stale view hierarchy.
 - Capture completion UI does not expose the app-private output file path.
 - Picture and info controls are listener-bound only when present in the current
   layout.

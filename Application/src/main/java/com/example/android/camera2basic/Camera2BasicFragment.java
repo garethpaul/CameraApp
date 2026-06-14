@@ -16,6 +16,7 @@
 
 package com.example.android.camera2basic;
 
+import android.Manifest;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Dialog;
@@ -24,6 +25,7 @@ import android.app.Fragment;
 import android.app.FragmentManager;
 import android.content.Context;
 import android.content.DialogInterface;
+import android.content.pm.PackageManager;
 import android.content.res.Configuration;
 import android.graphics.ImageFormat;
 import android.graphics.Matrix;
@@ -42,6 +44,7 @@ import android.hardware.camera2.params.StreamConfigurationMap;
 import android.media.Image;
 import android.media.ImageReader;
 import android.os.Bundle;
+import android.os.Build;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Looper;
@@ -54,6 +57,7 @@ import android.view.Surface;
 import android.view.TextureView;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.WindowInsets;
 import android.widget.Toast;
 
 import java.io.File;
@@ -71,6 +75,8 @@ import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 
 public class Camera2BasicFragment extends Fragment implements View.OnClickListener {
+
+    private static final int REQUEST_CAMERA_PERMISSION = 1;
 
     /**
      * Conversion from screen rotation to JPEG orientation.
@@ -148,6 +154,8 @@ public class Camera2BasicFragment extends Fragment implements View.OnClickListen
      * An {@link AutoFitTextureView} for camera preview.
      */
     private AutoFitTextureView mTextureView;
+
+    private boolean mCameraPermissionRequestPending;
 
     /**
      * A {@link CameraCaptureSession } for camera preview.
@@ -429,6 +437,31 @@ public class Camera2BasicFragment extends Fragment implements View.OnClickListen
             infoButton.setOnClickListener(this);
         }
         mTextureView = (AutoFitTextureView) view.findViewById(R.id.texture);
+        final View controls = view.findViewById(R.id.controls);
+        if (controls != null) {
+            final int initialLeft = controls.getPaddingLeft();
+            final int initialTop = controls.getPaddingTop();
+            final int initialRight = controls.getPaddingRight();
+            final int initialBottom = controls.getPaddingBottom();
+            controls.setOnApplyWindowInsetsListener(new View.OnApplyWindowInsetsListener() {
+                @Override
+                public WindowInsets onApplyWindowInsets(View insetView, WindowInsets insets) {
+                    insetView.setPadding(
+                            initialLeft + insets.getSystemWindowInsetLeft(),
+                            initialTop + insets.getSystemWindowInsetTop(),
+                            initialRight + insets.getSystemWindowInsetRight(),
+                            initialBottom + insets.getSystemWindowInsetBottom());
+                    return insets;
+                }
+            });
+            controls.requestApplyInsets();
+        }
+    }
+
+    @Override
+    public void onDestroyView() {
+        mTextureView = null;
+        super.onDestroyView();
     }
 
     @Override
@@ -551,19 +584,24 @@ public class Camera2BasicFragment extends Fragment implements View.OnClickListen
      * Opens the camera specified by {@link Camera2BasicFragment#mCameraId}.
      */
     private void openCamera(int width, int height) {
+        Activity activity = getActivity();
+        if (!ensureCameraPermission(activity)) {
+            return;
+        }
         setUpCameraOutputs(width, height);
         if (mCameraId == null || mImageReader == null || mPreviewSize == null) {
             showToast("Camera unavailable");
             return;
         }
         configureTransform(width, height);
-        Activity activity = getActivity();
-        if (activity == null) {
-            return;
-        }
         CameraManager manager = (CameraManager) activity.getSystemService(Context.CAMERA_SERVICE);
         if (manager == null) {
             showToast("Camera unavailable");
+            return;
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M &&
+                activity.checkSelfPermission(Manifest.permission.CAMERA) !=
+                        PackageManager.PERMISSION_GRANTED) {
             return;
         }
         boolean cameraLockAcquired = false;
@@ -582,6 +620,46 @@ public class Camera2BasicFragment extends Fragment implements View.OnClickListen
             if (cameraLockAcquired) {
                 mCameraOpenCloseLock.release();
             }
+        }
+    }
+
+    private boolean ensureCameraPermission(Activity activity) {
+        if (activity == null) {
+            return false;
+        }
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M ||
+                activity.checkSelfPermission(Manifest.permission.CAMERA) ==
+                        PackageManager.PERMISSION_GRANTED) {
+            return true;
+        }
+        if (!mCameraPermissionRequestPending) {
+            mCameraPermissionRequestPending = true;
+            requestPermissions(new String[]{Manifest.permission.CAMERA}, REQUEST_CAMERA_PERMISSION);
+        }
+        return false;
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions,
+                                           int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode != REQUEST_CAMERA_PERMISSION) {
+            return;
+        }
+
+        mCameraPermissionRequestPending = false;
+        boolean granted = grantResults.length > 0 &&
+                grantResults[0] == PackageManager.PERMISSION_GRANTED;
+        if (granted) {
+            if (isResumed() && mTextureView != null && mTextureView.isAvailable()) {
+                openCamera(mTextureView.getWidth(), mTextureView.getHeight());
+            }
+            return;
+        }
+
+        Activity activity = getActivity();
+        if (activity != null) {
+            showToast(activity.getString(R.string.camera_permission_denied));
         }
     }
 
@@ -867,20 +945,16 @@ public class Camera2BasicFragment extends Fragment implements View.OnClickListen
 
     @Override
     public void onClick(View view) {
-        switch (view.getId()) {
-            case R.id.picture: {
-                takePicture();
-                break;
-            }
-            case R.id.info: {
-                Activity activity = getActivity();
-                if (null != activity) {
-                    new AlertDialog.Builder(activity)
-                            .setMessage(R.string.intro_message)
-                            .setPositiveButton(android.R.string.ok, null)
-                            .show();
-                }
-                break;
+        int viewId = view.getId();
+        if (viewId == R.id.picture) {
+            takePicture();
+        } else if (viewId == R.id.info) {
+            Activity activity = getActivity();
+            if (null != activity) {
+                new AlertDialog.Builder(activity)
+                        .setMessage(R.string.intro_message)
+                        .setPositiveButton(android.R.string.ok, null)
+                        .show();
             }
         }
     }

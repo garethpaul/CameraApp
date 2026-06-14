@@ -16,4 +16,5 @@
 <resources>
     <string name="picture">Picture</string>
     <string name="description_info">Info</string>
+    <string name="camera_permission_denied">Camera permission is required to show the preview and take pictures.</string>
 </resources>

@@ -1,13 +1,13 @@
 ---
 title: Android 16 Toolchain Migration
 type: modernization
-status: in_progress
+status: completed
 date: 2026-06-14
 ---
 
 # Android 16 Toolchain Migration
 
-## Status: In Progress
+## Status: Completed
 
 ## Problem Frame
 
@@ -20,7 +20,8 @@ baseline. Targeting current Android also requires runtime camera permission and
 modern manifest/build metadata that the SDK-21 sample never needed.
 
 Primary Android documentation identifies Android Gradle Plugin 9.2.0 with
-Gradle 9.4.1 and JDK 17 as the current stable compatibility line, and Android
+JDK 17 as the current stable compatibility line. Gradle 9.5.1 is the current
+stable build runtime and satisfies AGP 9.2.0's minimum, while Android
 16 development uses compile/target SDK 36 with current 36.x build tools.
 
 ## Prioritized Engineering Tasks
@@ -41,7 +42,7 @@ Gradle 9.4.1 and JDK 17 as the current stable compatibility line, and Android
 
 ### R1. Current Supported Build Toolchain
 
-- Pin Android Gradle Plugin 9.2.0 and Gradle 9.4.1.
+- Pin Android Gradle Plugin 9.2.0 and Gradle 9.5.1.
 - Pin the official Gradle distribution SHA-256 and retain wrapper URL
   validation.
 - Build under JDK 17 and fail clearly on unsupported Java runtimes.
@@ -115,7 +116,7 @@ Files:
 - Modify `settings.gradle`
 - Modify `gradle/wrapper/gradle-wrapper.properties`
 - Regenerate and verify `gradlew`, `gradlew.bat`, and
-  `gradle/wrapper/gradle-wrapper.jar` only from Gradle 9.4.1
+  `gradle/wrapper/gradle-wrapper.jar` only from current Gradle tooling
 
 Approach:
 
@@ -204,11 +205,53 @@ the implementation may ship only with compilation, lint, manifest/APK, static
 ordering, and mutation evidence, and the missing runtime coverage must remain an
 explicit risk in the plan, PR, and tracker.
 
+## Implementation Outcome
+
+- Upgraded to Android Gradle Plugin 9.2.0, Gradle 9.5.1, JDK 17,
+  compile/target SDK 36, and Build Tools 36.1.0 while preserving min SDK 21.
+- Removed all application runtime dependencies. AndroidX core, runner, and
+  JUnit integration remain confined to `androidTestImplementation`.
+- Added permission-first camera startup, one-request-at-a-time handling,
+  denial feedback, retained-view teardown, and target-36 system-bar insets for
+  interactive controls.
+- Added namespace-owned manifests, a required camera feature, explicit backup
+  and device-transfer exclusions, a current instrumentation smoke test, and a
+  full hosted SDK-backed gate.
+
+## Verification Results
+
+Completed on 2026-06-14 with JDK 17 and the Android SDK rooted at the explicit
+`JAVA_HOME` and `ANDROID_HOME` values supplied to each command:
+
+- `timeout 120 sh scripts/check-baseline.sh` passed.
+- `timeout 900 env JAVA_HOME=... ANDROID_HOME=... ANDROID_SDK_ROOT=... make check`
+  passed from the repository root.
+- `timeout 900 env JAVA_HOME=... ANDROID_HOME=... ANDROID_SDK_ROOT=... make -f /absolute/path/to/Makefile check`
+  passed from `/tmp`, proving external-working-directory resolution.
+- `./gradlew :Application:dependencies --configuration debugRuntimeClasspath --no-daemon`
+  reported `No dependencies`.
+- Debug and release lint XML reports each contained zero issues.
+- `aapt dump badging` confirmed application ID
+  `com.example.android.camera2basic`, compile SDK 36, min SDK 21, target SDK
+  36, CAMERA permission, and the complete mdpi-through-xxxhdpi launcher set.
+- The merged debug manifest retained the required camera feature, disabled
+  backup, Android 12+ extraction rules, legacy full-backup rules, and exported
+  launcher activity. The app APK contained no Kotlin runtime entries.
+- Thirteen isolated hostile mutations were rejected across AGP/wrapper drift,
+  runtime dependencies, compile SDK, permission ordering/request/teardown,
+  controls insets, backup policy, instrumentation runner, Make routing, CI SDK
+  provisioning, and README toolchain evidence.
+
+No camera-capable emulator or physical device was available. Permission grant,
+permission denial, preview, still capture, system-bar appearance, and lifecycle
+behavior therefore remain runtime qualification work and are not claimed as
+executed by this plan.
+
 ## Primary References
 
 - Android Gradle Plugin 9.2 release notes:
   https://developer.android.com/build/releases/gradle-plugin
 - Android 16 SDK setup:
   https://developer.android.com/about/versions/16/setup-sdk
-- Gradle 9.4.1 distribution checksum:
-  https://services.gradle.org/distributions/gradle-9.4.1-bin.zip.sha256
+- Gradle 9.5.1 distribution checksum:
+  https://services.gradle.org/distributions/gradle-9.5.1-bin.zip.sha256
