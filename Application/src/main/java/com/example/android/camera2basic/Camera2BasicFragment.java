@@ -61,7 +61,6 @@ import android.view.WindowInsets;
 import android.widget.Toast;
 
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -249,7 +248,8 @@ public class Camera2BasicFragment extends Fragment implements View.OnClickListen
                 }
                 return;
             }
-            if (!backgroundHandler.post(new ImageSaver(image, mFile)) && image != null) {
+            if (!backgroundHandler.post(new ImageSaver(image, mFile, mMessageHandler)) &&
+                    image != null) {
                 image.close();
             }
         }
@@ -910,7 +910,6 @@ public class Camera2BasicFragment extends Fragment implements View.OnClickListen
                 @Override
                 public void onCaptureCompleted(CameraCaptureSession session, CaptureRequest request,
                                                TotalCaptureResult result) {
-                    showToast("Picture saved");
                     unlockFocus();
                 }
             };
@@ -975,10 +974,15 @@ public class Camera2BasicFragment extends Fragment implements View.OnClickListen
          * The file we save the image into.
          */
         private final File mFile;
+        /**
+         * Weak-fragment main-thread handler for the completed save notification.
+         */
+        private final Handler mResultHandler;
 
-        public ImageSaver(Image image, File file) {
+        public ImageSaver(Image image, File file, Handler resultHandler) {
             mImage = image;
             mFile = file;
+            mResultHandler = resultHandler;
         }
 
         @Override
@@ -1001,23 +1005,20 @@ public class Camera2BasicFragment extends Fragment implements View.OnClickListen
             }
             byte[] bytes = new byte[buffer.remaining()];
             buffer.get(bytes);
-            FileOutputStream output = null;
-            try {
-                output = new FileOutputStream(mFile);
+            boolean saved = false;
+            try (FileOutputStream output = new FileOutputStream(mFile)) {
                 output.write(bytes);
-            } catch (FileNotFoundException e) {
-                e.printStackTrace();
+                saved = true;
             } catch (IOException e) {
+                saved = false;
                 e.printStackTrace();
             } finally {
                 mImage.close();
-                if (null != output) {
-                    try {
-                        output.close();
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-                }
+            }
+            if (saved && mResultHandler != null) {
+                Message message = Message.obtain();
+                message.obj = "Picture saved";
+                mResultHandler.sendMessage(message);
             }
         }
 

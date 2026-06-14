@@ -18,6 +18,8 @@
   checkout credentials on the modern toolchain.
 - Closed callback-owned images when the background handler rejects a save
   runnable during lifecycle shutdown.
+- CameraApp reports picture-save success only after file output closes
+  successfully instead of treating Camera2 capture completion as persistence.
 
 ## 2026-06-13
 

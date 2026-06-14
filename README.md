@@ -139,6 +139,8 @@ contracts as camera execution.
 - During background-thread shutdown, rejected background-handler handoffs close
   the acquired image so the two-slot reader cannot be exhausted by an ownerless
   capture.
+- CameraApp reports picture-save success only after file output closes
+  successfully; Camera2 capture completion alone does not claim persistence.
 - Android backup is disabled for the app because the sample handles camera
   capture state and app-specific image output.
 - Resume skips camera open until the texture view is recreated, avoiding retained
@@ -170,6 +172,8 @@ contracts as camera execution.
   retained-fragment texture resume guard.
 - See `docs/plans/2026-06-09-cameraapp-save-toast-path-privacy.md` for the
   capture saved-toast privacy baseline.
+- See `docs/plans/2026-06-14-cameraapp-save-success-notification.md` for the
+  success-only file-output notification boundary.
 - See `docs/plans/2026-06-09-cameraapp-control-binding-guard.md` for the
   picture/info control binding guard.
 - See `docs/plans/2026-06-09-cameraapp-error-dialog-fragment-manager.md` for

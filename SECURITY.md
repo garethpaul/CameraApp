@@ -44,6 +44,8 @@ Helpful reports include:
   permission is granted.
 - Application runtime dependencies are intentionally absent. AndroidX
   dependencies are limited to the instrumentation test configuration.
+- CameraApp reports picture-save success only after file output closes
+  successfully, avoiding false persistence claims when local storage fails.
 
 ## Mobile Privacy Notes
 

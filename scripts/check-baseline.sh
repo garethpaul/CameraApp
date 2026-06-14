@@ -31,6 +31,7 @@ XXXHDPI_ICON_PLAN="$ROOT_DIR/docs/plans/2026-06-13-cameraapp-xxxhdpi-icons.md"
 ANDROID_16_PLAN="$ROOT_DIR/docs/plans/2026-06-14-android-16-toolchain-migration.md"
 IMAGE_HANDOFF_PLAN="$ROOT_DIR/docs/plans/2026-06-14-cameraapp-image-handoff-ownership.md"
 DEVICE_VERIFICATION_PLAN="$ROOT_DIR/docs/plans/2026-06-14-cameraapp-device-verification-checklist.md"
+SAVE_SUCCESS_PLAN="$ROOT_DIR/docs/plans/2026-06-14-cameraapp-save-success-notification.md"
 XXXHDPI_LAUNCHER="$ROOT_DIR/Application/src/main/res/drawable-xxxhdpi/ic_launcher.png"
 XXXHDPI_INFO="$ROOT_DIR/Application/src/main/res/drawable-xxxhdpi/ic_action_info.png"
 ACTIVITY_LAYOUT="$ROOT_DIR/Application/src/main/res/layout/activity_camera.xml"
@@ -109,6 +110,7 @@ for path in \
   "docs/plans/2026-06-13-cameraapp-window-background-overdraw.md" \
   "docs/plans/2026-06-13-cameraapp-xxxhdpi-icons.md" \
   "docs/plans/2026-06-14-android-16-toolchain-migration.md" \
+  "docs/plans/2026-06-14-cameraapp-save-success-notification.md" \
   "Application/src/main/res/drawable-xxxhdpi/ic_launcher.png" \
   "Application/src/main/res/drawable-xxxhdpi/ic_action_info.png" \
   "gradlew" \
@@ -680,8 +682,8 @@ if grep -Fq 'showToast("Saved: " + mFile)' "$FRAGMENT"; then
   exit 1
 fi
 
-if ! grep -Fq 'showToast("Picture saved")' "$FRAGMENT"; then
-  printf '%s\n' "Capture completion toast must use generic saved-copy." >&2
+if grep -Fq 'showToast("Picture saved")' "$FRAGMENT"; then
+  printf '%s\n' "Camera capture completion must not report file-save success prematurely." >&2
   exit 1
 fi
 
@@ -700,7 +702,7 @@ image_callback_compact=$(printf '%s\n' "$image_callback" | tr '\n' ' ' | tr -s '
 for image_handoff_contract in \
   'Handler backgroundHandler = mBackgroundHandler;' \
   'if (backgroundHandler == null || mFile == null)' \
-  'if (!backgroundHandler.post(new ImageSaver(image, mFile)) && image != null)' \
+  'if (!backgroundHandler.post(new ImageSaver(image, mFile, mMessageHandler)) &&' \
   'image.close();'; do
   if ! printf '%s\n' "$image_callback" | grep -Fq "$image_handoff_contract"; then
     printf '%s\n' "Image callback handoff ownership changed: $image_handoff_contract" >&2
@@ -708,12 +710,64 @@ for image_handoff_contract in \
   fi
 done
 if ! printf '%s\n' "$image_callback_compact" | grep -Fq \
-    'if (!backgroundHandler.post(new ImageSaver(image, mFile)) && image != null) { image.close(); }' || \
-   [ "$(printf '%s\n' "$image_callback" | grep -Fc 'backgroundHandler.post(new ImageSaver(image, mFile))')" -ne 1 ] || \
-   printf '%s\n' "$image_callback" | grep -Fq 'mBackgroundHandler.post(new ImageSaver(image, mFile))'; then
+    'if (!backgroundHandler.post(new ImageSaver(image, mFile, mMessageHandler)) && image != null) { image.close(); }' || \
+   [ "$(printf '%s\n' "$image_callback" | grep -Fc 'backgroundHandler.post(new ImageSaver(image, mFile, mMessageHandler))')" -ne 1 ] || \
+   printf '%s\n' "$image_callback" | grep -Fq 'mBackgroundHandler.post(new ImageSaver(image, mFile, mMessageHandler))'; then
   printf '%s\n' "Rejected image-save posts must close the callback-owned image exactly once." >&2
   exit 1
 fi
+
+image_saver_scope=$(sed -n '/private static class ImageSaver implements Runnable/,/^    }/p' "$FRAGMENT")
+for save_success_contract in \
+  'private final Handler mResultHandler;' \
+  'public ImageSaver(Image image, File file, Handler resultHandler)' \
+  'mResultHandler = resultHandler;' \
+  'boolean saved = false;' \
+  'try (FileOutputStream output = new FileOutputStream(mFile))' \
+  'output.write(bytes);' \
+  'saved = true;' \
+  'catch (IOException e)' \
+  'saved = false;' \
+  'if (saved && mResultHandler != null)' \
+  'message.obj = "Picture saved";' \
+  'mResultHandler.sendMessage(message);'; do
+  if ! printf '%s\n' "$image_saver_scope" | grep -Fq "$save_success_contract"; then
+    printf '%s\n' "ImageSaver success ordering changed: $save_success_contract" >&2
+    exit 1
+  fi
+done
+save_failure_scope=$(sed -n '/catch (IOException e)/,/^            } finally/p' "$FRAGMENT")
+if ! printf '%s\n' "$save_failure_scope" | grep -Fq 'saved = false;' || \
+   [ "$(printf '%s\n' "$image_saver_scope" | grep -Fc 'saved = false;')" -ne 2 ]; then
+  printf '%s\n' "ImageSaver must clear save success when file output fails or cannot close." >&2
+  exit 1
+fi
+write_line=$(printf '%s\n' "$image_saver_scope" | grep -nF 'output.write(bytes);' | cut -d: -f1)
+catch_line=$(printf '%s\n' "$image_saver_scope" | grep -nF 'catch (IOException e)' | cut -d: -f1)
+close_line=$(printf '%s\n' "$image_saver_scope" | grep -nF 'mImage.close();' | tail -1 | cut -d: -f1)
+success_line=$(printf '%s\n' "$image_saver_scope" | grep -nF 'if (saved && mResultHandler != null)' | cut -d: -f1)
+message_line=$(printf '%s\n' "$image_saver_scope" | grep -nF 'message.obj = "Picture saved";' | cut -d: -f1)
+if [ -z "$write_line" ] || [ -z "$catch_line" ] || [ -z "$close_line" ] || \
+   [ -z "$success_line" ] || [ -z "$message_line" ] || \
+   [ "$write_line" -ge "$catch_line" ] || [ "$catch_line" -ge "$close_line" ] || \
+   [ "$close_line" -ge "$success_line" ] || [ "$success_line" -ge "$message_line" ] || \
+   [ "$(grep -Fc '"Picture saved"' "$FRAGMENT")" -ne 1 ]; then
+  printf '%s\n' "ImageSaver must report success only after completed output cleanup." >&2
+  exit 1
+fi
+for save_success_doc in "$README" "$ROOT_DIR/SECURITY.md" "$ROOT_DIR/VISION.md" "$ROOT_DIR/CHANGES.md"; do
+  if ! tr '\n' ' ' < "$save_success_doc" | tr -s '[:space:]' ' ' | \
+      grep -Fq 'reports picture-save success only after file output closes successfully'; then
+    printf '%s\n' "${save_success_doc#"$ROOT_DIR/"} must document success-only save notification ordering." >&2
+    exit 1
+  fi
+done
+for save_success_plan_contract in 'Status: Completed' 'make check' 'mutations'; do
+  if ! grep -Fq "$save_success_plan_contract" "$SAVE_SUCCESS_PLAN"; then
+    printf '%s\n' "Camera save-success plan must record completed verification: $save_success_plan_contract" >&2
+    exit 1
+  fi
+done
 if [ ! -f "$IMAGE_HANDOFF_PLAN" ] || \
    ! grep -Fq 'Status: Completed' "$IMAGE_HANDOFF_PLAN" || \
    ! grep -Fq 'make check' "$IMAGE_HANDOFF_PLAN" || \
