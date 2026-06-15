@@ -1,7 +1,7 @@
 ---
 title: CameraApp Preview Configuration Failure Ownership
 type: reliability
-status: planned
+status: completed
 date: 2026-06-15
 ---
 
@@ -12,19 +12,20 @@ date: 2026-06-15
 `createCameraPreviewSession()` binds successful configuration callbacks to the
 exact initiating `CameraDevice`, but `onConfigureFailed()` always displays a
 failure toast. A delayed failure from a camera that has already closed or been
-replaced can therefore report an error during a newer camera lifetime. Cleanup
-of the failed session is also left implicit.
+replaced can therefore report an error during a newer camera lifetime. Camera2
+already considers the failed session closed when this callback begins.
 
 ## Priorities
 
 1. P0: Prevent stale preview-configuration failures from affecting current UI.
-2. P1: Close every failed preview session explicitly.
+2. P1: Respect Camera2's already-closed failed-session contract.
 3. P2: Preserve current-camera failure notification and all successful preview
    behavior.
 
 ## Requirements
 
-- Close the callback-owned `CameraCaptureSession` in `onConfigureFailed()`.
+- Do not invoke methods on the failed `CameraCaptureSession`; Camera2 already
+  considers it closed when `onConfigureFailed()` begins.
 - Compare the current `mCameraDevice` with the captured initiating device
   before displaying failure UI.
 - Return silently for failures from closed or replaced camera lifetimes.
@@ -40,28 +41,28 @@ of the failed session is also left implicit.
 **File:**
 `Application/src/main/java/com/example/android/camera2basic/Camera2BasicFragment.java`
 
-Explicitly close the failed session, reject stale initiating-camera ownership,
-and retain the existing failure toast only for the current camera lifetime.
+Reject stale initiating-camera ownership without invoking the already-closed
+session, and retain the existing failure toast only for the current lifetime.
 
 ### U2: Portable Failure Contract
 
 **File:** `scripts/check-baseline.sh`
 
-Scope `onConfigureFailed()`, require close-before-identity-before-toast ordering,
-and fail closed if cleanup or stale-callback suppression is weakened.
+Scope `onConfigureFailed()`, reject session method calls, require
+identity-before-toast ordering, and fail closed if stale suppression is weakened.
 
 ### U3: Maintained Guidance
 
 **Files:** `README.md`, `SECURITY.md`, `VISION.md`, `CHANGES.md`, and this plan.
 
-Document that failed asynchronous preview sessions close and may report UI only
-while their initiating camera remains current.
+Document Camera2-owned failed-session closure and require failure UI to retain
+initiating-camera ownership.
 
 ## Verification
 
 - Run POSIX shell validation and the focused static baseline.
 - Run SDK-backed repository and external-directory `make check`.
-- Reject isolated close, identity, return, ordering, toast, guidance, and
+- Reject isolated session-use, identity, return, ordering, toast, guidance, and
   incomplete-plan mutations.
 - Audit exact intended paths, generated artifacts, dependency/workflow drift,
   conflict markers, whitespace, and credential-shaped additions.
@@ -72,3 +73,17 @@ while their initiating camera remains current.
   ownership, background threads, capture sequencing, image saving, permissions,
   resources, dependencies, project metadata, or workflows.
 - Keep this pull request stacked on PR #15 and preserve base-first ordering.
+
+## Completion Evidence
+
+- The focused source and guidance contract reached only this plan's intentional
+  incomplete-status gate before the status was finalized.
+- Corretto 17 with Android SDK 36 and Build Tools 36.1.0 passed debug/release
+  lint with zero findings, instrumentation APK assembly, and debug app assembly.
+- Repository-root and external-directory `make check` passed the complete JDK
+  17, Android SDK 36, Build Tools 36.1.0, zero-finding debug/release lint,
+  instrumentation APK, and debug application APK gate.
+- Seven isolated hostile failure-ownership mutations were rejected across failed
+  session method use, initiating-camera identity, stale return, callback ordering,
+  current-camera failure UI, maintained guidance, and incomplete plan status.
+- No emulator, physical camera, or live close/reopen preview race was exercised.

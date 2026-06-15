@@ -36,6 +36,7 @@ SAVE_FAILURE_LOG_PLAN="$ROOT_DIR/docs/plans/2026-06-15-cameraapp-save-failure-lo
 BACKGROUND_INTERRUPT_PLAN="$ROOT_DIR/docs/plans/2026-06-15-cameraapp-background-interrupt-restoration.md"
 CAMERA_ERROR_LOG_PLAN="$ROOT_DIR/docs/plans/2026-06-15-cameraapp-camera-error-log-redaction.md"
 PREVIEW_SESSION_OWNERSHIP_PLAN="$ROOT_DIR/docs/plans/2026-06-15-cameraapp-preview-session-ownership.md"
+PREVIEW_FAILURE_OWNERSHIP_PLAN="$ROOT_DIR/docs/plans/2026-06-15-cameraapp-preview-configuration-failure-ownership.md"
 XXXHDPI_LAUNCHER="$ROOT_DIR/Application/src/main/res/drawable-xxxhdpi/ic_launcher.png"
 XXXHDPI_INFO="$ROOT_DIR/Application/src/main/res/drawable-xxxhdpi/ic_action_info.png"
 ACTIVITY_LAYOUT="$ROOT_DIR/Application/src/main/res/layout/activity_camera.xml"
@@ -773,6 +774,11 @@ configured_callback=$(printf '%s\n' "$preview_session_method" | awk '
   capture && /public void onConfigureFailed\(CameraCaptureSession cameraCaptureSession\)/ { exit }
   capture { print }
 ')
+configure_failed_callback=$(printf '%s\n' "$preview_session_method" | awk '
+  /public void onConfigureFailed\(CameraCaptureSession cameraCaptureSession\)/ { capture = 1 }
+  capture && /^[[:space:]]*}, null$/ { exit }
+  capture { print }
+')
 
 if [ "$(grep -Fc "private volatile CameraDevice mCameraDevice;" "$FRAGMENT")" -ne 1 ]; then
   printf '%s\n' "Camera device ownership must remain visible across lifecycle and callback threads." >&2
@@ -822,11 +828,43 @@ if [ "$stale_guard_line" -ge "$stale_close_line" ] || \
   exit 1
 fi
 
+for failure_marker in \
+  "if (mCameraDevice != cameraDevice)" \
+  "return;" \
+  'showToast("Failed");'; do
+  if [ "$(printf '%s\n' "$configure_failed_callback" | grep -Fc "$failure_marker")" -ne 1 ]; then
+    printf '%s\n' "Failed preview ownership marker must be unique: $failure_marker" >&2
+    exit 1
+  fi
+done
+
+if printf '%s\n' "$configure_failed_callback" | grep -Fq "cameraCaptureSession.close();"; then
+  printf '%s\n' "Camera2 already closes failed preview sessions; failure callbacks must not invoke session methods." >&2
+  exit 1
+fi
+
+failure_guard_line=$(printf '%s\n' "$configure_failed_callback" | grep -nF "if (mCameraDevice != cameraDevice)" | cut -d: -f1)
+failure_return_line=$(printf '%s\n' "$configure_failed_callback" | grep -nF "return;" | cut -d: -f1)
+failure_toast_line=$(printf '%s\n' "$configure_failed_callback" | grep -nF 'showToast("Failed");' | cut -d: -f1)
+if [ "$failure_guard_line" -ge "$failure_return_line" ] || \
+  [ "$failure_return_line" -ge "$failure_toast_line" ]; then
+  printf '%s\n' "Failed preview callbacks must reject stale camera ownership before reporting UI." >&2
+  exit 1
+fi
+
 if ! grep -Fq "exact initiating camera device before publishing preview state" "$README" || \
   ! grep -Fq "Keep asynchronous preview callbacks bound to their initiating camera device" "$ROOT_DIR/VISION.md" || \
   ! grep -Fq "Stale camera-session callbacks close before publishing preview state" "$ROOT_DIR/SECURITY.md" || \
   ! grep -Fq "Bound configured preview sessions to their exact initiating camera device" "$ROOT_DIR/CHANGES.md"; then
   printf '%s\n' "Preview session ownership guidance must remain checked in." >&2
+  exit 1
+fi
+
+if ! grep -Fq "Failed preview callbacks rely on Camera2 session closure and suppress stale UI" "$README" || \
+  ! grep -Fq "Report preview configuration failures only for the initiating camera lifetime" "$ROOT_DIR/VISION.md" || \
+  ! grep -Fq "Failed preview callbacks suppress stale failure UI without invoking the already-closed session" "$ROOT_DIR/SECURITY.md" || \
+  ! grep -Fq "Suppressed stale camera-lifetime preview failure UI without invoking failed sessions" "$ROOT_DIR/CHANGES.md"; then
+  printf '%s\n' "Preview configuration failure ownership guidance must remain checked in." >&2
   exit 1
 fi
 
@@ -837,6 +875,17 @@ for preview_plan_contract in \
   "No emulator, physical camera, or live preview"; do
   if ! grep -Fq "$preview_plan_contract" "$PREVIEW_SESSION_OWNERSHIP_PLAN"; then
     printf '%s\n' "Preview session ownership plan must record completed verification: $preview_plan_contract" >&2
+    exit 1
+  fi
+done
+
+for preview_failure_plan_contract in \
+  "status: completed" \
+  "make check" \
+  "hostile failure-ownership mutations were rejected" \
+  "No emulator, physical camera, or live close/reopen"; do
+  if ! grep -Fq "$preview_failure_plan_contract" "$PREVIEW_FAILURE_OWNERSHIP_PLAN"; then
+    printf '%s\n' "Preview failure ownership plan must record completed verification: $preview_failure_plan_contract" >&2
     exit 1
   fi
 done

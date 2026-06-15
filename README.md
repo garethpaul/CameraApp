@@ -130,6 +130,8 @@ contracts as camera execution.
   must not replace an already-running handler thread.
 - Interrupted camera-worker shutdown preserves the interrupt signal and unresolved worker ownership.
 - Configured preview callbacks must still own their exact initiating camera device before publishing preview state; stale sessions close instead.
+- Failed preview callbacks rely on Camera2 session closure and suppress stale UI;
+  only the initiating camera lifetime may report configuration failures.
 - Synchronous camera-open failures release the open/close semaphore before
   pause or teardown can wait on it.
 - Camera close releases the semaphore only after successful acquisition and

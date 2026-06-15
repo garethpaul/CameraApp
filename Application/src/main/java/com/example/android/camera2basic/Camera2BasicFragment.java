@@ -786,6 +786,9 @@ public class Camera2BasicFragment extends Fragment implements View.OnClickListen
 
                         @Override
                         public void onConfigureFailed(CameraCaptureSession cameraCaptureSession) {
+                            if (mCameraDevice != cameraDevice) {
+                                return;
+                            }
                             showToast("Failed");
                         }
                     }, null

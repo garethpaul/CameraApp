@@ -5,6 +5,7 @@
 - Interrupted camera-worker shutdown preserves the interrupt signal and unresolved worker ownership.
 - Bound configured preview sessions to their exact initiating camera device and
   closed stale sessions before shared preview state publication.
+- Suppressed stale camera-lifetime preview failure UI without invoking failed sessions.
 - Camera runtime diagnostics retain fixed operation categories without exception stack traces or throwable details.
 - Image-save failures log a generic category without exception details or private output paths.
 
