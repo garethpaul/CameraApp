@@ -150,6 +150,7 @@ contracts as camera execution.
   permission results cannot reopen against a stale view hierarchy.
 - Capture completion UI does not expose the app-private output file path.
 - Image-save failures log a generic category without exception details or private output paths.
+- Camera runtime diagnostics retain fixed operation categories without exception stack traces or throwable details.
 - Picture and info controls are listener-bound only when present in the current
   layout.
 - The application enables RTL mirroring, and portrait and landscape camera

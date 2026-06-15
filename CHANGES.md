@@ -3,6 +3,7 @@
 ## 2026-06-15
 
 - Interrupted camera-worker shutdown preserves the interrupt signal and unresolved worker ownership.
+- Camera runtime diagnostics retain fixed operation categories without exception stack traces or throwable details.
 - Image-save failures log a generic category without exception details or private output paths.
 
 ## 2026-06-14

@@ -34,6 +34,7 @@ DEVICE_VERIFICATION_PLAN="$ROOT_DIR/docs/plans/2026-06-14-cameraapp-device-verif
 SAVE_SUCCESS_PLAN="$ROOT_DIR/docs/plans/2026-06-14-cameraapp-save-success-notification.md"
 SAVE_FAILURE_LOG_PLAN="$ROOT_DIR/docs/plans/2026-06-15-cameraapp-save-failure-log-redaction.md"
 BACKGROUND_INTERRUPT_PLAN="$ROOT_DIR/docs/plans/2026-06-15-cameraapp-background-interrupt-restoration.md"
+CAMERA_ERROR_LOG_PLAN="$ROOT_DIR/docs/plans/2026-06-15-cameraapp-camera-error-log-redaction.md"
 XXXHDPI_LAUNCHER="$ROOT_DIR/Application/src/main/res/drawable-xxxhdpi/ic_launcher.png"
 XXXHDPI_INFO="$ROOT_DIR/Application/src/main/res/drawable-xxxhdpi/ic_action_info.png"
 ACTIVITY_LAYOUT="$ROOT_DIR/Application/src/main/res/layout/activity_camera.xml"
@@ -667,6 +668,57 @@ for background_interrupt_plan_contract in \
   "No emulator or physical-camera lifecycle execution was performed"; do
   if ! grep -Fqi "$background_interrupt_plan_contract" "$BACKGROUND_INTERRUPT_PLAN"; then
     printf '%s\n' "Camera background interrupt plan must record completion evidence: $background_interrupt_plan_contract" >&2
+    exit 1
+  fi
+done
+
+if grep -Fq 'printStackTrace()' "$FRAGMENT"; then
+  printf '%s\n' "Camera runtime paths must not print exception stack traces." >&2
+  exit 1
+fi
+
+if [ "$(grep -Fc 'catch (CameraAccessException e)' "$FRAGMENT")" -ne 8 ]; then
+  printf '%s\n' "Camera error redaction must preserve all eight camera access catch boundaries." >&2
+  exit 1
+fi
+
+fragment_compact=$(tr '\n' ' ' < "$FRAGMENT" | tr -s '[:space:]' ' ')
+if printf '%s\n' "$fragment_compact" | grep -Eq 'Log\.[vdiew]\([^;]*,[^;]*,[^;]*\)'; then
+  printf '%s\n' "Camera runtime diagnostics must not serialize caught throwable details." >&2
+  exit 1
+fi
+
+for camera_error_category in \
+  'Log.w(TAG, "Dropping image because ImageReader is full.");' \
+  'Log.e(TAG, "Unable to configure camera outputs.");' \
+  'Log.e(TAG, "Unable to open camera.");' \
+  'Log.e(TAG, "Unable to start camera preview.");' \
+  'Log.e(TAG, "Unable to create camera preview session.");' \
+  'Log.e(TAG, "Unable to lock camera focus.");' \
+  'Log.e(TAG, "Unable to run camera precapture sequence.");' \
+  'Log.e(TAG, "Unable to capture picture.");' \
+  'Log.e(TAG, "Unable to resume camera preview.");'; do
+  if [ "$(grep -Fc "$camera_error_category" "$FRAGMENT")" -ne 1 ]; then
+    printf '%s\n' "Camera diagnostics must preserve one fixed category: $camera_error_category" >&2
+    exit 1
+  fi
+done
+
+camera_error_guidance='Camera runtime diagnostics retain fixed operation categories without exception stack traces or throwable details.'
+for camera_error_doc in AGENTS.md README.md SECURITY.md VISION.md CHANGES.md; do
+  if ! grep -Fq "$camera_error_guidance" "$ROOT_DIR/$camera_error_doc"; then
+    printf '%s\n' "$camera_error_doc must document camera error log redaction." >&2
+    exit 1
+  fi
+done
+
+for camera_error_plan_contract in \
+  'status: completed' \
+  'repository-root and external-directory `make check` passed' \
+  'hostile mutations' \
+  'No emulator, physical-camera, or live logcat verification was performed'; do
+  if ! grep -Fqi "$camera_error_plan_contract" "$CAMERA_ERROR_LOG_PLAN"; then
+    printf '%s\n' "Camera error log plan must record completion evidence: $camera_error_plan_contract" >&2
     exit 1
   fi
 done

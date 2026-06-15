@@ -1,7 +1,7 @@
 ---
 title: Camera Error Log Redaction
 type: security
-status: planned
+status: completed
 date: 2026-06-15
 ---
 
@@ -67,7 +67,16 @@ exception stack traces or throwable details.
 
 ## Completion Evidence
 
-- Pending implementation and verification.
+- Replaced eight camera-access stack traces and the ImageReader throwable log
+  with fixed operation-level categories while preserving catch and state flow.
+- Repository-root and external-directory `make check` passed the complete
+  Android 16/JDK 17 gate, including zero-finding debug and release lint.
+- Six hostile mutations were rejected for a restored stack trace, restored and
+  additive throwable logs, removed category, missing guidance, and incomplete
+  plan status.
+- Exact-path diff, generated-artifact, dependency/workflow-drift,
+  conflict-marker, whitespace, and credential-shaped-addition audits passed.
+- No emulator, physical-camera, or live logcat verification was performed.
 
 ## Scope Boundaries
 

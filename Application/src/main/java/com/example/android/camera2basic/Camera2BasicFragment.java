@@ -238,7 +238,7 @@ public class Camera2BasicFragment extends Fragment implements View.OnClickListen
             try {
                 image = reader.acquireNextImage();
             } catch (IllegalStateException e) {
-                Log.w(TAG, "Dropping image because ImageReader is full.", e);
+                Log.w(TAG, "Dropping image because ImageReader is full.");
                 return;
             }
             Handler backgroundHandler = mBackgroundHandler;
@@ -570,7 +570,7 @@ public class Camera2BasicFragment extends Fragment implements View.OnClickListen
                 return;
             }
         } catch (CameraAccessException e) {
-            e.printStackTrace();
+            Log.e(TAG, "Unable to configure camera outputs.");
         } catch (NullPointerException e) {
             // Currently an NPE is thrown when the Camera2API is used but not supported on the
             // device this code runs.
@@ -616,7 +616,7 @@ public class Camera2BasicFragment extends Fragment implements View.OnClickListen
             manager.openCamera(mCameraId, mStateCallback, mBackgroundHandler);
             cameraLockAcquired = false;
         } catch (CameraAccessException e) {
-            e.printStackTrace();
+            Log.e(TAG, "Unable to open camera.");
         } catch (InterruptedException e) {
             throw new RuntimeException("Interrupted while trying to lock camera opening.", e);
         } finally {
@@ -777,7 +777,7 @@ public class Camera2BasicFragment extends Fragment implements View.OnClickListen
                                 mCaptureSession.setRepeatingRequest(mPreviewRequest,
                                         mCaptureCallback, mBackgroundHandler);
                             } catch (CameraAccessException e) {
-                                e.printStackTrace();
+                                Log.e(TAG, "Unable to start camera preview.");
                             }
                         }
 
@@ -788,7 +788,7 @@ public class Camera2BasicFragment extends Fragment implements View.OnClickListen
                     }, null
             );
         } catch (CameraAccessException e) {
-            e.printStackTrace();
+            Log.e(TAG, "Unable to create camera preview session.");
         }
     }
 
@@ -852,7 +852,7 @@ public class Camera2BasicFragment extends Fragment implements View.OnClickListen
             mCaptureSession.setRepeatingRequest(mPreviewRequestBuilder.build(), mCaptureCallback,
                     mBackgroundHandler);
         } catch (CameraAccessException e) {
-            e.printStackTrace();
+            Log.e(TAG, "Unable to lock camera focus.");
         }
     }
 
@@ -874,7 +874,7 @@ public class Camera2BasicFragment extends Fragment implements View.OnClickListen
             mCaptureSession.capture(mPreviewRequestBuilder.build(), mCaptureCallback,
                     mBackgroundHandler);
         } catch (CameraAccessException e) {
-            e.printStackTrace();
+            Log.e(TAG, "Unable to run camera precapture sequence.");
         }
     }
 
@@ -917,7 +917,7 @@ public class Camera2BasicFragment extends Fragment implements View.OnClickListen
             mCaptureSession.stopRepeating();
             mCaptureSession.capture(captureBuilder.build(), CaptureCallback, null);
         } catch (CameraAccessException e) {
-            e.printStackTrace();
+            Log.e(TAG, "Unable to capture picture.");
         }
     }
 
@@ -941,7 +941,7 @@ public class Camera2BasicFragment extends Fragment implements View.OnClickListen
             mCaptureSession.setRepeatingRequest(mPreviewRequest, mCaptureCallback,
                     mBackgroundHandler);
         } catch (CameraAccessException e) {
-            e.printStackTrace();
+            Log.e(TAG, "Unable to resume camera preview.");
         }
     }
 

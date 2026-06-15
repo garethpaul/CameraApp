@@ -48,6 +48,7 @@ Helpful reports include:
 - CameraApp reports picture-save success only after file output closes
   successfully, avoiding false persistence claims when local storage fails.
 - Image-save failures log a generic category without exception details or private output paths.
+- Camera runtime diagnostics retain fixed operation categories without exception stack traces or throwable details.
 
 ## Mobile Privacy Notes
 
