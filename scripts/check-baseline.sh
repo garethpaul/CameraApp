@@ -35,6 +35,7 @@ SAVE_SUCCESS_PLAN="$ROOT_DIR/docs/plans/2026-06-14-cameraapp-save-success-notifi
 SAVE_FAILURE_LOG_PLAN="$ROOT_DIR/docs/plans/2026-06-15-cameraapp-save-failure-log-redaction.md"
 BACKGROUND_INTERRUPT_PLAN="$ROOT_DIR/docs/plans/2026-06-15-cameraapp-background-interrupt-restoration.md"
 CAMERA_ERROR_LOG_PLAN="$ROOT_DIR/docs/plans/2026-06-15-cameraapp-camera-error-log-redaction.md"
+PREVIEW_SESSION_OWNERSHIP_PLAN="$ROOT_DIR/docs/plans/2026-06-15-cameraapp-preview-session-ownership.md"
 XXXHDPI_LAUNCHER="$ROOT_DIR/Application/src/main/res/drawable-xxxhdpi/ic_launcher.png"
 XXXHDPI_INFO="$ROOT_DIR/Application/src/main/res/drawable-xxxhdpi/ic_action_info.png"
 ACTIVITY_LAYOUT="$ROOT_DIR/Application/src/main/res/layout/activity_camera.xml"
@@ -114,6 +115,7 @@ for path in \
   "docs/plans/2026-06-13-cameraapp-xxxhdpi-icons.md" \
   "docs/plans/2026-06-14-android-16-toolchain-migration.md" \
   "docs/plans/2026-06-14-cameraapp-save-success-notification.md" \
+  "docs/plans/2026-06-15-cameraapp-preview-session-ownership.md" \
   "Application/src/main/res/drawable-xxxhdpi/ic_launcher.png" \
   "Application/src/main/res/drawable-xxxhdpi/ic_action_info.png" \
   "gradlew" \
@@ -755,11 +757,89 @@ if ! grep -Fq "afState == null" "$FRAGMENT"; then
   exit 1
 fi
 
-if ! grep -Fq "mTextureView == null || mCameraDevice == null" "$FRAGMENT" ||
+if ! grep -Fq "mTextureView == null || cameraDevice == null" "$FRAGMENT" ||
   ! grep -Fq "if (texture == null)" "$FRAGMENT"; then
   printf '%s\n' "Preview session creation must guard missing texture and camera state." >&2
   exit 1
 fi
+
+preview_session_method=$(awk '
+  /private void createCameraPreviewSession\(\)/ { capture = 1 }
+  capture && /private void configureTransform\(/ { exit }
+  capture { print }
+' "$FRAGMENT")
+configured_callback=$(printf '%s\n' "$preview_session_method" | awk '
+  /public void onConfigured\(CameraCaptureSession cameraCaptureSession\)/ { capture = 1 }
+  capture && /public void onConfigureFailed\(CameraCaptureSession cameraCaptureSession\)/ { exit }
+  capture { print }
+')
+
+if [ "$(grep -Fc "private volatile CameraDevice mCameraDevice;" "$FRAGMENT")" -ne 1 ]; then
+  printf '%s\n' "Camera device ownership must remain visible across lifecycle and callback threads." >&2
+  exit 1
+fi
+
+for preview_marker in \
+  "final CameraDevice cameraDevice = mCameraDevice;" \
+  "final CaptureRequest.Builder previewRequestBuilder" \
+  "cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);" \
+  "previewRequestBuilder.addTarget(surface);" \
+  "cameraDevice.createCaptureSession(Arrays.asList(surface, mImageReader.getSurface()),"; do
+  if [ "$(printf '%s\n' "$preview_session_method" | grep -Fc "$preview_marker")" -ne 1 ]; then
+    printf '%s\n' "Preview session ownership marker must be unique: $preview_marker" >&2
+    exit 1
+  fi
+done
+
+for configured_marker in \
+  "if (mCameraDevice != cameraDevice)" \
+  "cameraCaptureSession.close();" \
+  "return;" \
+  "mPreviewRequestBuilder = previewRequestBuilder;" \
+  "mCaptureSession = cameraCaptureSession;" \
+  "mPreviewRequest = previewRequestBuilder.build();" \
+  "cameraCaptureSession.setRepeatingRequest(mPreviewRequest,"; do
+  if [ "$(printf '%s\n' "$configured_callback" | grep -Fc "$configured_marker")" -ne 1 ]; then
+    printf '%s\n' "Configured preview ownership marker must be unique: $configured_marker" >&2
+    exit 1
+  fi
+done
+
+stale_guard_line=$(printf '%s\n' "$configured_callback" | grep -nF "if (mCameraDevice != cameraDevice)" | cut -d: -f1)
+stale_close_line=$(printf '%s\n' "$configured_callback" | grep -nF "cameraCaptureSession.close();" | cut -d: -f1)
+stale_return_line=$(printf '%s\n' "$configured_callback" | grep -nF "return;" | cut -d: -f1)
+builder_publish_line=$(printf '%s\n' "$configured_callback" | grep -nF "mPreviewRequestBuilder = previewRequestBuilder;" | cut -d: -f1)
+session_publish_line=$(printf '%s\n' "$configured_callback" | grep -nF "mCaptureSession = cameraCaptureSession;" | cut -d: -f1)
+request_build_line=$(printf '%s\n' "$configured_callback" | grep -nF "mPreviewRequest = previewRequestBuilder.build();" | cut -d: -f1)
+repeat_line=$(printf '%s\n' "$configured_callback" | grep -nF "cameraCaptureSession.setRepeatingRequest(mPreviewRequest," | cut -d: -f1)
+if [ "$stale_guard_line" -ge "$stale_close_line" ] || \
+  [ "$stale_close_line" -ge "$stale_return_line" ] || \
+  [ "$stale_return_line" -ge "$builder_publish_line" ] || \
+  [ "$builder_publish_line" -ge "$session_publish_line" ] || \
+  [ "$session_publish_line" -ge "$request_build_line" ] || \
+  [ "$request_build_line" -ge "$repeat_line" ]; then
+  printf '%s\n' "Stale preview sessions must close and return before current preview state is published." >&2
+  exit 1
+fi
+
+if ! grep -Fq "exact initiating camera device before publishing preview state" "$README" || \
+  ! grep -Fq "Keep asynchronous preview callbacks bound to their initiating camera device" "$ROOT_DIR/VISION.md" || \
+  ! grep -Fq "Stale camera-session callbacks close before publishing preview state" "$ROOT_DIR/SECURITY.md" || \
+  ! grep -Fq "Bound configured preview sessions to their exact initiating camera device" "$ROOT_DIR/CHANGES.md"; then
+  printf '%s\n' "Preview session ownership guidance must remain checked in." >&2
+  exit 1
+fi
+
+for preview_plan_contract in \
+  "status: completed" \
+  "make check" \
+  "hostile ownership mutations were rejected" \
+  "No emulator, physical camera, or live preview"; do
+  if ! grep -Fq "$preview_plan_contract" "$PREVIEW_SESSION_OWNERSHIP_PLAN"; then
+    printf '%s\n' "Preview session ownership plan must record completed verification: $preview_plan_contract" >&2
+    exit 1
+  fi
+done
 
 if grep -Fq 'new ErrorDialog().show(getFragmentManager(), "dialog");' "$FRAGMENT"; then
   printf '%s\n' "Unsupported-camera error dialog must not use getFragmentManager() without a null guard." >&2

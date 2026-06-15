@@ -165,7 +165,7 @@ public class Camera2BasicFragment extends Fragment implements View.OnClickListen
      * A reference to the opened {@link CameraDevice}.
      */
 
-    private CameraDevice mCameraDevice;
+    private volatile CameraDevice mCameraDevice;
     /**
      * The {@link android.util.Size} of camera preview.
      */
@@ -730,7 +730,8 @@ public class Camera2BasicFragment extends Fragment implements View.OnClickListen
      * Creates a new {@link CameraCaptureSession} for camera preview.
      */
     private void createCameraPreviewSession() {
-        if (mTextureView == null || mCameraDevice == null ||
+        final CameraDevice cameraDevice = mCameraDevice;
+        if (mTextureView == null || cameraDevice == null ||
                 mImageReader == null || mPreviewSize == null) {
             return;
         }
@@ -747,34 +748,36 @@ public class Camera2BasicFragment extends Fragment implements View.OnClickListen
             Surface surface = new Surface(texture);
 
             // We set up a CaptureRequest.Builder with the output Surface.
-            mPreviewRequestBuilder
-                    = mCameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
-            mPreviewRequestBuilder.addTarget(surface);
+            final CaptureRequest.Builder previewRequestBuilder
+                    = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
+            previewRequestBuilder.addTarget(surface);
 
             // Here, we create a CameraCaptureSession for camera preview.
-            mCameraDevice.createCaptureSession(Arrays.asList(surface, mImageReader.getSurface()),
+            cameraDevice.createCaptureSession(Arrays.asList(surface, mImageReader.getSurface()),
                     new CameraCaptureSession.StateCallback() {
 
                         @Override
                         public void onConfigured(CameraCaptureSession cameraCaptureSession) {
-                            // The camera is already closed
-                            if (null == mCameraDevice) {
+                            // The initiating camera is already closed or replaced.
+                            if (mCameraDevice != cameraDevice) {
+                                cameraCaptureSession.close();
                                 return;
                             }
 
                             // When the session is ready, we start displaying the preview.
+                            mPreviewRequestBuilder = previewRequestBuilder;
                             mCaptureSession = cameraCaptureSession;
                             try {
                                 // Auto focus should be continuous for camera preview.
-                                mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AF_MODE,
+                                previewRequestBuilder.set(CaptureRequest.CONTROL_AF_MODE,
                                         CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE);
                                 // Flash is automatically enabled when necessary.
-                                mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AE_MODE,
+                                previewRequestBuilder.set(CaptureRequest.CONTROL_AE_MODE,
                                         CaptureRequest.CONTROL_AE_MODE_ON_AUTO_FLASH);
 
                                 // Finally, we start displaying the camera preview.
-                                mPreviewRequest = mPreviewRequestBuilder.build();
-                                mCaptureSession.setRepeatingRequest(mPreviewRequest,
+                                mPreviewRequest = previewRequestBuilder.build();
+                                cameraCaptureSession.setRepeatingRequest(mPreviewRequest,
                                         mCaptureCallback, mBackgroundHandler);
                             } catch (CameraAccessException e) {
                                 Log.e(TAG, "Unable to start camera preview.");

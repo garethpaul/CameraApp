@@ -24,6 +24,7 @@ Priority:
 - Keep camera open/close semaphore ownership balanced across failure paths
 - Keep interrupted camera close attempts from releasing unowned permits
 - Interrupted camera-worker shutdown preserves the interrupt signal and unresolved worker ownership.
+- Keep asynchronous preview callbacks bound to their initiating camera device
 - Keep layout control binding tolerant of missing optional controls
 - Keep right-to-left camera control placement tied to logical layout anchors
 - Keep non-overlapping landscape preview and control regions under localization

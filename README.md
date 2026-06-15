@@ -129,6 +129,7 @@ contracts as camera execution.
 - Camera background thread startup is idempotent; repeated resume/start paths
   must not replace an already-running handler thread.
 - Interrupted camera-worker shutdown preserves the interrupt signal and unresolved worker ownership.
+- Configured preview callbacks must still own their exact initiating camera device before publishing preview state; stale sessions close instead.
 - Synchronous camera-open failures release the open/close semaphore before
   pause or teardown can wait on it.
 - Camera close releases the semaphore only after successful acquisition and

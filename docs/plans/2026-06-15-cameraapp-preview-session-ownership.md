@@ -1,7 +1,7 @@
 ---
 title: CameraApp Preview Session Ownership
 type: reliability
-status: planned
+status: completed
 date: 2026-06-15
 ---
 
@@ -72,3 +72,16 @@ retain exact camera-device ownership.
   thread ownership, capture sequencing, image saving, permissions, UI,
   dependencies, resources, project metadata, or workflows.
 - Keep this pull request stacked on PR #14 and preserve base-first ordering.
+
+## Completion Evidence
+
+- `sh -n scripts/check-baseline.sh` and the focused static baseline passed.
+- Repository and external-directory `make check` passed the complete JDK 17,
+  Android SDK 36, Build Tools 36.1.0, debug/release lint, instrumentation APK,
+  and debug application APK gate.
+- Focused hostile ownership mutations were rejected across captured device,
+  local builder, identity, stale close, return ordering, state publication,
+  maintained guidance, plan status, and verification evidence.
+- Exact intended-path, generated-artifact, dependency/workflow-drift,
+  conflict-marker, whitespace, and credential-shaped-addition audits passed.
+- No emulator, physical camera, or live preview/reopen race was exercised.
