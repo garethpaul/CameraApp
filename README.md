@@ -148,6 +148,7 @@ contracts as camera execution.
 - Retained fragments clear the texture view at view teardown, so delayed camera
   permission results cannot reopen against a stale view hierarchy.
 - Capture completion UI does not expose the app-private output file path.
+- Image-save failures log a generic category without exception details or private output paths.
 - Picture and info controls are listener-bound only when present in the current
   layout.
 - The application enables RTL mirroring, and portrait and landscape camera

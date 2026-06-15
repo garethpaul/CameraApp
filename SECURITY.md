@@ -46,6 +46,7 @@ Helpful reports include:
   dependencies are limited to the instrumentation test configuration.
 - CameraApp reports picture-save success only after file output closes
   successfully, avoiding false persistence claims when local storage fails.
+- Image-save failures log a generic category without exception details or private output paths.
 
 ## Mobile Privacy Notes
 

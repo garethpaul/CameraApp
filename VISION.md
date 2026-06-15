@@ -39,6 +39,7 @@ Priority:
   successfully
 - Keep camera app data out of platform backup by default
 - Keep UI copy from exposing app-private captured-image paths
+- Image-save failures log a generic category without exception details or private output paths.
 - Make Android SDK and build-tool requirements visible
 - Keep the SDK-free source checker available for focused mutation tests
 - Keep the full JDK 17, SDK 36, lint, test-APK, and app-APK gate in GitHub Actions

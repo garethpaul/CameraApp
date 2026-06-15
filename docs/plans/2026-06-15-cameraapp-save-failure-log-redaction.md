@@ -1,6 +1,6 @@
 # Camera Save Failure Log Redaction
 
-Status: Planned
+Status: Completed
 
 ## Problem
 
@@ -54,15 +54,15 @@ Files:
 Record that image-save failures log a generic category without exception or
 private output-path details.
 
-## Verification Plan
+## Verification Completed
 
-- Run `sh -n` and the focused portable baseline with explicit timeouts.
-- Run repository and external-directory `make check`, using the documented
-  Android toolchain when available.
-- Reject isolated mutations for throwable logging, missing generic logging,
-  failure-state ordering, documentation, and completed-plan evidence.
-- Audit the exact diff, generated artifacts, changed-line secrets, and intended
-  paths before commit.
+- `sh -n` and the focused portable baseline passed.
+- Six isolated mutations were rejected for stack traces, throwable-bearing
+  logging, missing generic logging, late failure state, guidance, and completed
+  plan evidence.
+- Repository and external-directory `make check` passed with Amazon Corretto
+  17.0.19, SDK 36, and build-tools 36.1.0. Debug/release lint produced zero
+  findings, and instrumentation plus app APK assembly succeeded.
 
 ## Scope Boundaries
 

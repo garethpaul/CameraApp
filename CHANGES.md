@@ -1,5 +1,9 @@
 # CameraApp Changes
 
+## 2026-06-15
+
+- Image-save failures log a generic category without exception details or private output paths.
+
 ## 2026-06-14
 
 - Added an exact-head CameraApp device verification matrix with privacy-safe

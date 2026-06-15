@@ -32,6 +32,7 @@ ANDROID_16_PLAN="$ROOT_DIR/docs/plans/2026-06-14-android-16-toolchain-migration.
 IMAGE_HANDOFF_PLAN="$ROOT_DIR/docs/plans/2026-06-14-cameraapp-image-handoff-ownership.md"
 DEVICE_VERIFICATION_PLAN="$ROOT_DIR/docs/plans/2026-06-14-cameraapp-device-verification-checklist.md"
 SAVE_SUCCESS_PLAN="$ROOT_DIR/docs/plans/2026-06-14-cameraapp-save-success-notification.md"
+SAVE_FAILURE_LOG_PLAN="$ROOT_DIR/docs/plans/2026-06-15-cameraapp-save-failure-log-redaction.md"
 XXXHDPI_LAUNCHER="$ROOT_DIR/Application/src/main/res/drawable-xxxhdpi/ic_launcher.png"
 XXXHDPI_INFO="$ROOT_DIR/Application/src/main/res/drawable-xxxhdpi/ic_action_info.png"
 ACTIVITY_LAYOUT="$ROOT_DIR/Application/src/main/res/layout/activity_camera.xml"
@@ -737,9 +738,22 @@ for save_success_contract in \
   fi
 done
 save_failure_scope=$(sed -n '/catch (IOException e)/,/^            } finally/p' "$FRAGMENT")
+save_failure_compact=$(printf '%s\n' "$save_failure_scope" | tr '\n' ' ' | tr -s '[:space:]' ' ')
 if ! printf '%s\n' "$save_failure_scope" | grep -Fq 'saved = false;' || \
    [ "$(printf '%s\n' "$image_saver_scope" | grep -Fc 'saved = false;')" -ne 2 ]; then
   printf '%s\n' "ImageSaver must clear save success when file output fails or cannot close." >&2
+  exit 1
+fi
+if ! printf '%s\n' "$save_failure_scope" | grep -Fq 'Log.e(TAG, "Unable to save picture.");' || \
+   printf '%s\n' "$save_failure_scope" | grep -Fq 'printStackTrace()' || \
+   printf '%s\n' "$save_failure_scope" | grep -Eq 'Log\.[a-z]+\([^;]*, *e\)' || \
+   [ "$(printf '%s\n' "$image_saver_scope" | grep -Fc 'Log.e(TAG, "Unable to save picture.");')" -ne 1 ]; then
+  printf '%s\n' "ImageSaver failures must use one generic log without throwable details." >&2
+  exit 1
+fi
+if ! printf '%s\n' "$save_failure_compact" | grep -Fq \
+    'saved = false; Log.e(TAG, "Unable to save picture.");' ; then
+  printf '%s\n' "ImageSaver must clear save success before generic failure logging." >&2
   exit 1
 fi
 write_line=$(printf '%s\n' "$image_saver_scope" | grep -nF 'output.write(bytes);' | cut -d: -f1)
@@ -765,6 +779,19 @@ done
 for save_success_plan_contract in 'Status: Completed' 'make check' 'mutations'; do
   if ! grep -Fq "$save_success_plan_contract" "$SAVE_SUCCESS_PLAN"; then
     printf '%s\n' "Camera save-success plan must record completed verification: $save_success_plan_contract" >&2
+    exit 1
+  fi
+done
+
+for save_failure_log_doc in AGENTS.md README.md SECURITY.md VISION.md CHANGES.md; do
+  if ! grep -Fq 'Image-save failures log a generic category without exception details or private output paths.' "$ROOT_DIR/$save_failure_log_doc"; then
+    printf '%s\n' "$save_failure_log_doc must document generic image-save failure logging." >&2
+    exit 1
+  fi
+done
+for save_failure_log_plan_contract in 'Status: Completed' 'make check' 'mutations'; do
+  if ! grep -Fq "$save_failure_log_plan_contract" "$SAVE_FAILURE_LOG_PLAN"; then
+    printf '%s\n' "Camera save-failure log plan must record completed verification: $save_failure_log_plan_contract" >&2
     exit 1
   fi
 done

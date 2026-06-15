@@ -1011,7 +1011,7 @@ public class Camera2BasicFragment extends Fragment implements View.OnClickListen
                 saved = true;
             } catch (IOException e) {
                 saved = false;
-                e.printStackTrace();
+                Log.e(TAG, "Unable to save picture.");
             } finally {
                 mImage.close();
             }
