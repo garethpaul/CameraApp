@@ -59,6 +59,7 @@
 - Target-36 edge-to-edge behavior must keep interactive camera controls inside
   system-bar insets without shrinking the full-bleed preview.
 - Camera background thread startup is idempotent; repeated resume/start paths must not replace an already-running handler thread.
+- Interrupted camera-worker shutdown preserves the interrupt signal and unresolved worker ownership.
 - ImageReader backpressure is handled by dropping a backed-up capture callback before it can crash the still-image save path.
 - During background-thread shutdown, rejected image-save handoffs close the
   callback-owned image instead of consuming `ImageReader` capacity.

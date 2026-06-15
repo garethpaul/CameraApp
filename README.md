@@ -128,6 +128,7 @@ contracts as camera execution.
 - This looks like a legacy Android project or sample. Expect Android SDK, Gradle, and support-library versions to matter.
 - Camera background thread startup is idempotent; repeated resume/start paths
   must not replace an already-running handler thread.
+- Interrupted camera-worker shutdown preserves the interrupt signal and unresolved worker ownership.
 - Synchronous camera-open failures release the open/close semaphore before
   pause or teardown can wait on it.
 - Camera close releases the semaphore only after successful acquisition and

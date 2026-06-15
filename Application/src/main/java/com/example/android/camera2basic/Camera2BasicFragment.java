@@ -722,7 +722,7 @@ public class Camera2BasicFragment extends Fragment implements View.OnClickListen
             mBackgroundThread = null;
             mBackgroundHandler = null;
         } catch (InterruptedException e) {
-            e.printStackTrace();
+            Thread.currentThread().interrupt();
         }
     }
 

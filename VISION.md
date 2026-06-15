@@ -23,6 +23,7 @@ Priority:
 - Keep camera lifecycle startup tied to an available texture view
 - Keep camera open/close semaphore ownership balanced across failure paths
 - Keep interrupted camera close attempts from releasing unowned permits
+- Interrupted camera-worker shutdown preserves the interrupt signal and unresolved worker ownership.
 - Keep layout control binding tolerant of missing optional controls
 - Keep right-to-left camera control placement tied to logical layout anchors
 - Keep non-overlapping landscape preview and control regions under localization

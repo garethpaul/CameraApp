@@ -1,7 +1,7 @@
 ---
 title: CameraApp Background Interrupt Restoration
 type: reliability
-status: planned
+status: completed
 date: 2026-06-15
 ---
 
@@ -75,3 +75,14 @@ signal and unresolved worker ownership.
 - Do not change camera setup, open/close locking, preview, capture, image saving,
   permissions, UI, dependencies, or workflow configuration.
 - Keep this pull request stacked on PR #12 and preserve base-first ordering.
+
+## Completion Evidence
+
+- `sh -n scripts/check-baseline.sh` passed.
+- The focused baseline passed with the completed plan record.
+- Five isolated hostile mutations were rejected: missing interrupt restoration,
+  restored stack-trace output, ownership release before join, missing maintained
+  guidance, and incomplete plan status.
+- The repository-root and external-directory make check passed using JDK 17,
+  Android SDK 36, and Build Tools 36.1.0.
+- No emulator or physical-camera lifecycle execution was performed.

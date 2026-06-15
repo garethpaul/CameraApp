@@ -33,6 +33,7 @@ IMAGE_HANDOFF_PLAN="$ROOT_DIR/docs/plans/2026-06-14-cameraapp-image-handoff-owne
 DEVICE_VERIFICATION_PLAN="$ROOT_DIR/docs/plans/2026-06-14-cameraapp-device-verification-checklist.md"
 SAVE_SUCCESS_PLAN="$ROOT_DIR/docs/plans/2026-06-14-cameraapp-save-success-notification.md"
 SAVE_FAILURE_LOG_PLAN="$ROOT_DIR/docs/plans/2026-06-15-cameraapp-save-failure-log-redaction.md"
+BACKGROUND_INTERRUPT_PLAN="$ROOT_DIR/docs/plans/2026-06-15-cameraapp-background-interrupt-restoration.md"
 XXXHDPI_LAUNCHER="$ROOT_DIR/Application/src/main/res/drawable-xxxhdpi/ic_launcher.png"
 XXXHDPI_INFO="$ROOT_DIR/Application/src/main/res/drawable-xxxhdpi/ic_action_info.png"
 ACTIVITY_LAYOUT="$ROOT_DIR/Application/src/main/res/layout/activity_camera.xml"
@@ -613,6 +614,62 @@ if ! grep -Fq "if (mBackgroundThread != null)" "$FRAGMENT"; then
   printf '%s\n' "Background thread startup must avoid duplicate handler threads." >&2
   exit 1
 fi
+
+stop_background_body=$(awk '
+  /private void stopBackgroundThread\(\)/ { capture = 1 }
+  capture && /private void createCameraPreviewSession\(\)/ { exit }
+  capture { print }
+' "$FRAGMENT")
+for stop_background_contract in \
+  "mBackgroundThread.quitSafely();" \
+  "mBackgroundThread.join();" \
+  "mBackgroundThread = null;" \
+  "mBackgroundHandler = null;" \
+  "catch (InterruptedException e)" \
+  "Thread.currentThread().interrupt();"; do
+  if ! printf '%s\n' "$stop_background_body" | grep -Fq "$stop_background_contract"; then
+    printf '%s\n' "Camera background shutdown must preserve: $stop_background_contract" >&2
+    exit 1
+  fi
+done
+if printf '%s\n' "$stop_background_body" | grep -Eq 'printStackTrace\(|Log\.[ew]\([^;]*, *e\)'; then
+  printf '%s\n' "Interrupted camera background shutdown must not emit throwable details." >&2
+  exit 1
+fi
+if ! printf '%s\n' "$stop_background_body" | awk '
+  /mBackgroundThread\.quitSafely\(\);/ { quit = NR }
+  /mBackgroundThread\.join\(\);/ { joined = NR }
+  /mBackgroundThread = null;/ && joined && !released_thread { released_thread = NR }
+  /mBackgroundHandler = null;/ && joined && !released_handler { released_handler = NR }
+  /catch \(InterruptedException e\)/ { caught = NR }
+  /Thread\.currentThread\(\)\.interrupt\(\);/ { interrupted = NR }
+  END {
+    exit !(quit && joined && released_thread && released_handler && caught && interrupted &&
+      quit < joined && joined < released_thread && joined < released_handler && caught < interrupted)
+  }
+'; then
+  printf '%s\n' "Camera background shutdown must release ownership only after join and restore interruption in the catch." >&2
+  exit 1
+fi
+
+background_interrupt_guidance='Interrupted camera-worker shutdown preserves the interrupt signal and unresolved worker ownership.'
+for background_interrupt_doc in AGENTS.md README.md SECURITY.md VISION.md CHANGES.md; do
+  if ! grep -Fq "$background_interrupt_guidance" "$ROOT_DIR/$background_interrupt_doc"; then
+    printf '%s\n' "$background_interrupt_doc must document interrupted worker shutdown ownership." >&2
+    exit 1
+  fi
+done
+
+for background_interrupt_plan_contract in \
+  "status: completed" \
+  "repository-root and external-directory make check passed" \
+  "hostile mutations" \
+  "No emulator or physical-camera lifecycle execution was performed"; do
+  if ! grep -Fqi "$background_interrupt_plan_contract" "$BACKGROUND_INTERRUPT_PLAN"; then
+    printf '%s\n' "Camera background interrupt plan must record completion evidence: $background_interrupt_plan_contract" >&2
+    exit 1
+  fi
+done
 
 if ! grep -Fq "mCameraDevice == null || mCaptureSession == null" "$FRAGMENT"; then
   printf '%s\n' "takePicture must guard unavailable camera session state." >&2
