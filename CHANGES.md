@@ -2,6 +2,10 @@
 
 ## 2026-06-16
 
+- Added bounded API 36 emulator provisioning and executed the existing
+  pre-permission CameraActivity instrumentation smoke test in hosted CI.
+- Serialized debug and release lint so clean builds cannot race over shared
+  Android lint partial-result state.
 - Capture-result and still-capture completion callbacks reject stale session ownership before mutating capture state or unlocking focus.
 - Current-session still-capture failures unlock focus and resume preview; stale session failures are ignored.
 - Synchronous still-capture and preview-restart failures restore preview state before Camera2 recovery work can throw.

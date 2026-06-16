@@ -19,10 +19,12 @@
 - Full baseline: `make check`
 - Combined verification: `make verify`
 - Lint/static checks: `make lint`
-- Tests: `make test`
+- Tests: `make test` provisions a bounded API 36 emulator and executes the
+  pre-permission instrumentation smoke test by default.
 - Build: `make build`
 - Source-only contract: `scripts/check-baseline.sh`
 - Android instrumentation APK: `./gradlew :Application:assembleDebugAndroidTest`
+- Android instrumentation runtime: `./gradlew :Application:connectedDebugAndroidTest`
 - Android debug build: `./gradlew :Application:assembleDebug`
 - Use JDK 17, SDK platform 36, and Build Tools 36.1.0. Runtime permission,
   preview, and capture claims additionally require a camera-capable device.

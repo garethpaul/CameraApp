@@ -64,8 +64,8 @@ Next priorities:
   a camera-capable emulator and physical device
 - Exercise permission grant, denial, resume, preview, and capture behavior on a
   camera-capable API-23+ device or emulator
-- Add instrumentation coverage for runtime flows when a deterministic
-  camera-capable CI environment is available
+- Keep the deterministic pre-permission activity/fragment instrumentation smoke
+  test running in hosted CI; retain camera preview and capture as device validation
 - Reassess the two preview-SDK lint advisories when Android API 37 is stable
 
 Contribution rules:

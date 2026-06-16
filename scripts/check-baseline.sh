@@ -43,6 +43,8 @@ CAPTURE_FAILURE_RECOVERY_PLAN="$ROOT_DIR/docs/plans/2026-06-16-cameraapp-capture
 SYNCHRONOUS_CAPTURE_RECOVERY_PLAN="$ROOT_DIR/docs/plans/2026-06-16-cameraapp-synchronous-capture-recovery.md"
 MISSING_CAPTURE_DEPENDENCY_PLAN="$ROOT_DIR/docs/plans/2026-06-16-cameraapp-missing-capture-dependency-recovery.md"
 CLOSED_SESSION_CAPTURE_RECOVERY_PLAN="$ROOT_DIR/docs/plans/2026-06-16-cameraapp-closed-session-capture-recovery.md"
+INSTRUMENTATION_EXECUTION_PLAN="$ROOT_DIR/docs/plans/2026-06-16-cameraapp-instrumentation-execution.md"
+INSTRUMENTATION_RUNNER="$ROOT_DIR/scripts/run-instrumentation.sh"
 XXXHDPI_LAUNCHER="$ROOT_DIR/Application/src/main/res/drawable-xxxhdpi/ic_launcher.png"
 XXXHDPI_INFO="$ROOT_DIR/Application/src/main/res/drawable-xxxhdpi/ic_action_info.png"
 ACTIVITY_LAYOUT="$ROOT_DIR/Application/src/main/res/layout/activity_camera.xml"
@@ -128,6 +130,8 @@ for path in \
   "docs/plans/2026-06-16-cameraapp-synchronous-capture-recovery.md" \
   "docs/plans/2026-06-16-cameraapp-missing-capture-dependency-recovery.md" \
   "docs/plans/2026-06-16-cameraapp-closed-session-capture-recovery.md" \
+  "docs/plans/2026-06-16-cameraapp-instrumentation-execution.md" \
+  "scripts/run-instrumentation.sh" \
   "Application/src/main/res/drawable-xxxhdpi/ic_launcher.png" \
   "Application/src/main/res/drawable-xxxhdpi/ic_action_info.png" \
   "gradlew" \
@@ -164,8 +168,54 @@ fi
 
 if ! grep -Fq "Android lint must produce zero-finding debug and release XML reports." "$ROOT_DIR/Makefile" || \
    ! grep -Fq "grep -Eq '<issue([[:space:]>])'" "$ROOT_DIR/Makefile" || \
-   ! grep -Fq ":Application:assembleDebugAndroidTest" "$ROOT_DIR/Makefile"; then
+   ! grep -Fq ":Application:assembleDebugAndroidTest" "$ROOT_DIR/Makefile" || \
+   ! grep -Fq 'SKIP_ANDROID_INSTRUMENTATION ?= 0' "$ROOT_DIR/Makefile" || \
+   ! grep -Fq 'GRADLE="$(GRADLE_COMMAND)" "$(ROOT)scripts/run-instrumentation.sh"' "$ROOT_DIR/Makefile"; then
   printf '%s\n' "Make lint must reject every Android lint finding without suppression." >&2
+  exit 1
+fi
+
+for lint_contract in \
+  ':Application:lintDebug --no-daemon' \
+  ':Application:lintRelease --no-daemon'; do
+  if ! grep -Fq "$lint_contract" "$ROOT_DIR/Makefile"; then
+    printf '%s\n' "Make lint must keep sequential variant contract: $lint_contract" >&2
+    exit 1
+  fi
+done
+if grep -Fq ':Application:lintDebug :Application:lintRelease' "$ROOT_DIR/Makefile"; then
+  printf '%s\n' "Debug and release lint must not share one racy Gradle invocation." >&2
+  exit 1
+fi
+
+if [ ! -x "$INSTRUMENTATION_RUNNER" ] || ! sh -n "$INSTRUMENTATION_RUNNER"; then
+  printf '%s\n' "Instrumentation runner must exist and pass POSIX shell syntax checks." >&2
+  exit 1
+fi
+
+for runner_contract in \
+  'SYSTEM_IMAGE=${ANDROID_SYSTEM_IMAGE:-system-images;android-36;google_apis;x86_64}' \
+  'trap cleanup 0 1 2 15' \
+  '"$AVDMANAGER" create avd' \
+  '-no-window' \
+  '-no-snapshot' \
+  'get-state' \
+  'sys.boot_completed' \
+  'kill -0 "$emulator_pid"' \
+  ':Application:connectedDebugAndroidTest --no-daemon'; do
+  if ! grep -Fq -- "$runner_contract" "$INSTRUMENTATION_RUNNER"; then
+    printf '%s\n' "Instrumentation runner contract is missing: $runner_contract" >&2
+    exit 1
+  fi
+done
+
+if [ "$(grep -Fc 'BOOT_TIMEOUT_SECONDS=${ANDROID_BOOT_TIMEOUT_SECONDS:-180}' "$INSTRUMENTATION_RUNNER")" -ne 1 ]; then
+  printf '%s\n' "Instrumentation runner must keep a testable three-minute default boot deadline." >&2
+  exit 1
+fi
+
+if grep -Fq 'wait-for-device' "$INSTRUMENTATION_RUNNER"; then
+  printf '%s\n' "Instrumentation runner must not block outside the bounded boot loop." >&2
   exit 1
 fi
 
@@ -522,8 +572,11 @@ for workflow_contract in \
   'actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654' \
   'java-version: "17"' \
   'run: |' \
-  '"$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" "build-tools;36.1.0"' \
-  'timeout 12m make check'; do
+  '"platforms;android-36"' \
+  '"build-tools;36.1.0"' \
+  '"system-images;android-36;google_apis;x86_64"' \
+  'sudo chmod 666 /dev/kvm' \
+  'timeout 22m make check'; do
   if ! grep -Fq "$workflow_contract" "$CI_WORKFLOW"; then
     printf '%s\n' "CI must preserve Android 16 toolchain contract: $workflow_contract" >&2
     exit 1
@@ -532,6 +585,11 @@ done
 
 if grep -Fq 'android-actions/setup-android@' "$CI_WORKFLOW"; then
   printf '%s\n' "CI must not use actions outside this repository's allowed Actions policy." >&2
+  exit 1
+fi
+
+if grep -Fq 'SKIP_ANDROID_INSTRUMENTATION' "$CI_WORKFLOW"; then
+  printf '%s\n' "CI must execute instrumentation without the local runtime skip." >&2
   exit 1
 fi
 
@@ -1467,6 +1525,30 @@ if ! grep -Fq "GitHub Actions" "$README"; then
   exit 1
 fi
 
+README_FLAT=$(tr '\n' ' ' < "$README" | tr -s '[:space:]' ' ')
+for instrumentation_doc_contract in \
+  "connectedDebugAndroidTest" \
+  "pre-permission activity/fragment startup" \
+  "does not prove camera preview or capture behavior"; do
+  if ! printf '%s\n' "$README_FLAT" | grep -Fq "$instrumentation_doc_contract"; then
+    printf '%s\n' "README must document hosted instrumentation scope: $instrumentation_doc_contract" >&2
+    exit 1
+  fi
+done
+
+for instrumentation_plan_contract in \
+  "status: completed" \
+  "repository-owned API 36 Google APIs emulator" \
+  "Bound emulator discovery and boot completion to three minutes" \
+  ":Application:connectedDebugAndroidTest" \
+  "SKIP_ANDROID_INSTRUMENTATION=1" \
+  "Exact-head hosted push and pull-request instrumentation execution before"; do
+  if ! grep -Fq "$instrumentation_plan_contract" "$INSTRUMENTATION_EXECUTION_PLAN"; then
+    printf '%s\n' "Instrumentation execution plan must preserve contract: $instrumentation_plan_contract" >&2
+    exit 1
+  fi
+done
+
 if ! grep -Fq "actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10" "$ROOT_DIR/.github/workflows/check.yml" ||
   ! grep -Fq "make check" "$ROOT_DIR/.github/workflows/check.yml"; then
   printf '%s\n' "GitHub Actions check workflow must check out the repository and run make check." >&2
@@ -1487,7 +1569,7 @@ if ! grep -Fq "permissions:" "$ROOT_DIR/.github/workflows/check.yml" ||
 fi
 
 if ! grep -Fq "workflow_dispatch:" "$ROOT_DIR/.github/workflows/check.yml" ||
-  ! grep -Fq "timeout-minutes: 15" "$ROOT_DIR/.github/workflows/check.yml"; then
+  ! grep -Fq "timeout-minutes: 25" "$ROOT_DIR/.github/workflows/check.yml"; then
   printf '%s\n' "GitHub Actions check workflow must support bounded manual verification." >&2
   exit 1
 fi
@@ -1537,17 +1619,21 @@ if ! grep -Fq "only preview-SDK availability advisories are disabled" "$README";
   exit 1
 fi
 
-if ! grep -Fq "./gradlew :Application:lintDebug :Application:lintRelease --no-daemon" "$README"; then
-  printf '%s\n' "README must document the lint gate." >&2
-  exit 1
-fi
+for lint_doc_contract in \
+  "./gradlew :Application:lintDebug --no-daemon" \
+  "./gradlew :Application:lintRelease --no-daemon"; do
+  if ! grep -Fq "$lint_doc_contract" "$README"; then
+    printf '%s\n' "README must document sequential lint command: $lint_doc_contract" >&2
+    exit 1
+  fi
+done
 
 if ! grep -Fq "./gradlew :Application:assembleDebug --no-daemon" "$README"; then
   printf '%s\n' "README must document the debug assemble gate." >&2
   exit 1
 fi
 
-if ! grep -Fq "Instrumentation tests require an Android device or emulator" "$README"; then
+if ! grep -Fq "hosted API 36 emulator executes" "$README"; then
   printf '%s\n' "README must document instrumentation test runtime requirements." >&2
   exit 1
 fi
@@ -1624,8 +1710,8 @@ if ! grep -Fq 'ROOT := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))' "$ROOT_DI
   exit 1
 fi
 
-if [ "$(grep -Fc '$(GRADLE_COMMAND) -p "$(ROOT)"' "$ROOT_DIR/Makefile")" -ne 3 ]; then
-  printf '%s\n' "Makefile must root lint, test, and build Gradle tasks." >&2
+if [ "$(grep -Fc '$(GRADLE_COMMAND) -p "$(ROOT)"' "$ROOT_DIR/Makefile")" -ne 4 ]; then
+  printf '%s\n' "Makefile must root both lint variants, test, and build Gradle tasks." >&2
   exit 1
 fi
 

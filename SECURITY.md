@@ -54,6 +54,8 @@ Helpful reports include:
   permission is granted.
 - Application runtime dependencies are intentionally absent. AndroidX
   dependencies are limited to the instrumentation test configuration.
+- Hosted instrumentation executes only the pre-permission activity/fragment
+  startup assertion; it does not claim camera preview, capture, or device privacy behavior.
 - CameraApp reports picture-save success only after file output closes
   successfully, avoiding false persistence claims when local storage fails.
 - Image-save failures log a generic category without exception details or private output paths.
