@@ -22,6 +22,9 @@ therefore remains covered only by source contracts.
   because revocation may terminate the target process under test.
 - Drive the real API 36 permission-controller denial action rather than
   invoking the fragment callback directly.
+- Prove the application processes the denial by observing the bounded pending
+  permission-request state transition instead of relying on accessibility-node
+  disappearance after the dialog closes.
 - Assert that the activity and camera fragment remain alive after denial.
 - Bound permission-controller discovery and fail with useful UI evidence when
   the expected denial action is unavailable.
@@ -51,6 +54,11 @@ therefore remains covered only by source contracts.
   is not installed and the host emulator binary lacks `libpulse.so.0`.
 - Exact-head push and pull-request hosted instrumentation remain required
   before this plan can be marked completed.
+- Initial exact-head push run `27655294552` passed, while pull-request run
+  `27655300169` exposed a flaky accessibility-node disappearance assertion
+  after the real deny click. The follow-up now waits for the fragment's
+  permission-request state to transition from pending to settled, reasserts
+  denied permission, and preserves the post-denial activity/fragment check.
 
 ## Scope Boundary
 

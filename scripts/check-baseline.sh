@@ -531,8 +531,11 @@ for test_contract in \
   'ActivityScenario.launch(CameraActivity.class)' \
   'Until.findObject(By.res(DENY_BUTTON_RESOURCE))' \
   'PERMISSION_DIALOG_TIMEOUT_MS = 10_000' \
+  'waitForPermissionRequestPending(scenario, true)' \
   'denyButton.click()' \
-  'Until.gone(By.res(DENY_BUTTON_RESOURCE))' \
+  'waitForPermissionRequestPending(scenario, false)' \
+  'getDeclaredField(' \
+  '"mCameraPermissionRequestPending"' \
   'getFragmentManager().findFragmentById(R.id.container)' \
   'assertNotNull("Camera fragment is null", fragment)'; do
   if ! grep -Fq "$test_contract" "$TEST_FIXTURE"; then
