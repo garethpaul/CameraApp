@@ -19,8 +19,8 @@
 - Full baseline: `make check`
 - Combined verification: `make verify`
 - Lint/static checks: `make lint`
-- Tests: `make test` provisions a bounded API 36 emulator and executes the
-  pre-permission instrumentation smoke test by default.
+- Tests: `make test` provisions a bounded API 36 emulator, verifies
+  pre-permission startup, and drives camera-permission denial by default.
 - Build: `make build`
 - Source-only contract: `scripts/check-baseline.sh`
 - Android instrumentation APK: `./gradlew :Application:assembleDebugAndroidTest`

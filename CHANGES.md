@@ -2,6 +2,8 @@
 
 ## 2026-06-16
 
+- Extended hosted API 36 instrumentation through the real camera-permission
+  denial action and asserted that the activity and fragment remain stable.
 - Added bounded API 36 emulator provisioning and executed the existing
   pre-permission CameraActivity instrumentation smoke test in hosted CI.
 - Serialized debug and release lint so clean builds cannot race over shared

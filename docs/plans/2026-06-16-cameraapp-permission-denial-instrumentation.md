@@ -2,7 +2,7 @@
 title: CameraApp Permission Denial Instrumentation
 type: reliability
 date: 2026-06-16
-status: in_progress
+status: pending_hosted_validation
 execution: code
 ---
 
@@ -17,7 +17,9 @@ therefore remains covered only by source contracts.
 
 ## Requirements
 
-- Revoke camera permission before the denial test launches the activity.
+- Assert camera permission is denied on the fresh hosted install before the
+  denial test launches the activity. Do not revoke from inside instrumentation,
+  because revocation may terminate the target process under test.
 - Drive the real API 36 permission-controller denial action rather than
   invoking the fragment callback directly.
 - Assert that the activity and camera fragment remain alive after denial.
@@ -39,6 +41,16 @@ therefore remains covered only by source contracts.
   contracts.
 - Audit the exact diff, generated artifacts, and credential-shaped additions.
 - Require exact-head push and pull-request hosted instrumentation success.
+
+## Verification Results
+
+- The instrumentation APK compiled successfully with Temurin 17 and Android
+  SDK 36, including the UI Automator denial interaction.
+- Shell syntax and the focused static contracts passed after implementation.
+- Local emulator execution remains unavailable because the API 36 system image
+  is not installed and the host emulator binary lacks `libpulse.so.0`.
+- Exact-head push and pull-request hosted instrumentation remain required
+  before this plan can be marked completed.
 
 ## Scope Boundary
 

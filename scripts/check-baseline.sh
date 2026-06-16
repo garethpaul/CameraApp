@@ -44,6 +44,7 @@ SYNCHRONOUS_CAPTURE_RECOVERY_PLAN="$ROOT_DIR/docs/plans/2026-06-16-cameraapp-syn
 MISSING_CAPTURE_DEPENDENCY_PLAN="$ROOT_DIR/docs/plans/2026-06-16-cameraapp-missing-capture-dependency-recovery.md"
 CLOSED_SESSION_CAPTURE_RECOVERY_PLAN="$ROOT_DIR/docs/plans/2026-06-16-cameraapp-closed-session-capture-recovery.md"
 INSTRUMENTATION_EXECUTION_PLAN="$ROOT_DIR/docs/plans/2026-06-16-cameraapp-instrumentation-execution.md"
+PERMISSION_DENIAL_INSTRUMENTATION_PLAN="$ROOT_DIR/docs/plans/2026-06-16-cameraapp-permission-denial-instrumentation.md"
 INSTRUMENTATION_RUNNER="$ROOT_DIR/scripts/run-instrumentation.sh"
 XXXHDPI_LAUNCHER="$ROOT_DIR/Application/src/main/res/drawable-xxxhdpi/ic_launcher.png"
 XXXHDPI_INFO="$ROOT_DIR/Application/src/main/res/drawable-xxxhdpi/ic_action_info.png"
@@ -465,7 +466,8 @@ for build_contract in \
   "warningsAsErrors = true" \
   "androidTestImplementation 'androidx.test:core:1.7.0'" \
   "androidTestImplementation 'androidx.test.ext:junit:1.3.0'" \
-  "androidTestImplementation 'androidx.test:runner:1.7.0'"; do
+  "androidTestImplementation 'androidx.test:runner:1.7.0'" \
+  "androidTestImplementation 'androidx.test.uiautomator:uiautomator:2.3.0'"; do
   if ! grep -Fq "$build_contract" "$APP_BUILD"; then
     printf '%s\n' "Application build must preserve modern contract: $build_contract" >&2
     exit 1
@@ -523,7 +525,14 @@ fi
 
 for test_contract in \
   '@RunWith(AndroidJUnit4.class)' \
+  'activitySurvivesCameraPermissionDenial()' \
+  'assertEquals(PERMISSION_DENIED,' \
+  '.checkSelfPermission(Manifest.permission.CAMERA)' \
   'ActivityScenario.launch(CameraActivity.class)' \
+  'Until.findObject(By.res(DENY_BUTTON_RESOURCE))' \
+  'PERMISSION_DIALOG_TIMEOUT_MS = 10_000' \
+  'denyButton.click()' \
+  'Until.gone(By.res(DENY_BUTTON_RESOURCE))' \
   'getFragmentManager().findFragmentById(R.id.container)' \
   'assertNotNull("Camera fragment is null", fragment)'; do
   if ! grep -Fq "$test_contract" "$TEST_FIXTURE"; then
@@ -531,6 +540,11 @@ for test_contract in \
     exit 1
   fi
 done
+
+if [ "$(grep -Fc 'assertCameraFragmentExists(scenario);' "$TEST_FIXTURE")" -ne 2 ]; then
+  printf '%s\n' "Instrumentation fixture must verify the camera fragment before and after denial." >&2
+  exit 1
+fi
 
 ensure_line=$(grep -n 'if (!ensureCameraPermission(activity))' "$FRAGMENT" | head -n 1 | cut -d: -f1)
 setup_line=$(grep -n 'setUpCameraOutputs(width, height);' "$FRAGMENT" | head -n 1 | cut -d: -f1)
@@ -1532,9 +1546,23 @@ README_FLAT=$(tr '\n' ' ' < "$README" | tr -s '[:space:]' ' ')
 for instrumentation_doc_contract in \
   "connectedDebugAndroidTest" \
   "pre-permission activity/fragment startup" \
-  "does not prove camera preview or capture behavior"; do
+  "real camera-permission denial action" \
+  "does not prove permission grant, camera preview, or capture behavior"; do
   if ! printf '%s\n' "$README_FLAT" | grep -Fq "$instrumentation_doc_contract"; then
     printf '%s\n' "README must document hosted instrumentation scope: $instrumentation_doc_contract" >&2
+    exit 1
+  fi
+done
+
+PERMISSION_DENIAL_PLAN_FLAT=$(tr '\n' ' ' < "$PERMISSION_DENIAL_INSTRUMENTATION_PLAN" | tr -s '[:space:]' ' ')
+for permission_denial_plan_contract in \
+  "status: pending_hosted_validation" \
+  "camera permission is denied on the fresh hosted install" \
+  "real API 36 permission-controller denial action" \
+  "activity and camera fragment remain alive after denial" \
+  "push and pull-request hosted instrumentation success"; do
+  if ! printf '%s\n' "$PERMISSION_DENIAL_PLAN_FLAT" | grep -Fq "$permission_denial_plan_contract"; then
+    printf '%s\n' "Permission-denial instrumentation plan must preserve contract: $permission_denial_plan_contract" >&2
     exit 1
   fi
 done
