@@ -27,6 +27,7 @@ Priority:
 - Keep asynchronous preview callbacks bound to their initiating camera device
 - Keep camera-device disconnect and error callbacks bound to the device that initiated them
 - Capture-result and still-capture completion callbacks reject stale session ownership before mutating capture state or unlocking focus.
+- Current-session still-capture failures unlock focus and resume preview; stale session failures are ignored.
 - Report preview configuration failures only for the initiating camera lifetime
 - Keep layout control binding tolerant of missing optional controls
 - Keep right-to-left camera control placement tied to logical layout anchors

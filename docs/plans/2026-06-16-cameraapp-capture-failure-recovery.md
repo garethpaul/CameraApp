@@ -1,6 +1,6 @@
 # CameraApp Capture Failure Recovery
 
-## Status: In Progress
+## Status: Completed
 
 ## Context
 
@@ -48,3 +48,15 @@ the existing stale-session ownership boundary.
 
 - Capture retry policy, AF/AE heuristics, camera selection, image persistence,
   UI changes, dependency/toolchain upgrades, and workflow changes.
+
+## Verification Results
+
+- `sh -n scripts/check-baseline.sh` passed, and the focused SDK-free baseline
+  accepted the completed implementation and plan evidence.
+- Five isolated failure-recovery mutations were rejected: missing failure
+  callback, missing stale-session guard, missing focus recovery, missing
+  maintained guidance, and reopened plan status.
+- Repository-root and external-directory `make check` passed the SDK-free
+  source contracts and pinned Android package gate.
+- No emulator, physical camera, or live capture failure was executed; runtime
+  failure timing remains in the checked-in device verification matrix.

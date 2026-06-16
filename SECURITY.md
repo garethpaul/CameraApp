@@ -32,6 +32,7 @@ Helpful reports include:
 - Interrupted camera-worker shutdown preserves the interrupt signal and unresolved worker ownership.
 - Stale camera-device callbacks cannot clear replacement state or finish its activity.
 - Capture-result and still-capture completion callbacks reject stale session ownership before mutating capture state or unlocking focus.
+- Current-session still-capture failures unlock focus and resume preview; stale session failures are ignored.
 - Stale camera-session callbacks close before publishing preview state.
 - Failed preview callbacks suppress stale failure UI without invoking the already-closed session.
 - Review found file, document, data, or media parsing flows; changes in those areas should receive security-focused review before merge.

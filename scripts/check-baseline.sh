@@ -39,6 +39,7 @@ PREVIEW_SESSION_OWNERSHIP_PLAN="$ROOT_DIR/docs/plans/2026-06-15-cameraapp-previe
 PREVIEW_FAILURE_OWNERSHIP_PLAN="$ROOT_DIR/docs/plans/2026-06-15-cameraapp-preview-configuration-failure-ownership.md"
 DEVICE_CALLBACK_OWNERSHIP_PLAN="$ROOT_DIR/docs/plans/2026-06-15-cameraapp-device-callback-ownership.md"
 CAPTURE_CALLBACK_OWNERSHIP_PLAN="$ROOT_DIR/docs/plans/2026-06-16-cameraapp-capture-callback-ownership.md"
+CAPTURE_FAILURE_RECOVERY_PLAN="$ROOT_DIR/docs/plans/2026-06-16-cameraapp-capture-failure-recovery.md"
 XXXHDPI_LAUNCHER="$ROOT_DIR/Application/src/main/res/drawable-xxxhdpi/ic_launcher.png"
 XXXHDPI_INFO="$ROOT_DIR/Application/src/main/res/drawable-xxxhdpi/ic_action_info.png"
 ACTIVITY_LAYOUT="$ROOT_DIR/Application/src/main/res/layout/activity_camera.xml"
@@ -120,6 +121,7 @@ for path in \
   "docs/plans/2026-06-14-cameraapp-save-success-notification.md" \
   "docs/plans/2026-06-15-cameraapp-preview-session-ownership.md" \
   "docs/plans/2026-06-15-cameraapp-device-callback-ownership.md" \
+  "docs/plans/2026-06-16-cameraapp-capture-failure-recovery.md" \
   "Application/src/main/res/drawable-xxxhdpi/ic_launcher.png" \
   "Application/src/main/res/drawable-xxxhdpi/ic_action_info.png" \
   "gradlew" \
@@ -843,7 +845,7 @@ still_capture_method=$(awk '
 ' "$FRAGMENT")
 still_capture_completed=$(printf '%s\n' "$still_capture_method" | awk '
   /public void onCaptureCompleted\(CameraCaptureSession session/ { capture = 1 }
-  capture && /^[[:space:]]*};$/ { exit }
+  capture && /public void onCaptureFailed\(CameraCaptureSession session/ { exit }
   capture { print }
 ')
 for callback_marker in \
@@ -864,10 +866,53 @@ if [ "$still_guard_line" -ge "$still_return_line" ] || \
   exit 1
 fi
 
+still_capture_failed=$(printf '%s\n' "$still_capture_method" | awk '
+  /public void onCaptureFailed\(CameraCaptureSession session/ { capture = 1 }
+  capture && /^[[:space:]]*};$/ { exit }
+  capture { print }
+')
+for callback_marker in \
+  "CaptureFailure failure" \
+  "if (session != mCaptureSession)" \
+  "return;" \
+  "unlockFocus();"; do
+  if [ "$(printf '%s\n' "$still_capture_failed" | grep -Fc "$callback_marker")" -ne 1 ]; then
+    printf '%s\n' "Still-capture failure recovery marker must be unique: $callback_marker" >&2
+    exit 1
+  fi
+done
+failure_guard_line=$(printf '%s\n' "$still_capture_failed" | grep -nF "if (session != mCaptureSession)" | cut -d: -f1)
+failure_return_line=$(printf '%s\n' "$still_capture_failed" | grep -nF "return;" | cut -d: -f1)
+failure_unlock_line=$(printf '%s\n' "$still_capture_failed" | grep -nF "unlockFocus();" | cut -d: -f1)
+if [ "$failure_guard_line" -ge "$failure_return_line" ] || \
+  [ "$failure_return_line" -ge "$failure_unlock_line" ]; then
+  printf '%s\n' "Still-capture failure must reject stale session ownership before unlocking focus." >&2
+  exit 1
+fi
+
 capture_callback_guidance="Capture-result and still-capture completion callbacks reject stale session ownership before mutating capture state or unlocking focus."
 for guidance_file in AGENTS.md README.md SECURITY.md VISION.md CHANGES.md; do
   if ! grep -Fq "$capture_callback_guidance" "$ROOT_DIR/$guidance_file"; then
     printf '%s\n' "Capture callback ownership guidance must remain checked in: $guidance_file" >&2
+    exit 1
+  fi
+done
+
+capture_failure_guidance="Current-session still-capture failures unlock focus and resume preview; stale session failures are ignored."
+for guidance_file in AGENTS.md README.md SECURITY.md VISION.md CHANGES.md; do
+  if ! grep -Fq "$capture_failure_guidance" "$ROOT_DIR/$guidance_file"; then
+    printf '%s\n' "Capture failure recovery guidance must remain checked in: $guidance_file" >&2
+    exit 1
+  fi
+done
+
+for capture_failure_plan_contract in \
+  "Status: Completed" \
+  "make check" \
+  "isolated failure-recovery mutations were rejected" \
+  "No emulator, physical camera, or live capture failure"; do
+  if ! grep -Fq "$capture_failure_plan_contract" "$CAPTURE_FAILURE_RECOVERY_PLAN"; then
+    printf '%s\n' "Capture failure recovery plan must record completed verification: $capture_failure_plan_contract" >&2
     exit 1
   fi
 done

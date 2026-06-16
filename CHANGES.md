@@ -3,6 +3,7 @@
 ## 2026-06-16
 
 - Capture-result and still-capture completion callbacks reject stale session ownership before mutating capture state or unlocking focus.
+- Current-session still-capture failures unlock focus and resume preview; stale session failures are ignored.
 
 ## 2026-06-15
 

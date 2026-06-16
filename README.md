@@ -131,6 +131,7 @@ contracts as camera execution.
 - Interrupted camera-worker shutdown preserves the interrupt signal and unresolved worker ownership.
 - Camera-device disconnect and error callbacks close their callback device, but only the current device may clear shared state or finish the activity.
 - Capture-result and still-capture completion callbacks reject stale session ownership before mutating capture state or unlocking focus.
+- Current-session still-capture failures unlock focus and resume preview; stale session failures are ignored.
 - Configured preview callbacks must still own their exact initiating camera device before publishing preview state; stale sessions close instead.
 - Failed preview callbacks rely on Camera2 session closure and suppress stale UI;
   only the initiating camera lifetime may report configuration failures.

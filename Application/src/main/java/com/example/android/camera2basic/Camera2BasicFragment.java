@@ -37,6 +37,7 @@ import android.hardware.camera2.CameraCharacteristics;
 import android.hardware.camera2.CameraDevice;
 import android.hardware.camera2.CameraManager;
 import android.hardware.camera2.CameraMetadata;
+import android.hardware.camera2.CaptureFailure;
 import android.hardware.camera2.CaptureRequest;
 import android.hardware.camera2.CaptureResult;
 import android.hardware.camera2.TotalCaptureResult;
@@ -928,6 +929,15 @@ public class Camera2BasicFragment extends Fragment implements View.OnClickListen
                 @Override
                 public void onCaptureCompleted(CameraCaptureSession session, CaptureRequest request,
                                                TotalCaptureResult result) {
+                    if (session != mCaptureSession) {
+                        return;
+                    }
+                    unlockFocus();
+                }
+
+                @Override
+                public void onCaptureFailed(CameraCaptureSession session, CaptureRequest request,
+                                            CaptureFailure failure) {
                     if (session != mCaptureSession) {
                         return;
                     }
