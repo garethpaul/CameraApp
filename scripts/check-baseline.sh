@@ -42,6 +42,7 @@ CAPTURE_CALLBACK_OWNERSHIP_PLAN="$ROOT_DIR/docs/plans/2026-06-16-cameraapp-captu
 CAPTURE_FAILURE_RECOVERY_PLAN="$ROOT_DIR/docs/plans/2026-06-16-cameraapp-capture-failure-recovery.md"
 SYNCHRONOUS_CAPTURE_RECOVERY_PLAN="$ROOT_DIR/docs/plans/2026-06-16-cameraapp-synchronous-capture-recovery.md"
 MISSING_CAPTURE_DEPENDENCY_PLAN="$ROOT_DIR/docs/plans/2026-06-16-cameraapp-missing-capture-dependency-recovery.md"
+CLOSED_SESSION_CAPTURE_RECOVERY_PLAN="$ROOT_DIR/docs/plans/2026-06-16-cameraapp-closed-session-capture-recovery.md"
 XXXHDPI_LAUNCHER="$ROOT_DIR/Application/src/main/res/drawable-xxxhdpi/ic_launcher.png"
 XXXHDPI_INFO="$ROOT_DIR/Application/src/main/res/drawable-xxxhdpi/ic_action_info.png"
 ACTIVITY_LAYOUT="$ROOT_DIR/Application/src/main/res/layout/activity_camera.xml"
@@ -126,6 +127,7 @@ for path in \
   "docs/plans/2026-06-16-cameraapp-capture-failure-recovery.md" \
   "docs/plans/2026-06-16-cameraapp-synchronous-capture-recovery.md" \
   "docs/plans/2026-06-16-cameraapp-missing-capture-dependency-recovery.md" \
+  "docs/plans/2026-06-16-cameraapp-closed-session-capture-recovery.md" \
   "Application/src/main/res/drawable-xxxhdpi/ic_launcher.png" \
   "Application/src/main/res/drawable-xxxhdpi/ic_action_info.png" \
   "gradlew" \
@@ -689,8 +691,9 @@ if grep -Fq 'printStackTrace()' "$FRAGMENT"; then
   exit 1
 fi
 
-if [ "$(grep -Fc 'catch (CameraAccessException e)' "$FRAGMENT")" -ne 8 ]; then
-  printf '%s\n' "Camera error redaction must preserve all eight camera access catch boundaries." >&2
+if [ "$(grep -Fc 'catch (CameraAccessException e)' "$FRAGMENT")" -ne 6 ] || \
+   [ "$(grep -Fc 'catch (CameraAccessException | IllegalStateException e)' "$FRAGMENT")" -ne 2 ]; then
+  printf '%s\n' "Camera error redaction must preserve six access-only and two closed-session recovery boundaries." >&2
   exit 1
 fi
 
@@ -918,12 +921,12 @@ if [ "$failure_guard_line" -ge "$failure_return_line" ] || \
 fi
 
 capture_exception=$(printf '%s\n' "$still_capture_method" | awk '
-  /catch \(CameraAccessException e\)/ { capture = 1 }
+  /catch \(CameraAccessException \| IllegalStateException e\)/ { capture = 1 }
   capture && /^[[:space:]]*}$/ { exit }
   capture { print }
 ')
 for recovery_marker in \
-  "catch (CameraAccessException e)" \
+  "catch (CameraAccessException | IllegalStateException e)" \
   "unlockFocus();" \
   'Log.e(TAG, "Unable to capture picture.");'; do
   if [ "$(printf '%s\n' "$capture_exception" | grep -Fc "$recovery_marker")" -ne 1 ]; then
@@ -931,6 +934,7 @@ for recovery_marker in \
     exit 1
   fi
 done
+
 capture_exception_unlock_line=$(printf '%s\n' "$capture_exception" | grep -nF "unlockFocus();" | cut -d: -f1)
 capture_exception_log_line=$(printf '%s\n' "$capture_exception" | grep -nF 'Log.e(TAG, "Unable to capture picture.");' | cut -d: -f1)
 if [ "$capture_exception_unlock_line" -ge "$capture_exception_log_line" ]; then
@@ -943,6 +947,10 @@ unlock_focus_method=$(awk '
   capture && /@Override/ { exit }
   capture { print }
 ' "$FRAGMENT")
+if [ "$(printf '%s\n' "$unlock_focus_method" | grep -Fc 'catch (CameraAccessException | IllegalStateException e)')" -ne 1 ]; then
+  printf '%s\n' "Focus recovery must absorb closed-session failures after publishing preview state." >&2
+  exit 1
+fi
 for recovery_marker in \
   "mState = STATE_PREVIEW;" \
   "if (mPreviewRequestBuilder == null || mCaptureSession == null || mPreviewRequest == null)" \
@@ -989,6 +997,30 @@ missing_capture_dependency_guidance="Missing still-capture dependencies restore 
 for guidance_file in AGENTS.md README.md SECURITY.md VISION.md CHANGES.md; do
   if ! grep -Fq "$missing_capture_dependency_guidance" "$ROOT_DIR/$guidance_file"; then
     printf '%s\n' "Missing capture dependency recovery guidance must remain checked in: $guidance_file" >&2
+    exit 1
+  fi
+done
+
+closed_session_capture_guidance="Closed-session still-capture and preview-restart operations use the same recovery path instead of escaping with \`IllegalStateException\`."
+for guidance_file in AGENTS.md README.md SECURITY.md VISION.md; do
+  if ! tr '\n' ' ' < "$ROOT_DIR/$guidance_file" | tr -s '[:space:]' ' ' | \
+      grep -Fq "$closed_session_capture_guidance"; then
+    printf '%s\n' "Closed-session capture recovery guidance must remain checked in: $guidance_file" >&2
+    exit 1
+  fi
+done
+if ! grep -Fq 'Closed-session still-capture and preview-restart operations now recover' "$ROOT_DIR/CHANGES.md"; then
+  printf '%s\n' "CHANGES.md must document closed-session capture recovery." >&2
+  exit 1
+fi
+
+for closed_session_capture_plan_contract in \
+  "Status: Completed" \
+  "make check" \
+  "isolated closed-session mutations were rejected" \
+  "No emulator, physical camera, or live closed-session race"; do
+  if ! grep -Fq "$closed_session_capture_plan_contract" "$CLOSED_SESSION_CAPTURE_RECOVERY_PLAN"; then
+    printf '%s\n' "Closed-session capture recovery plan must record completed verification: $closed_session_capture_plan_contract" >&2
     exit 1
   fi
 done

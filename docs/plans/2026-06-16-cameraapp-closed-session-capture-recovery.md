@@ -1,6 +1,6 @@
 # CameraApp Closed-Session Capture Recovery
 
-## Status: Planned
+## Status: Completed
 
 ## Context
 
@@ -53,3 +53,25 @@ Primary references:
 - Source contracts cannot reproduce a physical camera session closing between
   the guard and Camera2 operation.
 - No emulator, physical camera, or live capture race is exercised locally.
+
+## Work Completed
+
+- Extended the existing still-capture and preview-restart recovery catches to
+  include closed or replaced Camera2 sessions.
+- Preserved preview-state publication, focus recovery, stale-session callback
+  ownership, and fixed-category error logging.
+- Added catch-inventory and method-specific static contracts plus synchronized
+  maintained guidance.
+
+## Verification Results
+
+- The pre-change source lacked closed-session recovery at both established
+  synchronous recovery boundaries.
+- `sh -n`, the focused SDK-free baseline, and repository and external-directory
+  make check passed with explicit timeouts.
+- Five isolated closed-session mutations were rejected: removing either
+  recovery catch, broadening an unrelated catch boundary, deleting maintained
+  security guidance, and reopening plan status.
+- Exact diff, generated-artifact, credential-pattern, conflict-marker,
+  dependency/workflow drift, binary, size, mode, and whitespace audits passed.
+- No emulator, physical camera, or live closed-session race was executed.

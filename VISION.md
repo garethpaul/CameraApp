@@ -29,6 +29,8 @@ Priority:
 - Capture-result and still-capture completion callbacks reject stale session ownership before mutating capture state or unlocking focus.
 - Current-session still-capture failures unlock focus and resume preview; stale session failures are ignored.
 - Synchronous still-capture and preview-restart failures restore preview state before Camera2 recovery work can throw.
+- Closed-session still-capture and preview-restart operations use the same
+  recovery path instead of escaping with `IllegalStateException`.
 - Missing still-capture dependencies restore preview state before the capture path returns.
 - Report preview configuration failures only for the initiating camera lifetime
 - Keep layout control binding tolerant of missing optional controls

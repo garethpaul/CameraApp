@@ -948,7 +948,7 @@ public class Camera2BasicFragment extends Fragment implements View.OnClickListen
 
             mCaptureSession.stopRepeating();
             mCaptureSession.capture(captureBuilder.build(), CaptureCallback, null);
-        } catch (CameraAccessException e) {
+        } catch (CameraAccessException | IllegalStateException e) {
             unlockFocus();
             Log.e(TAG, "Unable to capture picture.");
         }
@@ -974,7 +974,7 @@ public class Camera2BasicFragment extends Fragment implements View.OnClickListen
             // After this, the camera will go back to the normal state of preview.
             mCaptureSession.setRepeatingRequest(mPreviewRequest, mCaptureCallback,
                     mBackgroundHandler);
-        } catch (CameraAccessException e) {
+        } catch (CameraAccessException | IllegalStateException e) {
             Log.e(TAG, "Unable to resume camera preview.");
         }
     }
