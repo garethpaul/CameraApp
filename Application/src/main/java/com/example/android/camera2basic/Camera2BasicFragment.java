@@ -160,7 +160,7 @@ public class Camera2BasicFragment extends Fragment implements View.OnClickListen
      * A {@link CameraCaptureSession } for camera preview.
      */
 
-    private CameraCaptureSession mCaptureSession;
+    private volatile CameraCaptureSession mCaptureSession;
     /**
      * A reference to the opened {@link CameraDevice}.
      */
@@ -340,12 +340,18 @@ public class Camera2BasicFragment extends Fragment implements View.OnClickListen
         @Override
         public void onCaptureProgressed(CameraCaptureSession session, CaptureRequest request,
                                         CaptureResult partialResult) {
+            if (session != mCaptureSession) {
+                return;
+            }
             process(partialResult);
         }
 
         @Override
         public void onCaptureCompleted(CameraCaptureSession session, CaptureRequest request,
                                        TotalCaptureResult result) {
+            if (session != mCaptureSession) {
+                return;
+            }
             process(result);
         }
 
@@ -922,6 +928,9 @@ public class Camera2BasicFragment extends Fragment implements View.OnClickListen
                 @Override
                 public void onCaptureCompleted(CameraCaptureSession session, CaptureRequest request,
                                                TotalCaptureResult result) {
+                    if (session != mCaptureSession) {
+                        return;
+                    }
                     unlockFocus();
                 }
             };

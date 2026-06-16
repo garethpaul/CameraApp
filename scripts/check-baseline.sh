@@ -38,6 +38,7 @@ CAMERA_ERROR_LOG_PLAN="$ROOT_DIR/docs/plans/2026-06-15-cameraapp-camera-error-lo
 PREVIEW_SESSION_OWNERSHIP_PLAN="$ROOT_DIR/docs/plans/2026-06-15-cameraapp-preview-session-ownership.md"
 PREVIEW_FAILURE_OWNERSHIP_PLAN="$ROOT_DIR/docs/plans/2026-06-15-cameraapp-preview-configuration-failure-ownership.md"
 DEVICE_CALLBACK_OWNERSHIP_PLAN="$ROOT_DIR/docs/plans/2026-06-15-cameraapp-device-callback-ownership.md"
+CAPTURE_CALLBACK_OWNERSHIP_PLAN="$ROOT_DIR/docs/plans/2026-06-16-cameraapp-capture-callback-ownership.md"
 XXXHDPI_LAUNCHER="$ROOT_DIR/Application/src/main/res/drawable-xxxhdpi/ic_launcher.png"
 XXXHDPI_INFO="$ROOT_DIR/Application/src/main/res/drawable-xxxhdpi/ic_action_info.png"
 ACTIVITY_LAYOUT="$ROOT_DIR/Application/src/main/res/layout/activity_camera.xml"
@@ -786,6 +787,101 @@ if [ "$(grep -Fc "private volatile CameraDevice mCameraDevice;" "$FRAGMENT")" -n
   printf '%s\n' "Camera device ownership must remain visible across lifecycle and callback threads." >&2
   exit 1
 fi
+
+if [ "$(grep -Fc "private volatile CameraCaptureSession mCaptureSession;" "$FRAGMENT")" -ne 1 ]; then
+  printf '%s\n' "Capture session ownership must remain visible across lifecycle and callback threads." >&2
+  exit 1
+fi
+
+capture_result_callback=$(awk '
+  /private CameraCaptureSession.CaptureCallback mCaptureCallback/ { capture = 1 }
+  capture && /private static class MessageHandler/ { exit }
+  capture { print }
+' "$FRAGMENT")
+capture_progressed_callback=$(printf '%s\n' "$capture_result_callback" | awk '
+  /public void onCaptureProgressed\(CameraCaptureSession session/ { capture = 1 }
+  capture && /public void onCaptureCompleted\(CameraCaptureSession session/ { exit }
+  capture { print }
+')
+capture_completed_callback=$(printf '%s\n' "$capture_result_callback" | awk '
+  /public void onCaptureCompleted\(CameraCaptureSession session/ { capture = 1 }
+  capture { print }
+')
+
+for callback_name in progressed completed; do
+  if [ "$callback_name" = progressed ]; then
+    callback_body=$capture_progressed_callback
+    process_marker="process(partialResult);"
+  else
+    callback_body=$capture_completed_callback
+    process_marker="process(result);"
+  fi
+  for callback_marker in \
+    "if (session != mCaptureSession)" \
+    "return;" \
+    "$process_marker"; do
+    if [ "$(printf '%s\n' "$callback_body" | grep -Fc "$callback_marker")" -ne 1 ]; then
+      printf '%s\n' "Capture $callback_name ownership marker must be unique: $callback_marker" >&2
+      exit 1
+    fi
+  done
+
+  callback_guard_line=$(printf '%s\n' "$callback_body" | grep -nF "if (session != mCaptureSession)" | cut -d: -f1)
+  callback_return_line=$(printf '%s\n' "$callback_body" | grep -nF "return;" | cut -d: -f1)
+  callback_process_line=$(printf '%s\n' "$callback_body" | grep -nF "$process_marker" | cut -d: -f1)
+  if [ "$callback_guard_line" -ge "$callback_return_line" ] || \
+    [ "$callback_return_line" -ge "$callback_process_line" ]; then
+    printf '%s\n' "Capture $callback_name callbacks must reject stale session ownership before processing results." >&2
+    exit 1
+  fi
+done
+
+still_capture_method=$(awk '
+  /private void captureStillPicture\(\)/ { capture = 1 }
+  capture && /private void unlockFocus\(\)/ { exit }
+  capture { print }
+' "$FRAGMENT")
+still_capture_completed=$(printf '%s\n' "$still_capture_method" | awk '
+  /public void onCaptureCompleted\(CameraCaptureSession session/ { capture = 1 }
+  capture && /^[[:space:]]*};$/ { exit }
+  capture { print }
+')
+for callback_marker in \
+  "if (session != mCaptureSession)" \
+  "return;" \
+  "unlockFocus();"; do
+  if [ "$(printf '%s\n' "$still_capture_completed" | grep -Fc "$callback_marker")" -ne 1 ]; then
+    printf '%s\n' "Still-capture completion ownership marker must be unique: $callback_marker" >&2
+    exit 1
+  fi
+done
+still_guard_line=$(printf '%s\n' "$still_capture_completed" | grep -nF "if (session != mCaptureSession)" | cut -d: -f1)
+still_return_line=$(printf '%s\n' "$still_capture_completed" | grep -nF "return;" | cut -d: -f1)
+still_unlock_line=$(printf '%s\n' "$still_capture_completed" | grep -nF "unlockFocus();" | cut -d: -f1)
+if [ "$still_guard_line" -ge "$still_return_line" ] || \
+  [ "$still_return_line" -ge "$still_unlock_line" ]; then
+  printf '%s\n' "Still-capture completion must reject stale session ownership before unlocking focus." >&2
+  exit 1
+fi
+
+capture_callback_guidance="Capture-result and still-capture completion callbacks reject stale session ownership before mutating capture state or unlocking focus."
+for guidance_file in AGENTS.md README.md SECURITY.md VISION.md CHANGES.md; do
+  if ! grep -Fq "$capture_callback_guidance" "$ROOT_DIR/$guidance_file"; then
+    printf '%s\n' "Capture callback ownership guidance must remain checked in: $guidance_file" >&2
+    exit 1
+  fi
+done
+
+for capture_callback_plan_contract in \
+  "Status: Completed" \
+  "make check" \
+  "isolated ownership mutations were rejected" \
+  "No emulator, physical camera, or live stale callback"; do
+  if ! grep -Fq "$capture_callback_plan_contract" "$CAPTURE_CALLBACK_OWNERSHIP_PLAN"; then
+    printf '%s\n' "Capture callback ownership plan must record completed verification: $capture_callback_plan_contract" >&2
+    exit 1
+  fi
+done
 
 device_state_callback=$(awk '
   /private final CameraDevice.StateCallback mStateCallback/ { capture = 1 }

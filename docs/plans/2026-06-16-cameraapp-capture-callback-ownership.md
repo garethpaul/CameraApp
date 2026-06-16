@@ -1,6 +1,6 @@
 # CameraApp Capture Callback Ownership
 
-## Status: In Progress
+## Status: Completed
 
 ## Context
 
@@ -47,3 +47,15 @@ advance the replacement session's capture state or issue focus requests to it.
 
 - AF/AE heuristics, timeout policy, camera selection, image saving, UI changes,
   dependency/toolchain upgrades, and workflow changes.
+
+## Verification Results
+
+- `sh -n scripts/check-baseline.sh` passed, and the focused baseline accepted
+  the implementation once completed-plan evidence was supplied.
+- Six isolated ownership mutations were rejected: session visibility, both
+  shared capture-result guards, the still-capture completion guard, maintained
+  guidance, and completed plan status.
+- Repository-root and external-directory `make check` passed the SDK-free
+  source contracts and the pinned Android package gate.
+- No emulator, physical camera, or live stale callback was executed; runtime
+  callback timing remains in the checked-in device verification matrix.

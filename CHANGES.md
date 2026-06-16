@@ -1,5 +1,9 @@
 # CameraApp Changes
 
+## 2026-06-16
+
+- Capture-result and still-capture completion callbacks reject stale session ownership before mutating capture state or unlocking focus.
+
 ## 2026-06-15
 
 - Interrupted camera-worker shutdown preserves the interrupt signal and unresolved worker ownership.

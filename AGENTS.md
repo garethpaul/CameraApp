@@ -61,6 +61,7 @@
 - Camera background thread startup is idempotent; repeated resume/start paths must not replace an already-running handler thread.
 - Interrupted camera-worker shutdown preserves the interrupt signal and unresolved worker ownership.
 - Device disconnect and error callbacks close their callback-owned device before rejecting stale shared ownership.
+- Capture-result and still-capture completion callbacks reject stale session ownership before mutating capture state or unlocking focus.
 - ImageReader backpressure is handled by dropping a backed-up capture callback before it can crash the still-image save path.
 - During background-thread shutdown, rejected image-save handoffs close the
   callback-owned image instead of consuming `ImageReader` capacity.
