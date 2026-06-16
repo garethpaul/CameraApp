@@ -4,6 +4,7 @@
 
 - Capture-result and still-capture completion callbacks reject stale session ownership before mutating capture state or unlocking focus.
 - Current-session still-capture failures unlock focus and resume preview; stale session failures are ignored.
+- Synchronous still-capture and preview-restart failures restore preview state before Camera2 recovery work can throw.
 
 ## 2026-06-15
 

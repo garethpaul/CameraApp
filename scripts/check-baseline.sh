@@ -40,6 +40,7 @@ PREVIEW_FAILURE_OWNERSHIP_PLAN="$ROOT_DIR/docs/plans/2026-06-15-cameraapp-previe
 DEVICE_CALLBACK_OWNERSHIP_PLAN="$ROOT_DIR/docs/plans/2026-06-15-cameraapp-device-callback-ownership.md"
 CAPTURE_CALLBACK_OWNERSHIP_PLAN="$ROOT_DIR/docs/plans/2026-06-16-cameraapp-capture-callback-ownership.md"
 CAPTURE_FAILURE_RECOVERY_PLAN="$ROOT_DIR/docs/plans/2026-06-16-cameraapp-capture-failure-recovery.md"
+SYNCHRONOUS_CAPTURE_RECOVERY_PLAN="$ROOT_DIR/docs/plans/2026-06-16-cameraapp-synchronous-capture-recovery.md"
 XXXHDPI_LAUNCHER="$ROOT_DIR/Application/src/main/res/drawable-xxxhdpi/ic_launcher.png"
 XXXHDPI_INFO="$ROOT_DIR/Application/src/main/res/drawable-xxxhdpi/ic_action_info.png"
 ACTIVITY_LAYOUT="$ROOT_DIR/Application/src/main/res/layout/activity_camera.xml"
@@ -122,6 +123,7 @@ for path in \
   "docs/plans/2026-06-15-cameraapp-preview-session-ownership.md" \
   "docs/plans/2026-06-15-cameraapp-device-callback-ownership.md" \
   "docs/plans/2026-06-16-cameraapp-capture-failure-recovery.md" \
+  "docs/plans/2026-06-16-cameraapp-synchronous-capture-recovery.md" \
   "Application/src/main/res/drawable-xxxhdpi/ic_launcher.png" \
   "Application/src/main/res/drawable-xxxhdpi/ic_action_info.png" \
   "gradlew" \
@@ -890,6 +892,50 @@ if [ "$failure_guard_line" -ge "$failure_return_line" ] || \
   exit 1
 fi
 
+capture_exception=$(printf '%s\n' "$still_capture_method" | awk '
+  /catch \(CameraAccessException e\)/ { capture = 1 }
+  capture && /^[[:space:]]*}$/ { exit }
+  capture { print }
+')
+for recovery_marker in \
+  "catch (CameraAccessException e)" \
+  "unlockFocus();" \
+  'Log.e(TAG, "Unable to capture picture.");'; do
+  if [ "$(printf '%s\n' "$capture_exception" | grep -Fc "$recovery_marker")" -ne 1 ]; then
+    printf '%s\n' "Synchronous still-capture recovery marker must be unique: $recovery_marker" >&2
+    exit 1
+  fi
+done
+capture_exception_unlock_line=$(printf '%s\n' "$capture_exception" | grep -nF "unlockFocus();" | cut -d: -f1)
+capture_exception_log_line=$(printf '%s\n' "$capture_exception" | grep -nF 'Log.e(TAG, "Unable to capture picture.");' | cut -d: -f1)
+if [ "$capture_exception_unlock_line" -ge "$capture_exception_log_line" ]; then
+  printf '%s\n' "Synchronous still-capture failures must recover focus before returning." >&2
+  exit 1
+fi
+
+unlock_focus_method=$(awk '
+  /private void unlockFocus\(\)/ { capture = 1 }
+  capture && /@Override/ { exit }
+  capture { print }
+' "$FRAGMENT")
+for recovery_marker in \
+  "mState = STATE_PREVIEW;" \
+  "if (mPreviewRequestBuilder == null || mCaptureSession == null || mPreviewRequest == null)" \
+  "try {"; do
+  if [ "$(printf '%s\n' "$unlock_focus_method" | grep -Fc "$recovery_marker")" -ne 1 ]; then
+    printf '%s\n' "Focus recovery marker must be unique: $recovery_marker" >&2
+    exit 1
+  fi
+done
+preview_state_line=$(printf '%s\n' "$unlock_focus_method" | grep -nF "mState = STATE_PREVIEW;" | cut -d: -f1)
+preview_guard_line=$(printf '%s\n' "$unlock_focus_method" | grep -nF "if (mPreviewRequestBuilder == null || mCaptureSession == null || mPreviewRequest == null)" | cut -d: -f1)
+preview_try_line=$(printf '%s\n' "$unlock_focus_method" | grep -nF "try {" | cut -d: -f1)
+if [ "$preview_state_line" -ge "$preview_guard_line" ] || \
+  [ "$preview_state_line" -ge "$preview_try_line" ]; then
+  printf '%s\n' "Focus recovery must publish preview state before nullable or throwing Camera2 work." >&2
+  exit 1
+fi
+
 capture_callback_guidance="Capture-result and still-capture completion callbacks reject stale session ownership before mutating capture state or unlocking focus."
 for guidance_file in AGENTS.md README.md SECURITY.md VISION.md CHANGES.md; do
   if ! grep -Fq "$capture_callback_guidance" "$ROOT_DIR/$guidance_file"; then
@@ -906,6 +952,14 @@ for guidance_file in AGENTS.md README.md SECURITY.md VISION.md CHANGES.md; do
   fi
 done
 
+synchronous_capture_guidance="Synchronous still-capture and preview-restart failures restore preview state before Camera2 recovery work can throw."
+for guidance_file in AGENTS.md README.md SECURITY.md VISION.md CHANGES.md; do
+  if ! grep -Fq "$synchronous_capture_guidance" "$ROOT_DIR/$guidance_file"; then
+    printf '%s\n' "Synchronous capture recovery guidance must remain checked in: $guidance_file" >&2
+    exit 1
+  fi
+done
+
 for capture_failure_plan_contract in \
   "Status: Completed" \
   "make check" \
@@ -913,6 +967,17 @@ for capture_failure_plan_contract in \
   "No emulator, physical camera, or live capture failure"; do
   if ! grep -Fq "$capture_failure_plan_contract" "$CAPTURE_FAILURE_RECOVERY_PLAN"; then
     printf '%s\n' "Capture failure recovery plan must record completed verification: $capture_failure_plan_contract" >&2
+    exit 1
+  fi
+done
+
+for synchronous_capture_plan_contract in \
+  "Status: Completed" \
+  "make check" \
+  "isolated synchronous-recovery mutations were rejected" \
+  "No emulator, physical camera, or live synchronous Camera2 failure"; do
+  if ! grep -Fq "$synchronous_capture_plan_contract" "$SYNCHRONOUS_CAPTURE_RECOVERY_PLAN"; then
+    printf '%s\n' "Synchronous capture recovery plan must record completed verification: $synchronous_capture_plan_contract" >&2
     exit 1
   fi
 done

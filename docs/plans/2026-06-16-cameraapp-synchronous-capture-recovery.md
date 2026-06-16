@@ -1,6 +1,6 @@
 # CameraApp Synchronous Capture Recovery
 
-## Status: Planned
+## Status: Completed
 
 ## Context
 
@@ -44,3 +44,15 @@ leave subsequent shutter taps permanently blocked.
 
 - Capture retries, AF/AE policy changes, UI changes, persistence changes,
   dependency upgrades, and workflow changes.
+
+## Verification Results
+
+- `sh -n scripts/check-baseline.sh` passed, and the focused SDK-free baseline
+  accepted the implementation and completed plan evidence.
+- Five isolated synchronous-recovery mutations were rejected: missing catch
+  recovery, missing preview-state reset, reset after the nullable guard,
+  missing maintained guidance, and reopened plan status.
+- Repository-root and external-directory `make check` passed the SDK-free
+  contracts and pinned Android package gate.
+- No emulator, physical camera, or live synchronous Camera2 failure was
+  executed; runtime timing remains in the checked-in device matrix.

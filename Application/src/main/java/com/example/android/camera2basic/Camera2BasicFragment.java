@@ -948,6 +948,7 @@ public class Camera2BasicFragment extends Fragment implements View.OnClickListen
             mCaptureSession.stopRepeating();
             mCaptureSession.capture(captureBuilder.build(), CaptureCallback, null);
         } catch (CameraAccessException e) {
+            unlockFocus();
             Log.e(TAG, "Unable to capture picture.");
         }
     }
@@ -956,6 +957,8 @@ public class Camera2BasicFragment extends Fragment implements View.OnClickListen
      * Unlock the focus. This method should be called when still image capture sequence is finished.
      */
     private void unlockFocus() {
+        // Publish recoverable state before any Camera2 operation can fail.
+        mState = STATE_PREVIEW;
         if (mPreviewRequestBuilder == null || mCaptureSession == null || mPreviewRequest == null) {
             return;
         }
@@ -968,7 +971,6 @@ public class Camera2BasicFragment extends Fragment implements View.OnClickListen
             mCaptureSession.capture(mPreviewRequestBuilder.build(), mCaptureCallback,
                     mBackgroundHandler);
             // After this, the camera will go back to the normal state of preview.
-            mState = STATE_PREVIEW;
             mCaptureSession.setRepeatingRequest(mPreviewRequest, mCaptureCallback,
                     mBackgroundHandler);
         } catch (CameraAccessException e) {
