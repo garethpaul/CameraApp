@@ -1545,7 +1545,9 @@ for instrumentation_plan_contract in \
   "Bound emulator discovery and boot completion to three minutes" \
   ":Application:connectedDebugAndroidTest" \
   "SKIP_ANDROID_INSTRUMENTATION=1" \
-  "Exact-head hosted push and pull-request instrumentation execution before"; do
+  "75cbcb75a217599c6ec42446a48461c26ed971b9" \
+  "27640848165" \
+  "27640853374"; do
   if ! grep -Fq "$instrumentation_plan_contract" "$INSTRUMENTATION_EXECUTION_PLAN"; then
     printf '%s\n' "Instrumentation execution plan must preserve contract: $instrumentation_plan_contract" >&2
     exit 1

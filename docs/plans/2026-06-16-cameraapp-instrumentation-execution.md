@@ -59,8 +59,11 @@ executed its activity/fragment startup assertion.
   completed plan evidence.
 - The real API 36 emulator image could not be installed locally because the SDK
   unpack step reported `No space left on device`; only its explicit incomplete
-  `.temp` and system-image paths were removed. Real emulator execution remains
-  an exact-head hosted requirement and is not yet claimed here.
+  `.temp` and system-image paths were removed.
+- Exact implementation/review head
+  `75cbcb75a217599c6ec42446a48461c26ed971b9` passed real API 36 emulator
+  instrumentation in canonical push run `27640848165` and pull-request run
+  `27640853374`.
 
 ## Scope Boundary
 
