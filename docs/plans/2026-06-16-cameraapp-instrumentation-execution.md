@@ -36,8 +36,31 @@ executed its activity/fragment startup assertion.
 - Fake-SDK failure tests using a shortened deadline to prove early emulator
   exit and ADB discovery timeout handling without weakening the 180-second
   production default.
+- A signal-path test proving termination exits nonzero and removes temporary
+  AVD state through the exit cleanup trap.
 - Exact-head hosted push and pull-request instrumentation execution before
   closure.
+
+## Verification Results
+
+- Repository-root and external-directory `make check` passed from a clean
+  generated state with JDK 17, Android SDK 36, and
+  `SKIP_ANDROID_INSTRUMENTATION=1`; debug/release lint produced zero findings,
+  the instrumentation APK assembled, and the debug APK assembled.
+- Sequential lint was required because the combined clean-state invocation
+  reproduced a missing lint partial-result failure; separate debug and release
+  invocations passed consistently without weakening either lint gate.
+- Fake-SDK tests proved successful connected-test invocation, early emulator
+  exit rejection, bounded ADB discovery timeout, signal exit status 143, and
+  temporary AVD cleanup.
+- Twelve isolated hostile mutations were rejected across connected-test
+  execution, boot deadline, cleanup and signal traps, bounded discovery,
+  system-image and KVM provisioning, CI skip prevention, sequential lint, and
+  completed plan evidence.
+- The real API 36 emulator image could not be installed locally because the SDK
+  unpack step reported `No space left on device`; only its explicit incomplete
+  `.temp` and system-image paths were removed. Real emulator execution remains
+  an exact-head hosted requirement and is not yet claimed here.
 
 ## Scope Boundary
 

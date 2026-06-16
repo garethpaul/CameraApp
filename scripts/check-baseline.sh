@@ -195,7 +195,10 @@ fi
 
 for runner_contract in \
   'SYSTEM_IMAGE=${ANDROID_SYSTEM_IMAGE:-system-images;android-36;google_apis;x86_64}' \
-  'trap cleanup 0 1 2 15' \
+  'trap cleanup 0' \
+  "trap 'exit 129' 1" \
+  "trap 'exit 130' 2" \
+  "trap 'exit 143' 15" \
   '"$AVDMANAGER" create avd' \
   '-no-window' \
   '-no-snapshot' \
