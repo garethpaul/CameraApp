@@ -906,6 +906,7 @@ public class Camera2BasicFragment extends Fragment implements View.OnClickListen
             final Activity activity = getActivity();
             if (null == activity || null == mCameraDevice ||
                     mImageReader == null || mCaptureSession == null) {
+                mState = STATE_PREVIEW;
                 return;
             }
             // This is the CaptureRequest.Builder that we use to take a picture.

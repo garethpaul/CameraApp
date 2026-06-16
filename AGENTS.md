@@ -64,6 +64,7 @@
 - Capture-result and still-capture completion callbacks reject stale session ownership before mutating capture state or unlocking focus.
 - Current-session still-capture failures unlock focus and resume preview; stale session failures are ignored.
 - Synchronous still-capture and preview-restart failures restore preview state before Camera2 recovery work can throw.
+- Missing still-capture dependencies restore preview state before the capture path returns.
 - ImageReader backpressure is handled by dropping a backed-up capture callback before it can crash the still-image save path.
 - During background-thread shutdown, rejected image-save handoffs close the
   callback-owned image instead of consuming `ImageReader` capacity.

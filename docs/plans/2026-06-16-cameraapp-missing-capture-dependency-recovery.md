@@ -1,6 +1,6 @@
 # CameraApp Missing Capture Dependency Recovery
 
-## Status: Planned
+## Status: Completed
 
 ## Context
 
@@ -44,3 +44,17 @@ even though no still capture was submitted.
 
 - Capture retries, camera reopening, AF/AE policy changes, UI changes,
   dependency upgrades, and workflow changes.
+
+## Verification Results
+
+- `sh -n scripts/check-baseline.sh` and the focused SDK-free baseline passed.
+- Three isolated nullable-recovery mutations were rejected: removing the
+  preview-state reset, moving it after `return`, and moving it before the
+  missing-dependency guard.
+- Repository-root `make check` completed with Corretto 17, Android SDK 36, and
+  Build Tools 36.1.0 in an isolated exact-source copy. The subsequent
+  external-directory `make check` reached its explicit 240-second timeout and
+  is not claimed as complete.
+- Exact diff, artifact, secret-like addition, conflict-marker, whitespace, and
+  file-mode audits passed before commit.
+- No emulator, physical camera, or live missing-dependency race was exercised.

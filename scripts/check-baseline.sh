@@ -41,6 +41,7 @@ DEVICE_CALLBACK_OWNERSHIP_PLAN="$ROOT_DIR/docs/plans/2026-06-15-cameraapp-device
 CAPTURE_CALLBACK_OWNERSHIP_PLAN="$ROOT_DIR/docs/plans/2026-06-16-cameraapp-capture-callback-ownership.md"
 CAPTURE_FAILURE_RECOVERY_PLAN="$ROOT_DIR/docs/plans/2026-06-16-cameraapp-capture-failure-recovery.md"
 SYNCHRONOUS_CAPTURE_RECOVERY_PLAN="$ROOT_DIR/docs/plans/2026-06-16-cameraapp-synchronous-capture-recovery.md"
+MISSING_CAPTURE_DEPENDENCY_PLAN="$ROOT_DIR/docs/plans/2026-06-16-cameraapp-missing-capture-dependency-recovery.md"
 XXXHDPI_LAUNCHER="$ROOT_DIR/Application/src/main/res/drawable-xxxhdpi/ic_launcher.png"
 XXXHDPI_INFO="$ROOT_DIR/Application/src/main/res/drawable-xxxhdpi/ic_action_info.png"
 ACTIVITY_LAYOUT="$ROOT_DIR/Application/src/main/res/layout/activity_camera.xml"
@@ -124,6 +125,7 @@ for path in \
   "docs/plans/2026-06-15-cameraapp-device-callback-ownership.md" \
   "docs/plans/2026-06-16-cameraapp-capture-failure-recovery.md" \
   "docs/plans/2026-06-16-cameraapp-synchronous-capture-recovery.md" \
+  "docs/plans/2026-06-16-cameraapp-missing-capture-dependency-recovery.md" \
   "Application/src/main/res/drawable-xxxhdpi/ic_launcher.png" \
   "Application/src/main/res/drawable-xxxhdpi/ic_action_info.png" \
   "gradlew" \
@@ -845,6 +847,29 @@ still_capture_method=$(awk '
   capture && /private void unlockFocus\(\)/ { exit }
   capture { print }
 ' "$FRAGMENT")
+missing_capture_dependency_guard=$(printf '%s\n' "$still_capture_method" | awk '
+  /if \(null == activity \|\| null == mCameraDevice \|\|/ { capture = 1 }
+  capture && /\/\/ This is the CaptureRequest.Builder/ { exit }
+  capture { print }
+')
+for recovery_marker in \
+  "if (null == activity || null == mCameraDevice ||" \
+  "mImageReader == null || mCaptureSession == null)" \
+  "mState = STATE_PREVIEW;" \
+  "return;"; do
+  if [ "$(printf '%s\n' "$missing_capture_dependency_guard" | grep -Fc "$recovery_marker")" -ne 1 ]; then
+    printf '%s\n' "Missing capture dependency recovery marker must be unique: $recovery_marker" >&2
+    exit 1
+  fi
+done
+missing_dependency_guard_line=$(printf '%s\n' "$missing_capture_dependency_guard" | grep -nF "if (null == activity || null == mCameraDevice ||" | cut -d: -f1)
+missing_dependency_state_line=$(printf '%s\n' "$missing_capture_dependency_guard" | grep -nF "mState = STATE_PREVIEW;" | cut -d: -f1)
+missing_dependency_return_line=$(printf '%s\n' "$missing_capture_dependency_guard" | grep -nF "return;" | cut -d: -f1)
+if [ "$missing_dependency_guard_line" -ge "$missing_dependency_state_line" ] || \
+  [ "$missing_dependency_state_line" -ge "$missing_dependency_return_line" ]; then
+  printf '%s\n' "Missing still-capture dependencies must restore preview state before returning." >&2
+  exit 1
+fi
 still_capture_completed=$(printf '%s\n' "$still_capture_method" | awk '
   /public void onCaptureCompleted\(CameraCaptureSession session/ { capture = 1 }
   capture && /public void onCaptureFailed\(CameraCaptureSession session/ { exit }
@@ -960,6 +985,14 @@ for guidance_file in AGENTS.md README.md SECURITY.md VISION.md CHANGES.md; do
   fi
 done
 
+missing_capture_dependency_guidance="Missing still-capture dependencies restore preview state before the capture path returns."
+for guidance_file in AGENTS.md README.md SECURITY.md VISION.md CHANGES.md; do
+  if ! grep -Fq "$missing_capture_dependency_guidance" "$ROOT_DIR/$guidance_file"; then
+    printf '%s\n' "Missing capture dependency recovery guidance must remain checked in: $guidance_file" >&2
+    exit 1
+  fi
+done
+
 for capture_failure_plan_contract in \
   "Status: Completed" \
   "make check" \
@@ -978,6 +1011,17 @@ for synchronous_capture_plan_contract in \
   "No emulator, physical camera, or live synchronous Camera2 failure"; do
   if ! grep -Fq "$synchronous_capture_plan_contract" "$SYNCHRONOUS_CAPTURE_RECOVERY_PLAN"; then
     printf '%s\n' "Synchronous capture recovery plan must record completed verification: $synchronous_capture_plan_contract" >&2
+    exit 1
+  fi
+done
+
+for missing_capture_dependency_plan_contract in \
+  "Status: Completed" \
+  "make check" \
+  "isolated nullable-recovery mutations were rejected" \
+  "No emulator, physical camera, or live missing-dependency race"; do
+  if ! grep -Fq "$missing_capture_dependency_plan_contract" "$MISSING_CAPTURE_DEPENDENCY_PLAN"; then
+    printf '%s\n' "Missing capture dependency plan must record completed verification: $missing_capture_dependency_plan_contract" >&2
     exit 1
   fi
 done
