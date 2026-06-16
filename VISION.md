@@ -25,6 +25,7 @@ Priority:
 - Keep interrupted camera close attempts from releasing unowned permits
 - Interrupted camera-worker shutdown preserves the interrupt signal and unresolved worker ownership.
 - Keep asynchronous preview callbacks bound to their initiating camera device
+- Keep camera-device disconnect and error callbacks bound to the device that initiated them
 - Report preview configuration failures only for the initiating camera lifetime
 - Keep layout control binding tolerant of missing optional controls
 - Keep right-to-left camera control placement tied to logical layout anchors

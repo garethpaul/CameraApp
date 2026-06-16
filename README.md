@@ -129,6 +129,7 @@ contracts as camera execution.
 - Camera background thread startup is idempotent; repeated resume/start paths
   must not replace an already-running handler thread.
 - Interrupted camera-worker shutdown preserves the interrupt signal and unresolved worker ownership.
+- Camera-device disconnect and error callbacks close their callback device, but only the current device may clear shared state or finish the activity.
 - Configured preview callbacks must still own their exact initiating camera device before publishing preview state; stale sessions close instead.
 - Failed preview callbacks rely on Camera2 session closure and suppress stale UI;
   only the initiating camera lifetime may report configuration failures.

@@ -30,6 +30,7 @@ Helpful reports include:
 - Review found network clients, sockets, web APIs, or service endpoints; changes in those areas should receive security-focused review before merge.
 - Review found mobile permission or privacy-sensitive data handling; changes in those areas should receive security-focused review before merge.
 - Interrupted camera-worker shutdown preserves the interrupt signal and unresolved worker ownership.
+- Stale camera-device callbacks cannot clear replacement state or finish its activity.
 - Stale camera-session callbacks close before publishing preview state.
 - Failed preview callbacks suppress stale failure UI without invoking the already-closed session.
 - Review found file, document, data, or media parsing flows; changes in those areas should receive security-focused review before merge.

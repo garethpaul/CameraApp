@@ -37,6 +37,7 @@ BACKGROUND_INTERRUPT_PLAN="$ROOT_DIR/docs/plans/2026-06-15-cameraapp-background-
 CAMERA_ERROR_LOG_PLAN="$ROOT_DIR/docs/plans/2026-06-15-cameraapp-camera-error-log-redaction.md"
 PREVIEW_SESSION_OWNERSHIP_PLAN="$ROOT_DIR/docs/plans/2026-06-15-cameraapp-preview-session-ownership.md"
 PREVIEW_FAILURE_OWNERSHIP_PLAN="$ROOT_DIR/docs/plans/2026-06-15-cameraapp-preview-configuration-failure-ownership.md"
+DEVICE_CALLBACK_OWNERSHIP_PLAN="$ROOT_DIR/docs/plans/2026-06-15-cameraapp-device-callback-ownership.md"
 XXXHDPI_LAUNCHER="$ROOT_DIR/Application/src/main/res/drawable-xxxhdpi/ic_launcher.png"
 XXXHDPI_INFO="$ROOT_DIR/Application/src/main/res/drawable-xxxhdpi/ic_action_info.png"
 ACTIVITY_LAYOUT="$ROOT_DIR/Application/src/main/res/layout/activity_camera.xml"
@@ -117,6 +118,7 @@ for path in \
   "docs/plans/2026-06-14-android-16-toolchain-migration.md" \
   "docs/plans/2026-06-14-cameraapp-save-success-notification.md" \
   "docs/plans/2026-06-15-cameraapp-preview-session-ownership.md" \
+  "docs/plans/2026-06-15-cameraapp-device-callback-ownership.md" \
   "Application/src/main/res/drawable-xxxhdpi/ic_launcher.png" \
   "Application/src/main/res/drawable-xxxhdpi/ic_action_info.png" \
   "gradlew" \
@@ -784,6 +786,77 @@ if [ "$(grep -Fc "private volatile CameraDevice mCameraDevice;" "$FRAGMENT")" -n
   printf '%s\n' "Camera device ownership must remain visible across lifecycle and callback threads." >&2
   exit 1
 fi
+
+device_state_callback=$(awk '
+  /private final CameraDevice.StateCallback mStateCallback/ { capture = 1 }
+  capture && /An additional thread for running tasks/ { exit }
+  capture { print }
+' "$FRAGMENT")
+disconnected_callback=$(printf '%s\n' "$device_state_callback" | awk '
+  /public void onDisconnected\(CameraDevice cameraDevice\)/ { capture = 1 }
+  capture && /public void onError\(CameraDevice cameraDevice, int error\)/ { exit }
+  capture { print }
+')
+device_error_callback=$(printf '%s\n' "$device_state_callback" | awk '
+  /public void onError\(CameraDevice cameraDevice, int error\)/ { capture = 1 }
+  capture { print }
+')
+
+for callback_name in disconnected error; do
+  if [ "$callback_name" = disconnected ]; then
+    callback_body=$disconnected_callback
+  else
+    callback_body=$device_error_callback
+  fi
+  for callback_marker in \
+    "cameraDevice.close();" \
+    "if (mCameraDevice != cameraDevice)" \
+    "return;" \
+    "mCameraDevice = null;"; do
+    if [ "$(printf '%s\n' "$callback_body" | grep -Fc "$callback_marker")" -ne 1 ]; then
+      printf '%s\n' "Camera $callback_name callback ownership marker must be unique: $callback_marker" >&2
+      exit 1
+    fi
+  done
+
+  callback_close_line=$(printf '%s\n' "$callback_body" | grep -nF "cameraDevice.close();" | cut -d: -f1)
+  callback_guard_line=$(printf '%s\n' "$callback_body" | grep -nF "if (mCameraDevice != cameraDevice)" | cut -d: -f1)
+  callback_return_line=$(printf '%s\n' "$callback_body" | grep -nF "return;" | cut -d: -f1)
+  callback_clear_line=$(printf '%s\n' "$callback_body" | grep -nF "mCameraDevice = null;" | cut -d: -f1)
+  if [ "$callback_close_line" -ge "$callback_guard_line" ] || \
+    [ "$callback_guard_line" -ge "$callback_return_line" ] || \
+    [ "$callback_return_line" -ge "$callback_clear_line" ]; then
+    printf '%s\n' "Camera $callback_name callbacks must close their device and reject stale ownership before clearing shared state." >&2
+    exit 1
+  fi
+done
+
+error_clear_line=$(printf '%s\n' "$device_error_callback" | grep -nF "mCameraDevice = null;" | cut -d: -f1)
+error_finish_line=$(printf '%s\n' "$device_error_callback" | grep -nF "activity.finish();" | cut -d: -f1)
+if [ -z "$error_finish_line" ] || [ "$error_clear_line" -ge "$error_finish_line" ]; then
+  printf '%s\n' "Camera errors must finish the activity only after current-device ownership is established." >&2
+  exit 1
+fi
+
+if ! grep -Fq "Device disconnect and error callbacks close their callback-owned device before rejecting stale shared ownership." "$ROOT_DIR/AGENTS.md" || \
+  ! grep -Fq "Camera-device disconnect and error callbacks close their callback device, but only the current device may clear shared state or finish the activity." "$README" || \
+  ! grep -Fq "Stale camera-device callbacks cannot clear replacement state or finish its activity." "$ROOT_DIR/SECURITY.md" || \
+  ! grep -Fq "Keep camera-device disconnect and error callbacks bound to the device that initiated them" "$ROOT_DIR/VISION.md" || \
+  ! grep -Fq "Bound camera-device disconnect and error side effects to current-device ownership." "$ROOT_DIR/CHANGES.md"; then
+  printf '%s\n' "Camera device callback ownership guidance must remain checked in." >&2
+  exit 1
+fi
+
+for device_callback_plan_contract in \
+  "Status: Completed" \
+  "make check" \
+  "ownership mutations were rejected" \
+  "No emulator, physical camera, or live disconnect/error callback"; do
+  if ! grep -Fq "$device_callback_plan_contract" "$DEVICE_CALLBACK_OWNERSHIP_PLAN"; then
+    printf '%s\n' "Camera device callback ownership plan must record completed verification: $device_callback_plan_contract" >&2
+    exit 1
+  fi
+done
 
 for preview_marker in \
   "final CameraDevice cameraDevice = mCameraDevice;" \

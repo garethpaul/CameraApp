@@ -3,6 +3,7 @@
 ## 2026-06-15
 
 - Interrupted camera-worker shutdown preserves the interrupt signal and unresolved worker ownership.
+- Bound camera-device disconnect and error side effects to current-device ownership.
 - Bound configured preview sessions to their exact initiating camera device and
   closed stale sessions before shared preview state publication.
 - Suppressed stale camera-lifetime preview failure UI without invoking failed sessions.

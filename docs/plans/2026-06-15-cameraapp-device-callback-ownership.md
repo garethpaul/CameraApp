@@ -1,6 +1,6 @@
 # CameraApp Device Callback Ownership
 
-## Status: Planned
+## Status: Completed
 
 ## Context
 
@@ -35,3 +35,17 @@ the ownership state and UI of a newer camera session.
   guard, clearing replacement state, and finishing on stale errors
 - `git diff --check`
 - Generated artifact and sensitive-value audits
+
+## Verification Results
+
+- Four isolated ownership mutations were rejected: removing the disconnect
+  guard, moving callback-device closure after the guard, clearing replacement
+  state before the guard, and finishing the activity before error ownership.
+- `sh -n scripts/check-baseline.sh` and `git diff --check` passed before the
+  full package gate.
+- Repository-root and external-directory `make check` passed with JDK 17,
+  including zero-finding debug/release lint, debug instrumentation APK
+  assembly, and debug application APK assembly.
+- No emulator, physical camera, or live disconnect/error callback was
+  executed; runtime lifecycle confirmation remains part of the checked-in
+  device verification matrix.

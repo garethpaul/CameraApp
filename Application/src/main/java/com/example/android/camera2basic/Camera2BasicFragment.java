@@ -189,6 +189,9 @@ public class Camera2BasicFragment extends Fragment implements View.OnClickListen
         public void onDisconnected(CameraDevice cameraDevice) {
             mCameraOpenCloseLock.release();
             cameraDevice.close();
+            if (mCameraDevice != cameraDevice) {
+                return;
+            }
             mCameraDevice = null;
         }
 
@@ -196,6 +199,9 @@ public class Camera2BasicFragment extends Fragment implements View.OnClickListen
         public void onError(CameraDevice cameraDevice, int error) {
             mCameraOpenCloseLock.release();
             cameraDevice.close();
+            if (mCameraDevice != cameraDevice) {
+                return;
+            }
             mCameraDevice = null;
             Activity activity = getActivity();
             if (null != activity) {
