@@ -22,9 +22,10 @@ therefore remains covered only by source contracts.
   because revocation may terminate the target process under test.
 - Drive the real API 36 permission-controller denial action rather than
   invoking the fragment callback directly.
-- Prove the application processes the denial by observing the bounded pending
-  permission-request state transition instead of relying on accessibility-node
-  disappearance after the dialog closes.
+- Prove the application processes the denial by observing a bounded denial
+  callback state instead of relying only on accessibility-node disappearance.
+- Prove the application settles the pending request and does not immediately
+  re-request camera permission after denial.
 - Assert that the activity and camera fragment remain alive after denial.
 - Bound permission-controller discovery and fail with useful UI evidence when
   the expected denial action is unavailable.
@@ -56,9 +57,20 @@ therefore remains covered only by source contracts.
   before this plan can be marked completed.
 - Initial exact-head push run `27655294552` passed, while pull-request run
   `27655300169` exposed a flaky accessibility-node disappearance assertion
-  after the real deny click. The follow-up now waits for the fragment's
-  permission-request state to transition from pending to settled, reasserts
-  denied permission, and preserves the post-denial activity/fragment check.
+  after the real deny click.
+- Follow-up push run `27655608720` and pull-request run `27655610454` both
+  showed that the request remained pending after the deny action. Production
+  path inspection identified that the denial callback cleared the pending state
+  before resume logic immediately requested camera permission again. The new
+  follow-up records a fragment-lifetime denial latch, waits for that callback
+  state, asserts the request is settled, and proves that no replacement
+  permission dialog appears.
+- The follow-up instrumentation APK compiled with Temurin 17 and Android SDK
+  36. Repository-root and external-directory `make check` passed with only the
+  documented local instrumentation skip.
+- Six isolated hostile mutations were rejected across the production denial
+  guard, denial latch, callback wait, settled-request assertion, no-reprompt
+  assertion, and plan evidence.
 
 ## Scope Boundary
 

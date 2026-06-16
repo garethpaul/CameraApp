@@ -533,9 +533,11 @@ for test_contract in \
   'PERMISSION_DIALOG_TIMEOUT_MS = 10_000' \
   'waitForPermissionRequestPending(scenario, true)' \
   'denyButton.click()' \
-  'waitForPermissionRequestPending(scenario, false)' \
+  'waitForPermissionDenied(scenario)' \
+  'assertFalse("Camera permission request is still pending"' \
+  'Until.gone(By.res(DENY_BUTTON_RESOURCE))' \
   'getDeclaredField(' \
-  '"mCameraPermissionRequestPending"' \
+  'fragmentBooleanField(scenario, "mCameraPermissionDenied")' \
   'getFragmentManager().findFragmentById(R.id.container)' \
   'assertNotNull("Camera fragment is null", fragment)'; do
   if ! grep -Fq "$test_contract" "$TEST_FIXTURE"; then
@@ -561,9 +563,12 @@ fi
 
 for permission_contract in \
   'mCameraPermissionRequestPending' \
+  'mCameraPermissionDenied' \
   'requestPermissions(new String[]{Manifest.permission.CAMERA}, REQUEST_CAMERA_PERMISSION)' \
   'public void onRequestPermissionsResult' \
   'mCameraPermissionRequestPending = false' \
+  'if (mCameraPermissionDenied)' \
+  'mCameraPermissionDenied = true' \
   'public void onDestroyView()' \
   'mTextureView = null' \
   'isResumed() && mTextureView != null && mTextureView.isAvailable()' \
@@ -1562,6 +1567,7 @@ for permission_denial_plan_contract in \
   "status: pending_hosted_validation" \
   "camera permission is denied on the fresh hosted install" \
   "real API 36 permission-controller denial action" \
+  "does not immediately re-request camera permission after denial" \
   "activity and camera fragment remain alive after denial" \
   "push and pull-request hosted instrumentation success"; do
   if ! printf '%s\n' "$PERMISSION_DENIAL_PLAN_FLAT" | grep -Fq "$permission_denial_plan_contract"; then
