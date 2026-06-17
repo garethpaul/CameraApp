@@ -1564,12 +1564,15 @@ done
 
 PERMISSION_DENIAL_PLAN_FLAT=$(tr '\n' ' ' < "$PERMISSION_DENIAL_INSTRUMENTATION_PLAN" | tr -s '[:space:]' ' ')
 for permission_denial_plan_contract in \
-  "status: pending_hosted_validation" \
+  "status: completed" \
   "camera permission is denied on the fresh hosted install" \
   "real API 36 permission-controller denial action" \
   "does not immediately re-request camera permission after denial" \
   "activity and camera fragment remain alive after denial" \
-  "push and pull-request hosted instrumentation success"; do
+  "push and pull-request hosted instrumentation success" \
+  "27656010921" \
+  "27656012503" \
+  "0af9dcf0be82dec5ad4844f922e83a4f3d218eb0"; do
   if ! printf '%s\n' "$PERMISSION_DENIAL_PLAN_FLAT" | grep -Fq "$permission_denial_plan_contract"; then
     printf '%s\n' "Permission-denial instrumentation plan must preserve contract: $permission_denial_plan_contract" >&2
     exit 1

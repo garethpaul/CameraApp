@@ -2,7 +2,7 @@
 title: CameraApp Permission Denial Instrumentation
 type: reliability
 date: 2026-06-16
-status: pending_hosted_validation
+status: completed
 execution: code
 ---
 
@@ -53,8 +53,8 @@ therefore remains covered only by source contracts.
 - Shell syntax and the focused static contracts passed after implementation.
 - Local emulator execution remains unavailable because the API 36 system image
   is not installed and the host emulator binary lacks `libpulse.so.0`.
-- Exact-head push and pull-request hosted instrumentation remain required
-  before this plan can be marked completed.
+- Exact-head push run `27656010921` and pull-request run `27656012503` both
+  passed the full hosted instrumentation gate after the denial-latch fix.
 - Initial exact-head push run `27655294552` passed, while pull-request run
   `27655300169` exposed a flaky accessibility-node disappearance assertion
   after the real deny click.
@@ -71,6 +71,8 @@ therefore remains covered only by source contracts.
 - Six isolated hostile mutations were rejected across the production denial
   guard, denial latch, callback wait, settled-request assertion, no-reprompt
   assertion, and plan evidence.
+- PR #24 was confirmed OPEN, CLEAN, and MERGEABLE at exact implementation head
+  `0af9dcf0be82dec5ad4844f922e83a4f3d218eb0` after both canonical events passed.
 
 ## Scope Boundary
 
