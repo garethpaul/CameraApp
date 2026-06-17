@@ -2,7 +2,7 @@
 title: CameraApp Permission Denial Recreation
 type: reliability
 date: 2026-06-17
-status: planned
+status: implemented
 execution: code
 ---
 
@@ -76,6 +76,22 @@ claim permission grant, preview, capture, or physical-device coverage.
 - Reject isolated mutations to recreation and each post-recreation assertion.
 - Audit the exact diff, generated artifacts, and credential-shaped additions.
 - Require exact-head push and pull-request hosted instrumentation success.
+
+## Verification Results
+
+- Shell syntax and the focused baseline checker passed from the repository and
+  an external working directory.
+- The instrumentation APK compiled successfully with JDK 17, Android SDK 36,
+  and Build Tools 36.1.0.
+- Repository-root and external-directory `make check` passed with zero-finding
+  debug/release lint, instrumentation APK assembly, and debug APK assembly.
+  Runtime instrumentation was explicitly skipped locally because the host does
+  not retain the pinned API 36 emulator image and audio runtime.
+- Seven isolated mutations were rejected across recreation, retained denial,
+  settled request state, dialog absence, fragment liveness, README scope, and
+  plan-contract coverage.
+- Exact-head hosted push and pull-request instrumentation remain pending until
+  the implementation commit is pushed.
 
 ## Risks
 

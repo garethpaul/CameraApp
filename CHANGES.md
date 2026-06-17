@@ -1,5 +1,11 @@
 # CameraApp Changes
 
+## 2026-06-17
+
+- Extended hosted camera-permission denial coverage across activity recreation
+  and verified that the retained fragment neither loses denial state nor
+  restarts the permission request.
+
 ## 2026-06-16
 
 - Extended hosted API 36 instrumentation through the real camera-permission

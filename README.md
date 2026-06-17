@@ -81,10 +81,11 @@ JAVA_HOME=/path/to/jdk-17 ANDROID_HOME=/path/to/android-sdk make check
 `make check` runs the source contract, debug and release lint, instrumentation
 APK assembly and execution, and debug APK assembly. The lint gate requires zero findings;
 only preview-SDK availability advisories are disabled while API 37 remains a
-preview. The hosted API 36 emulator executes pre-permission activity/fragment
-startup and drives the real camera-permission denial action while asserting the
-activity remains stable; this does not prove permission grant, camera preview,
-or capture behavior.
+preview. The hosted API 36 gate is configured to execute pre-permission
+activity/fragment startup, drive the real camera-permission denial action, and
+assert that the activity remains stable and denial remains settled across
+activity recreation; this does not prove permission grant, camera preview, or
+capture behavior.
 
 Focused Gradle commands are available after Android SDK configuration:
 

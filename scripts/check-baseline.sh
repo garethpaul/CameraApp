@@ -45,6 +45,7 @@ MISSING_CAPTURE_DEPENDENCY_PLAN="$ROOT_DIR/docs/plans/2026-06-16-cameraapp-missi
 CLOSED_SESSION_CAPTURE_RECOVERY_PLAN="$ROOT_DIR/docs/plans/2026-06-16-cameraapp-closed-session-capture-recovery.md"
 INSTRUMENTATION_EXECUTION_PLAN="$ROOT_DIR/docs/plans/2026-06-16-cameraapp-instrumentation-execution.md"
 PERMISSION_DENIAL_INSTRUMENTATION_PLAN="$ROOT_DIR/docs/plans/2026-06-16-cameraapp-permission-denial-instrumentation.md"
+PERMISSION_DENIAL_RECREATION_PLAN="$ROOT_DIR/docs/plans/2026-06-17-cameraapp-permission-denial-recreation.md"
 INSTRUMENTATION_RUNNER="$ROOT_DIR/scripts/run-instrumentation.sh"
 XXXHDPI_LAUNCHER="$ROOT_DIR/Application/src/main/res/drawable-xxxhdpi/ic_launcher.png"
 XXXHDPI_INFO="$ROOT_DIR/Application/src/main/res/drawable-xxxhdpi/ic_action_info.png"
@@ -132,6 +133,7 @@ for path in \
   "docs/plans/2026-06-16-cameraapp-missing-capture-dependency-recovery.md" \
   "docs/plans/2026-06-16-cameraapp-closed-session-capture-recovery.md" \
   "docs/plans/2026-06-16-cameraapp-instrumentation-execution.md" \
+  "docs/plans/2026-06-17-cameraapp-permission-denial-recreation.md" \
   "scripts/run-instrumentation.sh" \
   "Application/src/main/res/drawable-xxxhdpi/ic_launcher.png" \
   "Application/src/main/res/drawable-xxxhdpi/ic_action_info.png" \
@@ -536,7 +538,12 @@ for test_contract in \
   'waitForPermissionDenied(scenario)' \
   'assertFalse("Camera permission request is still pending"' \
   'Until.gone(By.res(DENY_BUTTON_RESOURCE))' \
+  'scenario.recreate()' \
+  'assertTrue("Camera permission denial was not retained after recreation"' \
+  'assertFalse("Camera permission request restarted after recreation"' \
+  'assertNull("Camera permission dialog was shown after activity recreation"' \
   'getDeclaredField(' \
+  'cameraPermissionDenied(scenario)' \
   'fragmentBooleanField(scenario, "mCameraPermissionDenied")' \
   'getFragmentManager().findFragmentById(R.id.container)' \
   'assertNotNull("Camera fragment is null", fragment)'; do
@@ -546,8 +553,35 @@ for test_contract in \
   fi
 done
 
-if [ "$(grep -Fc 'assertCameraFragmentExists(scenario);' "$TEST_FIXTURE")" -ne 2 ]; then
-  printf '%s\n' "Instrumentation fixture must verify the camera fragment before and after denial." >&2
+if [ "$(grep -Fc 'assertCameraFragmentExists(scenario);' "$TEST_FIXTURE")" -ne 3 ]; then
+  printf '%s\n' "Instrumentation fixture must verify the camera fragment before denial, after denial, and after recreation." >&2
+  exit 1
+fi
+
+TEST_FIXTURE_FLAT=$(tr '\n' ' ' < "$TEST_FIXTURE" | tr -s '[:space:]' ' ')
+for recreation_test_contract in \
+  'assertTrue("Camera permission denial was not retained after recreation", cameraPermissionDenied(scenario));' \
+  'assertFalse("Camera permission request restarted after recreation", permissionRequestPending(scenario));' \
+  'assertNull("Camera permission dialog was shown after activity recreation", device.wait(Until.findObject(By.res(DENY_BUTTON_RESOURCE)), PERMISSION_DIALOG_TIMEOUT_MS));'; do
+  if ! printf '%s\n' "$TEST_FIXTURE_FLAT" | grep -Fq "$recreation_test_contract"; then
+    printf '%s\n' "Instrumentation fixture must preserve post-recreation assertion: $recreation_test_contract" >&2
+    exit 1
+  fi
+done
+
+recreate_line=$(grep -nF 'scenario.recreate();' "$TEST_FIXTURE" | cut -d: -f1)
+recreated_fragment_line=$(grep -nF 'assertCameraFragmentExists(scenario);' "$TEST_FIXTURE" | tail -1 | cut -d: -f1)
+retained_denial_line=$(grep -nF 'assertTrue("Camera permission denial was not retained after recreation"' "$TEST_FIXTURE" | cut -d: -f1)
+restarted_request_line=$(grep -nF 'assertFalse("Camera permission request restarted after recreation"' "$TEST_FIXTURE" | cut -d: -f1)
+recreated_dialog_line=$(grep -nF 'assertNull("Camera permission dialog was shown after activity recreation"' "$TEST_FIXTURE" | cut -d: -f1)
+if [ -z "$recreate_line" ] || [ -z "$recreated_fragment_line" ] || \
+   [ -z "$retained_denial_line" ] || [ -z "$restarted_request_line" ] || \
+   [ -z "$recreated_dialog_line" ] || \
+   [ "$recreate_line" -ge "$recreated_fragment_line" ] || \
+   [ "$recreated_fragment_line" -ge "$retained_denial_line" ] || \
+   [ "$retained_denial_line" -ge "$restarted_request_line" ] || \
+   [ "$restarted_request_line" -ge "$recreated_dialog_line" ]; then
+  printf '%s\n' "Instrumentation fixture must verify retained denial state after activity recreation in order." >&2
   exit 1
 fi
 
@@ -1555,12 +1589,19 @@ for instrumentation_doc_contract in \
   "connectedDebugAndroidTest" \
   "pre-permission activity/fragment startup" \
   "real camera-permission denial action" \
+  "denial remains settled across activity recreation" \
   "does not prove permission grant, camera preview, or capture behavior"; do
   if ! printf '%s\n' "$README_FLAT" | grep -Fq "$instrumentation_doc_contract"; then
     printf '%s\n' "README must document hosted instrumentation scope: $instrumentation_doc_contract" >&2
     exit 1
   fi
 done
+
+if ! tr '\n' ' ' < "$ROOT_DIR/CHANGES.md" | tr -s '[:space:]' ' ' | \
+    grep -Fq 'retained fragment neither loses denial state nor restarts the permission request'; then
+  printf '%s\n' "CHANGES.md must document post-recreation camera denial coverage." >&2
+  exit 1
+fi
 
 PERMISSION_DENIAL_PLAN_FLAT=$(tr '\n' ' ' < "$PERMISSION_DENIAL_INSTRUMENTATION_PLAN" | tr -s '[:space:]' ' ')
 for permission_denial_plan_contract in \
@@ -1575,6 +1616,21 @@ for permission_denial_plan_contract in \
   "0af9dcf0be82dec5ad4844f922e83a4f3d218eb0"; do
   if ! printf '%s\n' "$PERMISSION_DENIAL_PLAN_FLAT" | grep -Fq "$permission_denial_plan_contract"; then
     printf '%s\n' "Permission-denial instrumentation plan must preserve contract: $permission_denial_plan_contract" >&2
+    exit 1
+  fi
+done
+
+PERMISSION_DENIAL_RECREATION_PLAN_FLAT=$(tr '\n' ' ' < "$PERMISSION_DENIAL_RECREATION_PLAN" | tr -s '[:space:]' ' ')
+for permission_denial_recreation_plan_contract in \
+  'status: implemented' \
+  'Recreate `CameraActivity` after the denial callback has settled' \
+  'retained fragment still records denial' \
+  'permission dialog does not reappear after recreation' \
+  'Require exact-head push and pull-request hosted instrumentation success' \
+  'Seven isolated mutations were rejected' \
+  'Exact-head hosted push and pull-request instrumentation remain pending'; do
+  if ! printf '%s\n' "$PERMISSION_DENIAL_RECREATION_PLAN_FLAT" | grep -Fq "$permission_denial_recreation_plan_contract"; then
+    printf '%s\n' "Permission-denial recreation plan must preserve contract: $permission_denial_recreation_plan_contract" >&2
     exit 1
   fi
 done
@@ -1678,7 +1734,7 @@ if ! grep -Fq "./gradlew :Application:assembleDebug --no-daemon" "$README"; then
   exit 1
 fi
 
-if ! grep -Fq "hosted API 36 emulator executes" "$README"; then
+if ! grep -Fq "hosted API 36 gate is configured to execute" "$README"; then
   printf '%s\n' "README must document instrumentation test runtime requirements." >&2
   exit 1
 fi

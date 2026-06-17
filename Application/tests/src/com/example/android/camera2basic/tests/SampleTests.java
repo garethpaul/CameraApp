@@ -37,6 +37,7 @@ import static android.content.pm.PackageManager.PERMISSION_DENIED;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import android.Manifest;
@@ -101,6 +102,16 @@ public class SampleTests {
                     InstrumentationRegistry.getInstrumentation().getTargetContext()
                             .checkSelfPermission(Manifest.permission.CAMERA));
             assertCameraFragmentExists(scenario);
+
+            scenario.recreate();
+            assertCameraFragmentExists(scenario);
+            assertTrue("Camera permission denial was not retained after recreation",
+                    cameraPermissionDenied(scenario));
+            assertFalse("Camera permission request restarted after recreation",
+                    permissionRequestPending(scenario));
+            assertNull("Camera permission dialog was shown after activity recreation",
+                    device.wait(Until.findObject(By.res(DENY_BUTTON_RESOURCE)),
+                            PERMISSION_DIALOG_TIMEOUT_MS));
         }
     }
 
@@ -123,12 +134,16 @@ public class SampleTests {
     private static void waitForPermissionDenied(ActivityScenario<CameraActivity> scenario) {
         long deadline = SystemClock.elapsedRealtime() + PERMISSION_DIALOG_TIMEOUT_MS;
         do {
-            if (fragmentBooleanField(scenario, "mCameraPermissionDenied")) {
+            if (cameraPermissionDenied(scenario)) {
                 return;
             }
             SystemClock.sleep(100);
         } while (SystemClock.elapsedRealtime() < deadline);
         throw new AssertionError("Camera permission denial callback was not observed");
+    }
+
+    private static boolean cameraPermissionDenied(ActivityScenario<CameraActivity> scenario) {
+        return fragmentBooleanField(scenario, "mCameraPermissionDenied");
     }
 
     private static boolean fragmentBooleanField(
