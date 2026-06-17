@@ -1622,13 +1622,15 @@ done
 
 PERMISSION_DENIAL_RECREATION_PLAN_FLAT=$(tr '\n' ' ' < "$PERMISSION_DENIAL_RECREATION_PLAN" | tr -s '[:space:]' ' ')
 for permission_denial_recreation_plan_contract in \
-  'status: implemented' \
+  'status: completed' \
   'Recreate `CameraActivity` after the denial callback has settled' \
   'retained fragment still records denial' \
   'permission dialog does not reappear after recreation' \
   'Require exact-head push and pull-request hosted instrumentation success' \
   'Seven isolated mutations were rejected' \
-  'Exact-head hosted push and pull-request instrumentation remain pending'; do
+  'Exact implementation head `dbbca280f4a42759f88a19dda26016bedb62cd44`' \
+  '27679897578' \
+  '27679909628'; do
   if ! printf '%s\n' "$PERMISSION_DENIAL_RECREATION_PLAN_FLAT" | grep -Fq "$permission_denial_recreation_plan_contract"; then
     printf '%s\n' "Permission-denial recreation plan must preserve contract: $permission_denial_recreation_plan_contract" >&2
     exit 1

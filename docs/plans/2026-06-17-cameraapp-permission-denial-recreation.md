@@ -2,7 +2,7 @@
 title: CameraApp Permission Denial Recreation
 type: reliability
 date: 2026-06-17
-status: implemented
+status: completed
 execution: code
 ---
 
@@ -90,8 +90,9 @@ claim permission grant, preview, capture, or physical-device coverage.
 - Seven isolated mutations were rejected across recreation, retained denial,
   settled request state, dialog absence, fragment liveness, README scope, and
   plan-contract coverage.
-- Exact-head hosted push and pull-request instrumentation remain pending until
-  the implementation commit is pushed.
+- Exact implementation head `dbbca280f4a42759f88a19dda26016bedb62cd44`
+  passed hosted API 36 instrumentation on push run `27679897578` and
+  pull-request run `27679909628`.
 
 ## Risks
 
