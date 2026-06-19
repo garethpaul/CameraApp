@@ -44,6 +44,7 @@ import android.media.ImageReader;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.HandlerThread;
+import android.os.Looper;
 import android.os.Message;
 import android.util.Log;
 import android.util.Size;
@@ -60,6 +61,7 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -335,15 +337,29 @@ public class Camera2BasicFragment extends Fragment implements View.OnClickListen
     /**
      * A {@link Handler} for showing {@link Toast}s.
      */
-    private Handler mMessageHandler = new Handler() {
+    private static class MessageHandler extends Handler {
+        private final WeakReference<Camera2BasicFragment> mFragmentReference;
+
+        MessageHandler(Camera2BasicFragment fragment) {
+            super(Looper.getMainLooper());
+            mFragmentReference = new WeakReference<>(fragment);
+        }
+
         @Override
         public void handleMessage(Message msg) {
-            Activity activity = getActivity();
+            Camera2BasicFragment fragment = mFragmentReference.get();
+            if (fragment == null) {
+                return;
+            }
+
+            Activity activity = fragment.getActivity();
             if (activity != null) {
                 Toast.makeText(activity, (String) msg.obj, Toast.LENGTH_SHORT).show();
             }
         }
-    };
+    }
+
+    private final Handler mMessageHandler = new MessageHandler(this);
 
     /**
      * Shows a {@link Toast} on the UI thread.

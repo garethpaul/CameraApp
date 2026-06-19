@@ -18,6 +18,7 @@ ERROR_DIALOG_ACTIVITY_PLAN="$ROOT_DIR/docs/plans/2026-06-09-cameraapp-error-dial
 CI_PLAN="$ROOT_DIR/docs/plans/2026-06-10-ci-baseline.md"
 CAMERA_OPEN_LOCK_PLAN="$ROOT_DIR/docs/plans/2026-06-10-cameraapp-open-lock-release.md"
 CAMERA_CLOSE_LOCK_PLAN="$ROOT_DIR/docs/plans/2026-06-12-cameraapp-close-lock-ownership.md"
+TOAST_HANDLER_PLAN="$ROOT_DIR/docs/plans/2026-06-12-cameraapp-toast-handler-lifecycle.md"
 
 if [ ! -f "$ROOT_DIR/CHANGES.md" ]; then
   printf '%s\n' "CHANGES.md must document repository maintenance." >&2
@@ -52,6 +53,7 @@ for path in \
   "docs/plans/2026-06-10-ci-baseline.md" \
   "docs/plans/2026-06-10-cameraapp-open-lock-release.md" \
   "docs/plans/2026-06-12-cameraapp-close-lock-ownership.md" \
+  "docs/plans/2026-06-12-cameraapp-toast-handler-lifecycle.md" \
   "gradlew" \
   "gradle/wrapper/gradle-wrapper.properties" \
   "settings.gradle" \
@@ -263,6 +265,16 @@ if ! grep -Fq "Thread.currentThread().interrupt();" "$FRAGMENT"; then
   exit 1
 fi
 
+if grep -Fq "private Handler mMessageHandler = new Handler()" "$FRAGMENT" || \
+   ! grep -Fq "private static class MessageHandler extends Handler" "$FRAGMENT" || \
+   ! grep -Fq "WeakReference<Camera2BasicFragment>" "$FRAGMENT" || \
+   ! grep -Fq "super(Looper.getMainLooper());" "$FRAGMENT" || \
+   ! grep -Fq "Camera2BasicFragment fragment = mFragmentReference.get();" "$FRAGMENT" || \
+   ! grep -Fq "private final Handler mMessageHandler = new MessageHandler(this);" "$FRAGMENT"; then
+  printf '%s\n' "Toast delivery must use a static main-looper handler with a weak fragment reference." >&2
+  exit 1
+fi
+
 if ! grep -Fq "mBackgroundThread == null" "$FRAGMENT"; then
   printf '%s\n' "Background thread shutdown must be null-safe." >&2
   exit 1
@@ -441,6 +453,11 @@ if ! grep -Fq "Camera close releases the semaphore only after successful acquisi
   exit 1
 fi
 
+if ! grep -Fq "Toast messages use a static main-looper handler with a weak fragment reference" "$README"; then
+  printf '%s\n' "README must document lifecycle-safe toast delivery." >&2
+  exit 1
+fi
+
 if ! grep -Fq "ImageReader backpressure" "$README"; then
   printf '%s\n' "README must document ImageReader backpressure handling." >&2
   exit 1
@@ -591,6 +608,11 @@ fi
 
 if ! grep -Fq "Status: Completed" "$CAMERA_CLOSE_LOCK_PLAN" || ! grep -Fq "make check" "$CAMERA_CLOSE_LOCK_PLAN"; then
   printf '%s\n' "CameraApp camera close lock plan must record completed status and make check verification." >&2
+  exit 1
+fi
+
+if ! grep -Fq "Status: Completed" "$TOAST_HANDLER_PLAN" || ! grep -Fq "make check" "$TOAST_HANDLER_PLAN"; then
+  printf '%s\n' "CameraApp toast handler plan must record completed status and make check verification." >&2
   exit 1
 fi
 

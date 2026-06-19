@@ -106,6 +106,8 @@ When the required SDK or runtime is unavailable, use static checks and source re
   pause or teardown can wait on it.
 - Camera close releases the semaphore only after successful acquisition and
   restores interrupt status when acquisition is interrupted.
+- Toast messages use a static main-looper handler with a weak fragment reference
+  so queued UI messages do not retain a detached camera fragment.
 - ImageReader backpressure is handled by dropping a backed-up capture callback
   before it can crash the still-image save path.
 - Android backup is disabled for the app because the sample handles camera

@@ -6,6 +6,8 @@
   longer adds an extra permit to the camera lifecycle lock.
 - Restored the current thread's interrupt flag before propagating close-lock
   interruption and extended the SDK-free regression baseline.
+- Replaced the fragment-retaining toast handler with a static main-looper
+  handler backed by a weak fragment reference.
 
 ## 2026-06-10
 
