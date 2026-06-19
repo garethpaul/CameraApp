@@ -33,6 +33,21 @@ IMAGE_HANDOFF_PLAN="$ROOT_DIR/docs/plans/2026-06-14-cameraapp-image-handoff-owne
 DEVICE_VERIFICATION_PLAN="$ROOT_DIR/docs/plans/2026-06-14-cameraapp-device-verification-checklist.md"
 SAVE_SUCCESS_PLAN="$ROOT_DIR/docs/plans/2026-06-14-cameraapp-save-success-notification.md"
 SAVE_FAILURE_LOG_PLAN="$ROOT_DIR/docs/plans/2026-06-15-cameraapp-save-failure-log-redaction.md"
+BACKGROUND_INTERRUPT_PLAN="$ROOT_DIR/docs/plans/2026-06-15-cameraapp-background-interrupt-restoration.md"
+CAMERA_ERROR_LOG_PLAN="$ROOT_DIR/docs/plans/2026-06-15-cameraapp-camera-error-log-redaction.md"
+PREVIEW_SESSION_OWNERSHIP_PLAN="$ROOT_DIR/docs/plans/2026-06-15-cameraapp-preview-session-ownership.md"
+PREVIEW_FAILURE_OWNERSHIP_PLAN="$ROOT_DIR/docs/plans/2026-06-15-cameraapp-preview-configuration-failure-ownership.md"
+DEVICE_CALLBACK_OWNERSHIP_PLAN="$ROOT_DIR/docs/plans/2026-06-15-cameraapp-device-callback-ownership.md"
+CAPTURE_CALLBACK_OWNERSHIP_PLAN="$ROOT_DIR/docs/plans/2026-06-16-cameraapp-capture-callback-ownership.md"
+CAPTURE_FAILURE_RECOVERY_PLAN="$ROOT_DIR/docs/plans/2026-06-16-cameraapp-capture-failure-recovery.md"
+SYNCHRONOUS_CAPTURE_RECOVERY_PLAN="$ROOT_DIR/docs/plans/2026-06-16-cameraapp-synchronous-capture-recovery.md"
+MISSING_CAPTURE_DEPENDENCY_PLAN="$ROOT_DIR/docs/plans/2026-06-16-cameraapp-missing-capture-dependency-recovery.md"
+CLOSED_SESSION_CAPTURE_RECOVERY_PLAN="$ROOT_DIR/docs/plans/2026-06-16-cameraapp-closed-session-capture-recovery.md"
+INSTRUMENTATION_EXECUTION_PLAN="$ROOT_DIR/docs/plans/2026-06-16-cameraapp-instrumentation-execution.md"
+PERMISSION_DENIAL_INSTRUMENTATION_PLAN="$ROOT_DIR/docs/plans/2026-06-16-cameraapp-permission-denial-instrumentation.md"
+PERMISSION_DENIAL_RECREATION_PLAN="$ROOT_DIR/docs/plans/2026-06-17-cameraapp-permission-denial-recreation.md"
+GRADLE_96_REFRESH_PLAN="$ROOT_DIR/docs/plans/2026-06-19-gradle-9-6-refresh.md"
+INSTRUMENTATION_RUNNER="$ROOT_DIR/scripts/run-instrumentation.sh"
 XXXHDPI_LAUNCHER="$ROOT_DIR/Application/src/main/res/drawable-xxxhdpi/ic_launcher.png"
 XXXHDPI_INFO="$ROOT_DIR/Application/src/main/res/drawable-xxxhdpi/ic_action_info.png"
 ACTIVITY_LAYOUT="$ROOT_DIR/Application/src/main/res/layout/activity_camera.xml"
@@ -61,9 +76,11 @@ expected_wrapper_properties() {
   cat <<'EOF'
 distributionBase=GRADLE_USER_HOME
 distributionPath=wrapper/dists
-distributionSha256Sum=bafc141b619ad6350fd975fc903156dd5c151998cc8b058e8c1044ab5f7b031f
-distributionUrl=https\://services.gradle.org/distributions/gradle-9.5.1-bin.zip
+distributionSha256Sum=bbaeb2fef8710818cf0e261201dab964c572f92b942812df0c3620d62a529a01
+distributionUrl=https\://services.gradle.org/distributions/gradle-9.6.0-bin.zip
 networkTimeout=10000
+retries=0
+retryBackOffMs=500
 validateDistributionUrl=true
 zipStoreBase=GRADLE_USER_HOME
 zipStorePath=wrapper/dists
@@ -112,6 +129,16 @@ for path in \
   "docs/plans/2026-06-13-cameraapp-xxxhdpi-icons.md" \
   "docs/plans/2026-06-14-android-16-toolchain-migration.md" \
   "docs/plans/2026-06-14-cameraapp-save-success-notification.md" \
+  "docs/plans/2026-06-15-cameraapp-preview-session-ownership.md" \
+  "docs/plans/2026-06-15-cameraapp-device-callback-ownership.md" \
+  "docs/plans/2026-06-16-cameraapp-capture-failure-recovery.md" \
+  "docs/plans/2026-06-16-cameraapp-synchronous-capture-recovery.md" \
+  "docs/plans/2026-06-16-cameraapp-missing-capture-dependency-recovery.md" \
+  "docs/plans/2026-06-16-cameraapp-closed-session-capture-recovery.md" \
+  "docs/plans/2026-06-16-cameraapp-instrumentation-execution.md" \
+  "docs/plans/2026-06-17-cameraapp-permission-denial-recreation.md" \
+  "docs/plans/2026-06-19-gradle-9-6-refresh.md" \
+  "scripts/run-instrumentation.sh" \
   "Application/src/main/res/drawable-xxxhdpi/ic_launcher.png" \
   "Application/src/main/res/drawable-xxxhdpi/ic_action_info.png" \
   "gradlew" \
@@ -148,8 +175,57 @@ fi
 
 if ! grep -Fq "Android lint must produce zero-finding debug and release XML reports." "$ROOT_DIR/Makefile" || \
    ! grep -Fq "grep -Eq '<issue([[:space:]>])'" "$ROOT_DIR/Makefile" || \
-   ! grep -Fq ":Application:assembleDebugAndroidTest" "$ROOT_DIR/Makefile"; then
+   ! grep -Fq ":Application:assembleDebugAndroidTest" "$ROOT_DIR/Makefile" || \
+   ! grep -Fq 'SKIP_ANDROID_INSTRUMENTATION ?= 0' "$ROOT_DIR/Makefile" || \
+   ! grep -Fq 'GRADLE="$(GRADLE_COMMAND)" "$(ROOT)scripts/run-instrumentation.sh"' "$ROOT_DIR/Makefile"; then
   printf '%s\n' "Make lint must reject every Android lint finding without suppression." >&2
+  exit 1
+fi
+
+for lint_contract in \
+  ':Application:lintDebug --no-daemon' \
+  ':Application:lintRelease --no-daemon'; do
+  if ! grep -Fq "$lint_contract" "$ROOT_DIR/Makefile"; then
+    printf '%s\n' "Make lint must keep sequential variant contract: $lint_contract" >&2
+    exit 1
+  fi
+done
+if grep -Fq ':Application:lintDebug :Application:lintRelease' "$ROOT_DIR/Makefile"; then
+  printf '%s\n' "Debug and release lint must not share one racy Gradle invocation." >&2
+  exit 1
+fi
+
+if [ ! -x "$INSTRUMENTATION_RUNNER" ] || ! sh -n "$INSTRUMENTATION_RUNNER"; then
+  printf '%s\n' "Instrumentation runner must exist and pass POSIX shell syntax checks." >&2
+  exit 1
+fi
+
+for runner_contract in \
+  'SYSTEM_IMAGE=${ANDROID_SYSTEM_IMAGE:-system-images;android-36;google_apis;x86_64}' \
+  'trap cleanup 0' \
+  "trap 'exit 129' 1" \
+  "trap 'exit 130' 2" \
+  "trap 'exit 143' 15" \
+  '"$AVDMANAGER" create avd' \
+  '-no-window' \
+  '-no-snapshot' \
+  'get-state' \
+  'sys.boot_completed' \
+  'kill -0 "$emulator_pid"' \
+  ':Application:connectedDebugAndroidTest --no-daemon'; do
+  if ! grep -Fq -- "$runner_contract" "$INSTRUMENTATION_RUNNER"; then
+    printf '%s\n' "Instrumentation runner contract is missing: $runner_contract" >&2
+    exit 1
+  fi
+done
+
+if [ "$(grep -Fc 'BOOT_TIMEOUT_SECONDS=${ANDROID_BOOT_TIMEOUT_SECONDS:-180}' "$INSTRUMENTATION_RUNNER")" -ne 1 ]; then
+  printf '%s\n' "Instrumentation runner must keep a testable three-minute default boot deadline." >&2
+  exit 1
+fi
+
+if grep -Fq 'wait-for-device' "$INSTRUMENTATION_RUNNER"; then
+  printf '%s\n' "Instrumentation runner must not block outside the bounded boot loop." >&2
   exit 1
 fi
 
@@ -351,14 +427,14 @@ if [ ! -x "$ROOT_DIR/gradlew" ]; then
 fi
 
 if [ ! -x "$GRADLEW" ] || [ "$(cat "$WRAPPER_PROPERTIES")" != "$(expected_wrapper_properties)" ]; then
-  printf '%s\n' "Generated wrapper must retain the reviewed Gradle 9.5.1 URL and checksum." >&2
+  printf '%s\n' "Generated wrapper must retain the reviewed Gradle 9.6.0 URL and checksum." >&2
   exit 1
 fi
 
-require_sha256 "$GRADLEW" "b187b4c52e749f5760afdd6fadc31b2a98ad35fb249bf0dff03b72650f320409" "Unix wrapper must match the reviewed generated script."
-require_sha256 "$GRADLEW_BAT" "94102713eb8fb22d032397924c0f38ab2da783ba60d07054339f1190a0c4e2cd" "Windows wrapper must match the reviewed generated script."
-require_sha256 "$WRAPPER_JAR" "7d3a4ac4de1c32b59bc6a4eb8ecb8e612ccd0cf1ae1e99f66902da64df296172" "Wrapper JAR must match the reviewed generated artifact."
-require_sha256 "$WRAPPER_PROPERTIES" "dc61433ab2b0a18b8fd92d5f0f0b72ba2401b0393fd9d24a3d4fc3b63a314cd6" "Wrapper properties must match the reviewed checksum contract."
+require_sha256 "$GRADLEW" "ab5c0cad16305af2e619c159c1f58dd68d07fab9c11e36701e109c0277407f7a" "Unix wrapper must match the reviewed generated script."
+require_sha256 "$GRADLEW_BAT" "5c0a21ecd6b3a6292e0746bff3b75fd2d8f47b9ff226ce53dc22b30184ef3bec" "Windows wrapper must match the reviewed generated script."
+require_sha256 "$WRAPPER_JAR" "497c8c2a7e5031f6aa847f88104aa80a93532ec32ee17bdb8d1d2f67a194a9c7" "Wrapper JAR must match the reviewed generated artifact."
+require_sha256 "$WRAPPER_PROPERTIES" "c629b14195c2b627ef184fba4416f5dfce6f69c8b088230965bf3f77b8a1a7b4" "Wrapper properties must match the reviewed checksum contract."
 
 for contract in \
   "id 'com.android.application' version '9.2.0' apply false"; do
@@ -396,7 +472,8 @@ for build_contract in \
   "warningsAsErrors = true" \
   "androidTestImplementation 'androidx.test:core:1.7.0'" \
   "androidTestImplementation 'androidx.test.ext:junit:1.3.0'" \
-  "androidTestImplementation 'androidx.test:runner:1.7.0'"; do
+  "androidTestImplementation 'androidx.test:runner:1.7.0'" \
+  "androidTestImplementation 'androidx.test.uiautomator:uiautomator:2.3.0'"; do
   if ! grep -Fq "$build_contract" "$APP_BUILD"; then
     printf '%s\n' "Application build must preserve modern contract: $build_contract" >&2
     exit 1
@@ -454,7 +531,24 @@ fi
 
 for test_contract in \
   '@RunWith(AndroidJUnit4.class)' \
+  'activitySurvivesCameraPermissionDenial()' \
+  'assertEquals(PERMISSION_DENIED,' \
+  '.checkSelfPermission(Manifest.permission.CAMERA)' \
   'ActivityScenario.launch(CameraActivity.class)' \
+  'Until.findObject(By.res(DENY_BUTTON_RESOURCE))' \
+  'PERMISSION_DIALOG_TIMEOUT_MS = 10_000' \
+  'waitForPermissionRequestPending(scenario, true)' \
+  'denyButton.click()' \
+  'waitForPermissionDenied(scenario)' \
+  'assertFalse("Camera permission request is still pending"' \
+  'Until.gone(By.res(DENY_BUTTON_RESOURCE))' \
+  'scenario.recreate()' \
+  'assertTrue("Camera permission denial was not retained after recreation"' \
+  'assertFalse("Camera permission request restarted after recreation"' \
+  'assertNull("Camera permission dialog was shown after activity recreation"' \
+  'getDeclaredField(' \
+  'cameraPermissionDenied(scenario)' \
+  'fragmentBooleanField(scenario, "mCameraPermissionDenied")' \
   'getFragmentManager().findFragmentById(R.id.container)' \
   'assertNotNull("Camera fragment is null", fragment)'; do
   if ! grep -Fq "$test_contract" "$TEST_FIXTURE"; then
@@ -462,6 +556,38 @@ for test_contract in \
     exit 1
   fi
 done
+
+if [ "$(grep -Fc 'assertCameraFragmentExists(scenario);' "$TEST_FIXTURE")" -ne 3 ]; then
+  printf '%s\n' "Instrumentation fixture must verify the camera fragment before denial, after denial, and after recreation." >&2
+  exit 1
+fi
+
+TEST_FIXTURE_FLAT=$(tr '\n' ' ' < "$TEST_FIXTURE" | tr -s '[:space:]' ' ')
+for recreation_test_contract in \
+  'assertTrue("Camera permission denial was not retained after recreation", cameraPermissionDenied(scenario));' \
+  'assertFalse("Camera permission request restarted after recreation", permissionRequestPending(scenario));' \
+  'assertNull("Camera permission dialog was shown after activity recreation", device.wait(Until.findObject(By.res(DENY_BUTTON_RESOURCE)), PERMISSION_DIALOG_TIMEOUT_MS));'; do
+  if ! printf '%s\n' "$TEST_FIXTURE_FLAT" | grep -Fq "$recreation_test_contract"; then
+    printf '%s\n' "Instrumentation fixture must preserve post-recreation assertion: $recreation_test_contract" >&2
+    exit 1
+  fi
+done
+
+recreate_line=$(grep -nF 'scenario.recreate();' "$TEST_FIXTURE" | cut -d: -f1)
+recreated_fragment_line=$(grep -nF 'assertCameraFragmentExists(scenario);' "$TEST_FIXTURE" | tail -1 | cut -d: -f1)
+retained_denial_line=$(grep -nF 'assertTrue("Camera permission denial was not retained after recreation"' "$TEST_FIXTURE" | cut -d: -f1)
+restarted_request_line=$(grep -nF 'assertFalse("Camera permission request restarted after recreation"' "$TEST_FIXTURE" | cut -d: -f1)
+recreated_dialog_line=$(grep -nF 'assertNull("Camera permission dialog was shown after activity recreation"' "$TEST_FIXTURE" | cut -d: -f1)
+if [ -z "$recreate_line" ] || [ -z "$recreated_fragment_line" ] || \
+   [ -z "$retained_denial_line" ] || [ -z "$restarted_request_line" ] || \
+   [ -z "$recreated_dialog_line" ] || \
+   [ "$recreate_line" -ge "$recreated_fragment_line" ] || \
+   [ "$recreated_fragment_line" -ge "$retained_denial_line" ] || \
+   [ "$retained_denial_line" -ge "$restarted_request_line" ] || \
+   [ "$restarted_request_line" -ge "$recreated_dialog_line" ]; then
+  printf '%s\n' "Instrumentation fixture must verify retained denial state after activity recreation in order." >&2
+  exit 1
+fi
 
 ensure_line=$(grep -n 'if (!ensureCameraPermission(activity))' "$FRAGMENT" | head -n 1 | cut -d: -f1)
 setup_line=$(grep -n 'setUpCameraOutputs(width, height);' "$FRAGMENT" | head -n 1 | cut -d: -f1)
@@ -475,9 +601,12 @@ fi
 
 for permission_contract in \
   'mCameraPermissionRequestPending' \
+  'mCameraPermissionDenied' \
   'requestPermissions(new String[]{Manifest.permission.CAMERA}, REQUEST_CAMERA_PERMISSION)' \
   'public void onRequestPermissionsResult' \
   'mCameraPermissionRequestPending = false' \
+  'if (mCameraPermissionDenied)' \
+  'mCameraPermissionDenied = true' \
   'public void onDestroyView()' \
   'mTextureView = null' \
   'isResumed() && mTextureView != null && mTextureView.isAvailable()' \
@@ -506,8 +635,11 @@ for workflow_contract in \
   'actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654' \
   'java-version: "17"' \
   'run: |' \
-  '"$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" "build-tools;36.1.0"' \
-  'timeout 12m make check'; do
+  '"platforms;android-36"' \
+  '"build-tools;36.1.0"' \
+  '"system-images;android-36;google_apis;x86_64"' \
+  'sudo chmod 666 /dev/kvm' \
+  'timeout 22m make check'; do
   if ! grep -Fq "$workflow_contract" "$CI_WORKFLOW"; then
     printf '%s\n' "CI must preserve Android 16 toolchain contract: $workflow_contract" >&2
     exit 1
@@ -516,6 +648,11 @@ done
 
 if grep -Fq 'android-actions/setup-android@' "$CI_WORKFLOW"; then
   printf '%s\n' "CI must not use actions outside this repository's allowed Actions policy." >&2
+  exit 1
+fi
+
+if grep -Fq 'SKIP_ANDROID_INSTRUMENTATION' "$CI_WORKFLOW"; then
+  printf '%s\n' "CI must execute instrumentation without the local runtime skip." >&2
   exit 1
 fi
 
@@ -614,6 +751,114 @@ if ! grep -Fq "if (mBackgroundThread != null)" "$FRAGMENT"; then
   exit 1
 fi
 
+stop_background_body=$(awk '
+  /private void stopBackgroundThread\(\)/ { capture = 1 }
+  capture && /private void createCameraPreviewSession\(\)/ { exit }
+  capture { print }
+' "$FRAGMENT")
+for stop_background_contract in \
+  "mBackgroundThread.quitSafely();" \
+  "mBackgroundThread.join();" \
+  "mBackgroundThread = null;" \
+  "mBackgroundHandler = null;" \
+  "catch (InterruptedException e)" \
+  "Thread.currentThread().interrupt();"; do
+  if ! printf '%s\n' "$stop_background_body" | grep -Fq "$stop_background_contract"; then
+    printf '%s\n' "Camera background shutdown must preserve: $stop_background_contract" >&2
+    exit 1
+  fi
+done
+if printf '%s\n' "$stop_background_body" | grep -Eq 'printStackTrace\(|Log\.[ew]\([^;]*, *e\)'; then
+  printf '%s\n' "Interrupted camera background shutdown must not emit throwable details." >&2
+  exit 1
+fi
+if ! printf '%s\n' "$stop_background_body" | awk '
+  /mBackgroundThread\.quitSafely\(\);/ { quit = NR }
+  /mBackgroundThread\.join\(\);/ { joined = NR }
+  /mBackgroundThread = null;/ && joined && !released_thread { released_thread = NR }
+  /mBackgroundHandler = null;/ && joined && !released_handler { released_handler = NR }
+  /catch \(InterruptedException e\)/ { caught = NR }
+  /Thread\.currentThread\(\)\.interrupt\(\);/ { interrupted = NR }
+  END {
+    exit !(quit && joined && released_thread && released_handler && caught && interrupted &&
+      quit < joined && joined < released_thread && joined < released_handler && caught < interrupted)
+  }
+'; then
+  printf '%s\n' "Camera background shutdown must release ownership only after join and restore interruption in the catch." >&2
+  exit 1
+fi
+
+background_interrupt_guidance='Interrupted camera-worker shutdown preserves the interrupt signal and unresolved worker ownership.'
+for background_interrupt_doc in AGENTS.md README.md SECURITY.md VISION.md CHANGES.md; do
+  if ! grep -Fq "$background_interrupt_guidance" "$ROOT_DIR/$background_interrupt_doc"; then
+    printf '%s\n' "$background_interrupt_doc must document interrupted worker shutdown ownership." >&2
+    exit 1
+  fi
+done
+
+for background_interrupt_plan_contract in \
+  "status: completed" \
+  "repository-root and external-directory make check passed" \
+  "hostile mutations" \
+  "No emulator or physical-camera lifecycle execution was performed"; do
+  if ! grep -Fqi "$background_interrupt_plan_contract" "$BACKGROUND_INTERRUPT_PLAN"; then
+    printf '%s\n' "Camera background interrupt plan must record completion evidence: $background_interrupt_plan_contract" >&2
+    exit 1
+  fi
+done
+
+if grep -Fq 'printStackTrace()' "$FRAGMENT"; then
+  printf '%s\n' "Camera runtime paths must not print exception stack traces." >&2
+  exit 1
+fi
+
+if [ "$(grep -Fc 'catch (CameraAccessException e)' "$FRAGMENT")" -ne 6 ] || \
+   [ "$(grep -Fc 'catch (CameraAccessException | IllegalStateException e)' "$FRAGMENT")" -ne 2 ]; then
+  printf '%s\n' "Camera error redaction must preserve six access-only and two closed-session recovery boundaries." >&2
+  exit 1
+fi
+
+fragment_compact=$(tr '\n' ' ' < "$FRAGMENT" | tr -s '[:space:]' ' ')
+if printf '%s\n' "$fragment_compact" | grep -Eq 'Log\.[vdiew]\([^;]*,[^;]*,[^;]*\)'; then
+  printf '%s\n' "Camera runtime diagnostics must not serialize caught throwable details." >&2
+  exit 1
+fi
+
+for camera_error_category in \
+  'Log.w(TAG, "Dropping image because ImageReader is full.");' \
+  'Log.e(TAG, "Unable to configure camera outputs.");' \
+  'Log.e(TAG, "Unable to open camera.");' \
+  'Log.e(TAG, "Unable to start camera preview.");' \
+  'Log.e(TAG, "Unable to create camera preview session.");' \
+  'Log.e(TAG, "Unable to lock camera focus.");' \
+  'Log.e(TAG, "Unable to run camera precapture sequence.");' \
+  'Log.e(TAG, "Unable to capture picture.");' \
+  'Log.e(TAG, "Unable to resume camera preview.");'; do
+  if [ "$(grep -Fc "$camera_error_category" "$FRAGMENT")" -ne 1 ]; then
+    printf '%s\n' "Camera diagnostics must preserve one fixed category: $camera_error_category" >&2
+    exit 1
+  fi
+done
+
+camera_error_guidance='Camera runtime diagnostics retain fixed operation categories without exception stack traces or throwable details.'
+for camera_error_doc in AGENTS.md README.md SECURITY.md VISION.md CHANGES.md; do
+  if ! grep -Fq "$camera_error_guidance" "$ROOT_DIR/$camera_error_doc"; then
+    printf '%s\n' "$camera_error_doc must document camera error log redaction." >&2
+    exit 1
+  fi
+done
+
+for camera_error_plan_contract in \
+  'status: completed' \
+  'repository-root and external-directory `make check` passed' \
+  'hostile mutations' \
+  'No emulator, physical-camera, or live logcat verification was performed'; do
+  if ! grep -Fqi "$camera_error_plan_contract" "$CAMERA_ERROR_LOG_PLAN"; then
+    printf '%s\n' "Camera error log plan must record completion evidence: $camera_error_plan_contract" >&2
+    exit 1
+  fi
+done
+
 if ! grep -Fq "mCameraDevice == null || mCaptureSession == null" "$FRAGMENT"; then
   printf '%s\n' "takePicture must guard unavailable camera session state." >&2
   exit 1
@@ -646,11 +891,480 @@ if ! grep -Fq "afState == null" "$FRAGMENT"; then
   exit 1
 fi
 
-if ! grep -Fq "mTextureView == null || mCameraDevice == null" "$FRAGMENT" ||
+if ! grep -Fq "mTextureView == null || cameraDevice == null" "$FRAGMENT" ||
   ! grep -Fq "if (texture == null)" "$FRAGMENT"; then
   printf '%s\n' "Preview session creation must guard missing texture and camera state." >&2
   exit 1
 fi
+
+preview_session_method=$(awk '
+  /private void createCameraPreviewSession\(\)/ { capture = 1 }
+  capture && /private void configureTransform\(/ { exit }
+  capture { print }
+' "$FRAGMENT")
+configured_callback=$(printf '%s\n' "$preview_session_method" | awk '
+  /public void onConfigured\(CameraCaptureSession cameraCaptureSession\)/ { capture = 1 }
+  capture && /public void onConfigureFailed\(CameraCaptureSession cameraCaptureSession\)/ { exit }
+  capture { print }
+')
+configure_failed_callback=$(printf '%s\n' "$preview_session_method" | awk '
+  /public void onConfigureFailed\(CameraCaptureSession cameraCaptureSession\)/ { capture = 1 }
+  capture && /^[[:space:]]*}, null$/ { exit }
+  capture { print }
+')
+
+if [ "$(grep -Fc "private volatile CameraDevice mCameraDevice;" "$FRAGMENT")" -ne 1 ]; then
+  printf '%s\n' "Camera device ownership must remain visible across lifecycle and callback threads." >&2
+  exit 1
+fi
+
+if [ "$(grep -Fc "private volatile CameraCaptureSession mCaptureSession;" "$FRAGMENT")" -ne 1 ]; then
+  printf '%s\n' "Capture session ownership must remain visible across lifecycle and callback threads." >&2
+  exit 1
+fi
+
+capture_result_callback=$(awk '
+  /private CameraCaptureSession.CaptureCallback mCaptureCallback/ { capture = 1 }
+  capture && /private static class MessageHandler/ { exit }
+  capture { print }
+' "$FRAGMENT")
+capture_progressed_callback=$(printf '%s\n' "$capture_result_callback" | awk '
+  /public void onCaptureProgressed\(CameraCaptureSession session/ { capture = 1 }
+  capture && /public void onCaptureCompleted\(CameraCaptureSession session/ { exit }
+  capture { print }
+')
+capture_completed_callback=$(printf '%s\n' "$capture_result_callback" | awk '
+  /public void onCaptureCompleted\(CameraCaptureSession session/ { capture = 1 }
+  capture { print }
+')
+
+for callback_name in progressed completed; do
+  if [ "$callback_name" = progressed ]; then
+    callback_body=$capture_progressed_callback
+    process_marker="process(partialResult);"
+  else
+    callback_body=$capture_completed_callback
+    process_marker="process(result);"
+  fi
+  for callback_marker in \
+    "if (session != mCaptureSession)" \
+    "return;" \
+    "$process_marker"; do
+    if [ "$(printf '%s\n' "$callback_body" | grep -Fc "$callback_marker")" -ne 1 ]; then
+      printf '%s\n' "Capture $callback_name ownership marker must be unique: $callback_marker" >&2
+      exit 1
+    fi
+  done
+
+  callback_guard_line=$(printf '%s\n' "$callback_body" | grep -nF "if (session != mCaptureSession)" | cut -d: -f1)
+  callback_return_line=$(printf '%s\n' "$callback_body" | grep -nF "return;" | cut -d: -f1)
+  callback_process_line=$(printf '%s\n' "$callback_body" | grep -nF "$process_marker" | cut -d: -f1)
+  if [ "$callback_guard_line" -ge "$callback_return_line" ] || \
+    [ "$callback_return_line" -ge "$callback_process_line" ]; then
+    printf '%s\n' "Capture $callback_name callbacks must reject stale session ownership before processing results." >&2
+    exit 1
+  fi
+done
+
+still_capture_method=$(awk '
+  /private void captureStillPicture\(\)/ { capture = 1 }
+  capture && /private void unlockFocus\(\)/ { exit }
+  capture { print }
+' "$FRAGMENT")
+missing_capture_dependency_guard=$(printf '%s\n' "$still_capture_method" | awk '
+  /if \(null == activity \|\| null == mCameraDevice \|\|/ { capture = 1 }
+  capture && /\/\/ This is the CaptureRequest.Builder/ { exit }
+  capture { print }
+')
+for recovery_marker in \
+  "if (null == activity || null == mCameraDevice ||" \
+  "mImageReader == null || mCaptureSession == null)" \
+  "mState = STATE_PREVIEW;" \
+  "return;"; do
+  if [ "$(printf '%s\n' "$missing_capture_dependency_guard" | grep -Fc "$recovery_marker")" -ne 1 ]; then
+    printf '%s\n' "Missing capture dependency recovery marker must be unique: $recovery_marker" >&2
+    exit 1
+  fi
+done
+missing_dependency_guard_line=$(printf '%s\n' "$missing_capture_dependency_guard" | grep -nF "if (null == activity || null == mCameraDevice ||" | cut -d: -f1)
+missing_dependency_state_line=$(printf '%s\n' "$missing_capture_dependency_guard" | grep -nF "mState = STATE_PREVIEW;" | cut -d: -f1)
+missing_dependency_return_line=$(printf '%s\n' "$missing_capture_dependency_guard" | grep -nF "return;" | cut -d: -f1)
+if [ "$missing_dependency_guard_line" -ge "$missing_dependency_state_line" ] || \
+  [ "$missing_dependency_state_line" -ge "$missing_dependency_return_line" ]; then
+  printf '%s\n' "Missing still-capture dependencies must restore preview state before returning." >&2
+  exit 1
+fi
+still_capture_completed=$(printf '%s\n' "$still_capture_method" | awk '
+  /public void onCaptureCompleted\(CameraCaptureSession session/ { capture = 1 }
+  capture && /public void onCaptureFailed\(CameraCaptureSession session/ { exit }
+  capture { print }
+')
+for callback_marker in \
+  "if (session != mCaptureSession)" \
+  "return;" \
+  "unlockFocus();"; do
+  if [ "$(printf '%s\n' "$still_capture_completed" | grep -Fc "$callback_marker")" -ne 1 ]; then
+    printf '%s\n' "Still-capture completion ownership marker must be unique: $callback_marker" >&2
+    exit 1
+  fi
+done
+still_guard_line=$(printf '%s\n' "$still_capture_completed" | grep -nF "if (session != mCaptureSession)" | cut -d: -f1)
+still_return_line=$(printf '%s\n' "$still_capture_completed" | grep -nF "return;" | cut -d: -f1)
+still_unlock_line=$(printf '%s\n' "$still_capture_completed" | grep -nF "unlockFocus();" | cut -d: -f1)
+if [ "$still_guard_line" -ge "$still_return_line" ] || \
+  [ "$still_return_line" -ge "$still_unlock_line" ]; then
+  printf '%s\n' "Still-capture completion must reject stale session ownership before unlocking focus." >&2
+  exit 1
+fi
+
+still_capture_failed=$(printf '%s\n' "$still_capture_method" | awk '
+  /public void onCaptureFailed\(CameraCaptureSession session/ { capture = 1 }
+  capture && /^[[:space:]]*};$/ { exit }
+  capture { print }
+')
+for callback_marker in \
+  "CaptureFailure failure" \
+  "if (session != mCaptureSession)" \
+  "return;" \
+  "unlockFocus();"; do
+  if [ "$(printf '%s\n' "$still_capture_failed" | grep -Fc "$callback_marker")" -ne 1 ]; then
+    printf '%s\n' "Still-capture failure recovery marker must be unique: $callback_marker" >&2
+    exit 1
+  fi
+done
+failure_guard_line=$(printf '%s\n' "$still_capture_failed" | grep -nF "if (session != mCaptureSession)" | cut -d: -f1)
+failure_return_line=$(printf '%s\n' "$still_capture_failed" | grep -nF "return;" | cut -d: -f1)
+failure_unlock_line=$(printf '%s\n' "$still_capture_failed" | grep -nF "unlockFocus();" | cut -d: -f1)
+if [ "$failure_guard_line" -ge "$failure_return_line" ] || \
+  [ "$failure_return_line" -ge "$failure_unlock_line" ]; then
+  printf '%s\n' "Still-capture failure must reject stale session ownership before unlocking focus." >&2
+  exit 1
+fi
+
+capture_exception=$(printf '%s\n' "$still_capture_method" | awk '
+  /catch \(CameraAccessException \| IllegalStateException e\)/ { capture = 1 }
+  capture && /^[[:space:]]*}$/ { exit }
+  capture { print }
+')
+for recovery_marker in \
+  "catch (CameraAccessException | IllegalStateException e)" \
+  "unlockFocus();" \
+  'Log.e(TAG, "Unable to capture picture.");'; do
+  if [ "$(printf '%s\n' "$capture_exception" | grep -Fc "$recovery_marker")" -ne 1 ]; then
+    printf '%s\n' "Synchronous still-capture recovery marker must be unique: $recovery_marker" >&2
+    exit 1
+  fi
+done
+
+capture_exception_unlock_line=$(printf '%s\n' "$capture_exception" | grep -nF "unlockFocus();" | cut -d: -f1)
+capture_exception_log_line=$(printf '%s\n' "$capture_exception" | grep -nF 'Log.e(TAG, "Unable to capture picture.");' | cut -d: -f1)
+if [ "$capture_exception_unlock_line" -ge "$capture_exception_log_line" ]; then
+  printf '%s\n' "Synchronous still-capture failures must recover focus before returning." >&2
+  exit 1
+fi
+
+unlock_focus_method=$(awk '
+  /private void unlockFocus\(\)/ { capture = 1 }
+  capture && /@Override/ { exit }
+  capture { print }
+' "$FRAGMENT")
+if [ "$(printf '%s\n' "$unlock_focus_method" | grep -Fc 'catch (CameraAccessException | IllegalStateException e)')" -ne 1 ]; then
+  printf '%s\n' "Focus recovery must absorb closed-session failures after publishing preview state." >&2
+  exit 1
+fi
+for recovery_marker in \
+  "mState = STATE_PREVIEW;" \
+  "if (mPreviewRequestBuilder == null || mCaptureSession == null || mPreviewRequest == null)" \
+  "try {"; do
+  if [ "$(printf '%s\n' "$unlock_focus_method" | grep -Fc "$recovery_marker")" -ne 1 ]; then
+    printf '%s\n' "Focus recovery marker must be unique: $recovery_marker" >&2
+    exit 1
+  fi
+done
+preview_state_line=$(printf '%s\n' "$unlock_focus_method" | grep -nF "mState = STATE_PREVIEW;" | cut -d: -f1)
+preview_guard_line=$(printf '%s\n' "$unlock_focus_method" | grep -nF "if (mPreviewRequestBuilder == null || mCaptureSession == null || mPreviewRequest == null)" | cut -d: -f1)
+preview_try_line=$(printf '%s\n' "$unlock_focus_method" | grep -nF "try {" | cut -d: -f1)
+if [ "$preview_state_line" -ge "$preview_guard_line" ] || \
+  [ "$preview_state_line" -ge "$preview_try_line" ]; then
+  printf '%s\n' "Focus recovery must publish preview state before nullable or throwing Camera2 work." >&2
+  exit 1
+fi
+
+capture_callback_guidance="Capture-result and still-capture completion callbacks reject stale session ownership before mutating capture state or unlocking focus."
+for guidance_file in AGENTS.md README.md SECURITY.md VISION.md CHANGES.md; do
+  if ! grep -Fq "$capture_callback_guidance" "$ROOT_DIR/$guidance_file"; then
+    printf '%s\n' "Capture callback ownership guidance must remain checked in: $guidance_file" >&2
+    exit 1
+  fi
+done
+
+capture_failure_guidance="Current-session still-capture failures unlock focus and resume preview; stale session failures are ignored."
+for guidance_file in AGENTS.md README.md SECURITY.md VISION.md CHANGES.md; do
+  if ! grep -Fq "$capture_failure_guidance" "$ROOT_DIR/$guidance_file"; then
+    printf '%s\n' "Capture failure recovery guidance must remain checked in: $guidance_file" >&2
+    exit 1
+  fi
+done
+
+synchronous_capture_guidance="Synchronous still-capture and preview-restart failures restore preview state before Camera2 recovery work can throw."
+for guidance_file in AGENTS.md README.md SECURITY.md VISION.md CHANGES.md; do
+  if ! grep -Fq "$synchronous_capture_guidance" "$ROOT_DIR/$guidance_file"; then
+    printf '%s\n' "Synchronous capture recovery guidance must remain checked in: $guidance_file" >&2
+    exit 1
+  fi
+done
+
+missing_capture_dependency_guidance="Missing still-capture dependencies restore preview state before the capture path returns."
+for guidance_file in AGENTS.md README.md SECURITY.md VISION.md CHANGES.md; do
+  if ! grep -Fq "$missing_capture_dependency_guidance" "$ROOT_DIR/$guidance_file"; then
+    printf '%s\n' "Missing capture dependency recovery guidance must remain checked in: $guidance_file" >&2
+    exit 1
+  fi
+done
+
+closed_session_capture_guidance="Closed-session still-capture and preview-restart operations use the same recovery path instead of escaping with \`IllegalStateException\`."
+for guidance_file in AGENTS.md README.md SECURITY.md VISION.md; do
+  if ! tr '\n' ' ' < "$ROOT_DIR/$guidance_file" | tr -s '[:space:]' ' ' | \
+      grep -Fq "$closed_session_capture_guidance"; then
+    printf '%s\n' "Closed-session capture recovery guidance must remain checked in: $guidance_file" >&2
+    exit 1
+  fi
+done
+if ! grep -Fq 'Closed-session still-capture and preview-restart operations now recover' "$ROOT_DIR/CHANGES.md"; then
+  printf '%s\n' "CHANGES.md must document closed-session capture recovery." >&2
+  exit 1
+fi
+
+for closed_session_capture_plan_contract in \
+  "Status: Completed" \
+  "make check" \
+  "isolated closed-session mutations were rejected" \
+  "No emulator, physical camera, or live closed-session race"; do
+  if ! grep -Fq "$closed_session_capture_plan_contract" "$CLOSED_SESSION_CAPTURE_RECOVERY_PLAN"; then
+    printf '%s\n' "Closed-session capture recovery plan must record completed verification: $closed_session_capture_plan_contract" >&2
+    exit 1
+  fi
+done
+
+for capture_failure_plan_contract in \
+  "Status: Completed" \
+  "make check" \
+  "isolated failure-recovery mutations were rejected" \
+  "No emulator, physical camera, or live capture failure"; do
+  if ! grep -Fq "$capture_failure_plan_contract" "$CAPTURE_FAILURE_RECOVERY_PLAN"; then
+    printf '%s\n' "Capture failure recovery plan must record completed verification: $capture_failure_plan_contract" >&2
+    exit 1
+  fi
+done
+
+for synchronous_capture_plan_contract in \
+  "Status: Completed" \
+  "make check" \
+  "isolated synchronous-recovery mutations were rejected" \
+  "No emulator, physical camera, or live synchronous Camera2 failure"; do
+  if ! grep -Fq "$synchronous_capture_plan_contract" "$SYNCHRONOUS_CAPTURE_RECOVERY_PLAN"; then
+    printf '%s\n' "Synchronous capture recovery plan must record completed verification: $synchronous_capture_plan_contract" >&2
+    exit 1
+  fi
+done
+
+for missing_capture_dependency_plan_contract in \
+  "Status: Completed" \
+  "make check" \
+  "isolated nullable-recovery mutations were rejected" \
+  "No emulator, physical camera, or live missing-dependency race"; do
+  if ! grep -Fq "$missing_capture_dependency_plan_contract" "$MISSING_CAPTURE_DEPENDENCY_PLAN"; then
+    printf '%s\n' "Missing capture dependency plan must record completed verification: $missing_capture_dependency_plan_contract" >&2
+    exit 1
+  fi
+done
+
+for capture_callback_plan_contract in \
+  "Status: Completed" \
+  "make check" \
+  "isolated ownership mutations were rejected" \
+  "No emulator, physical camera, or live stale callback"; do
+  if ! grep -Fq "$capture_callback_plan_contract" "$CAPTURE_CALLBACK_OWNERSHIP_PLAN"; then
+    printf '%s\n' "Capture callback ownership plan must record completed verification: $capture_callback_plan_contract" >&2
+    exit 1
+  fi
+done
+
+device_state_callback=$(awk '
+  /private final CameraDevice.StateCallback mStateCallback/ { capture = 1 }
+  capture && /An additional thread for running tasks/ { exit }
+  capture { print }
+' "$FRAGMENT")
+disconnected_callback=$(printf '%s\n' "$device_state_callback" | awk '
+  /public void onDisconnected\(CameraDevice cameraDevice\)/ { capture = 1 }
+  capture && /public void onError\(CameraDevice cameraDevice, int error\)/ { exit }
+  capture { print }
+')
+device_error_callback=$(printf '%s\n' "$device_state_callback" | awk '
+  /public void onError\(CameraDevice cameraDevice, int error\)/ { capture = 1 }
+  capture { print }
+')
+
+for callback_name in disconnected error; do
+  if [ "$callback_name" = disconnected ]; then
+    callback_body=$disconnected_callback
+  else
+    callback_body=$device_error_callback
+  fi
+  for callback_marker in \
+    "cameraDevice.close();" \
+    "if (mCameraDevice != cameraDevice)" \
+    "return;" \
+    "mCameraDevice = null;"; do
+    if [ "$(printf '%s\n' "$callback_body" | grep -Fc "$callback_marker")" -ne 1 ]; then
+      printf '%s\n' "Camera $callback_name callback ownership marker must be unique: $callback_marker" >&2
+      exit 1
+    fi
+  done
+
+  callback_close_line=$(printf '%s\n' "$callback_body" | grep -nF "cameraDevice.close();" | cut -d: -f1)
+  callback_guard_line=$(printf '%s\n' "$callback_body" | grep -nF "if (mCameraDevice != cameraDevice)" | cut -d: -f1)
+  callback_return_line=$(printf '%s\n' "$callback_body" | grep -nF "return;" | cut -d: -f1)
+  callback_clear_line=$(printf '%s\n' "$callback_body" | grep -nF "mCameraDevice = null;" | cut -d: -f1)
+  if [ "$callback_close_line" -ge "$callback_guard_line" ] || \
+    [ "$callback_guard_line" -ge "$callback_return_line" ] || \
+    [ "$callback_return_line" -ge "$callback_clear_line" ]; then
+    printf '%s\n' "Camera $callback_name callbacks must close their device and reject stale ownership before clearing shared state." >&2
+    exit 1
+  fi
+done
+
+error_clear_line=$(printf '%s\n' "$device_error_callback" | grep -nF "mCameraDevice = null;" | cut -d: -f1)
+error_finish_line=$(printf '%s\n' "$device_error_callback" | grep -nF "activity.finish();" | cut -d: -f1)
+if [ -z "$error_finish_line" ] || [ "$error_clear_line" -ge "$error_finish_line" ]; then
+  printf '%s\n' "Camera errors must finish the activity only after current-device ownership is established." >&2
+  exit 1
+fi
+
+if ! grep -Fq "Device disconnect and error callbacks close their callback-owned device before rejecting stale shared ownership." "$ROOT_DIR/AGENTS.md" || \
+  ! grep -Fq "Camera-device disconnect and error callbacks close their callback device, but only the current device may clear shared state or finish the activity." "$README" || \
+  ! grep -Fq "Stale camera-device callbacks cannot clear replacement state or finish its activity." "$ROOT_DIR/SECURITY.md" || \
+  ! grep -Fq "Keep camera-device disconnect and error callbacks bound to the device that initiated them" "$ROOT_DIR/VISION.md" || \
+  ! grep -Fq "Bound camera-device disconnect and error side effects to current-device ownership." "$ROOT_DIR/CHANGES.md"; then
+  printf '%s\n' "Camera device callback ownership guidance must remain checked in." >&2
+  exit 1
+fi
+
+for device_callback_plan_contract in \
+  "Status: Completed" \
+  "make check" \
+  "ownership mutations were rejected" \
+  "No emulator, physical camera, or live disconnect/error callback"; do
+  if ! grep -Fq "$device_callback_plan_contract" "$DEVICE_CALLBACK_OWNERSHIP_PLAN"; then
+    printf '%s\n' "Camera device callback ownership plan must record completed verification: $device_callback_plan_contract" >&2
+    exit 1
+  fi
+done
+
+for preview_marker in \
+  "final CameraDevice cameraDevice = mCameraDevice;" \
+  "final CaptureRequest.Builder previewRequestBuilder" \
+  "cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);" \
+  "previewRequestBuilder.addTarget(surface);" \
+  "cameraDevice.createCaptureSession(Arrays.asList(surface, mImageReader.getSurface()),"; do
+  if [ "$(printf '%s\n' "$preview_session_method" | grep -Fc "$preview_marker")" -ne 1 ]; then
+    printf '%s\n' "Preview session ownership marker must be unique: $preview_marker" >&2
+    exit 1
+  fi
+done
+
+for configured_marker in \
+  "if (mCameraDevice != cameraDevice)" \
+  "cameraCaptureSession.close();" \
+  "return;" \
+  "mPreviewRequestBuilder = previewRequestBuilder;" \
+  "mCaptureSession = cameraCaptureSession;" \
+  "mPreviewRequest = previewRequestBuilder.build();" \
+  "cameraCaptureSession.setRepeatingRequest(mPreviewRequest,"; do
+  if [ "$(printf '%s\n' "$configured_callback" | grep -Fc "$configured_marker")" -ne 1 ]; then
+    printf '%s\n' "Configured preview ownership marker must be unique: $configured_marker" >&2
+    exit 1
+  fi
+done
+
+stale_guard_line=$(printf '%s\n' "$configured_callback" | grep -nF "if (mCameraDevice != cameraDevice)" | cut -d: -f1)
+stale_close_line=$(printf '%s\n' "$configured_callback" | grep -nF "cameraCaptureSession.close();" | cut -d: -f1)
+stale_return_line=$(printf '%s\n' "$configured_callback" | grep -nF "return;" | cut -d: -f1)
+builder_publish_line=$(printf '%s\n' "$configured_callback" | grep -nF "mPreviewRequestBuilder = previewRequestBuilder;" | cut -d: -f1)
+session_publish_line=$(printf '%s\n' "$configured_callback" | grep -nF "mCaptureSession = cameraCaptureSession;" | cut -d: -f1)
+request_build_line=$(printf '%s\n' "$configured_callback" | grep -nF "mPreviewRequest = previewRequestBuilder.build();" | cut -d: -f1)
+repeat_line=$(printf '%s\n' "$configured_callback" | grep -nF "cameraCaptureSession.setRepeatingRequest(mPreviewRequest," | cut -d: -f1)
+if [ "$stale_guard_line" -ge "$stale_close_line" ] || \
+  [ "$stale_close_line" -ge "$stale_return_line" ] || \
+  [ "$stale_return_line" -ge "$builder_publish_line" ] || \
+  [ "$builder_publish_line" -ge "$session_publish_line" ] || \
+  [ "$session_publish_line" -ge "$request_build_line" ] || \
+  [ "$request_build_line" -ge "$repeat_line" ]; then
+  printf '%s\n' "Stale preview sessions must close and return before current preview state is published." >&2
+  exit 1
+fi
+
+for failure_marker in \
+  "if (mCameraDevice != cameraDevice)" \
+  "return;" \
+  'showToast("Failed");'; do
+  if [ "$(printf '%s\n' "$configure_failed_callback" | grep -Fc "$failure_marker")" -ne 1 ]; then
+    printf '%s\n' "Failed preview ownership marker must be unique: $failure_marker" >&2
+    exit 1
+  fi
+done
+
+if printf '%s\n' "$configure_failed_callback" | grep -Fq "cameraCaptureSession.close();"; then
+  printf '%s\n' "Camera2 already closes failed preview sessions; failure callbacks must not invoke session methods." >&2
+  exit 1
+fi
+
+failure_guard_line=$(printf '%s\n' "$configure_failed_callback" | grep -nF "if (mCameraDevice != cameraDevice)" | cut -d: -f1)
+failure_return_line=$(printf '%s\n' "$configure_failed_callback" | grep -nF "return;" | cut -d: -f1)
+failure_toast_line=$(printf '%s\n' "$configure_failed_callback" | grep -nF 'showToast("Failed");' | cut -d: -f1)
+if [ "$failure_guard_line" -ge "$failure_return_line" ] || \
+  [ "$failure_return_line" -ge "$failure_toast_line" ]; then
+  printf '%s\n' "Failed preview callbacks must reject stale camera ownership before reporting UI." >&2
+  exit 1
+fi
+
+if ! grep -Fq "exact initiating camera device before publishing preview state" "$README" || \
+  ! grep -Fq "Keep asynchronous preview callbacks bound to their initiating camera device" "$ROOT_DIR/VISION.md" || \
+  ! grep -Fq "Stale camera-session callbacks close before publishing preview state" "$ROOT_DIR/SECURITY.md" || \
+  ! grep -Fq "Bound configured preview sessions to their exact initiating camera device" "$ROOT_DIR/CHANGES.md"; then
+  printf '%s\n' "Preview session ownership guidance must remain checked in." >&2
+  exit 1
+fi
+
+if ! grep -Fq "Failed preview callbacks rely on Camera2 session closure and suppress stale UI" "$README" || \
+  ! grep -Fq "Report preview configuration failures only for the initiating camera lifetime" "$ROOT_DIR/VISION.md" || \
+  ! grep -Fq "Failed preview callbacks suppress stale failure UI without invoking the already-closed session" "$ROOT_DIR/SECURITY.md" || \
+  ! grep -Fq "Suppressed stale camera-lifetime preview failure UI without invoking failed sessions" "$ROOT_DIR/CHANGES.md"; then
+  printf '%s\n' "Preview configuration failure ownership guidance must remain checked in." >&2
+  exit 1
+fi
+
+for preview_plan_contract in \
+  "status: completed" \
+  "make check" \
+  "hostile ownership mutations were rejected" \
+  "No emulator, physical camera, or live preview"; do
+  if ! grep -Fq "$preview_plan_contract" "$PREVIEW_SESSION_OWNERSHIP_PLAN"; then
+    printf '%s\n' "Preview session ownership plan must record completed verification: $preview_plan_contract" >&2
+    exit 1
+  fi
+done
+
+for preview_failure_plan_contract in \
+  "status: completed" \
+  "make check" \
+  "hostile failure-ownership mutations were rejected" \
+  "No emulator, physical camera, or live close/reopen"; do
+  if ! grep -Fq "$preview_failure_plan_contract" "$PREVIEW_FAILURE_OWNERSHIP_PLAN"; then
+    printf '%s\n' "Preview failure ownership plan must record completed verification: $preview_failure_plan_contract" >&2
+    exit 1
+  fi
+done
 
 if grep -Fq 'new ErrorDialog().show(getFragmentManager(), "dialog");' "$FRAGMENT"; then
   printf '%s\n' "Unsupported-camera error dialog must not use getFragmentManager() without a null guard." >&2
@@ -874,6 +1588,74 @@ if ! grep -Fq "GitHub Actions" "$README"; then
   exit 1
 fi
 
+README_FLAT=$(tr '\n' ' ' < "$README" | tr -s '[:space:]' ' ')
+for instrumentation_doc_contract in \
+  "connectedDebugAndroidTest" \
+  "pre-permission activity/fragment startup" \
+  "real camera-permission denial action" \
+  "denial remains settled across activity recreation" \
+  "does not prove permission grant, camera preview, or capture behavior"; do
+  if ! printf '%s\n' "$README_FLAT" | grep -Fq "$instrumentation_doc_contract"; then
+    printf '%s\n' "README must document hosted instrumentation scope: $instrumentation_doc_contract" >&2
+    exit 1
+  fi
+done
+
+if ! tr '\n' ' ' < "$ROOT_DIR/CHANGES.md" | tr -s '[:space:]' ' ' | \
+    grep -Fq 'retained fragment neither loses denial state nor restarts the permission request'; then
+  printf '%s\n' "CHANGES.md must document post-recreation camera denial coverage." >&2
+  exit 1
+fi
+
+PERMISSION_DENIAL_PLAN_FLAT=$(tr '\n' ' ' < "$PERMISSION_DENIAL_INSTRUMENTATION_PLAN" | tr -s '[:space:]' ' ')
+for permission_denial_plan_contract in \
+  "status: completed" \
+  "camera permission is denied on the fresh hosted install" \
+  "real API 36 permission-controller denial action" \
+  "does not immediately re-request camera permission after denial" \
+  "activity and camera fragment remain alive after denial" \
+  "push and pull-request hosted instrumentation success" \
+  "27656010921" \
+  "27656012503" \
+  "0af9dcf0be82dec5ad4844f922e83a4f3d218eb0"; do
+  if ! printf '%s\n' "$PERMISSION_DENIAL_PLAN_FLAT" | grep -Fq "$permission_denial_plan_contract"; then
+    printf '%s\n' "Permission-denial instrumentation plan must preserve contract: $permission_denial_plan_contract" >&2
+    exit 1
+  fi
+done
+
+PERMISSION_DENIAL_RECREATION_PLAN_FLAT=$(tr '\n' ' ' < "$PERMISSION_DENIAL_RECREATION_PLAN" | tr -s '[:space:]' ' ')
+for permission_denial_recreation_plan_contract in \
+  'status: completed' \
+  'Recreate `CameraActivity` after the denial callback has settled' \
+  'retained fragment still records denial' \
+  'permission dialog does not reappear after recreation' \
+  'Require exact-head push and pull-request hosted instrumentation success' \
+  'Seven isolated mutations were rejected' \
+  'Exact implementation head `dbbca280f4a42759f88a19dda26016bedb62cd44`' \
+  '27679897578' \
+  '27679909628'; do
+  if ! printf '%s\n' "$PERMISSION_DENIAL_RECREATION_PLAN_FLAT" | grep -Fq "$permission_denial_recreation_plan_contract"; then
+    printf '%s\n' "Permission-denial recreation plan must preserve contract: $permission_denial_recreation_plan_contract" >&2
+    exit 1
+  fi
+done
+
+for instrumentation_plan_contract in \
+  "status: completed" \
+  "repository-owned API 36 Google APIs emulator" \
+  "Bound emulator discovery and boot completion to three minutes" \
+  ":Application:connectedDebugAndroidTest" \
+  "SKIP_ANDROID_INSTRUMENTATION=1" \
+  "75cbcb75a217599c6ec42446a48461c26ed971b9" \
+  "27640848165" \
+  "27640853374"; do
+  if ! grep -Fq "$instrumentation_plan_contract" "$INSTRUMENTATION_EXECUTION_PLAN"; then
+    printf '%s\n' "Instrumentation execution plan must preserve contract: $instrumentation_plan_contract" >&2
+    exit 1
+  fi
+done
+
 if ! grep -Fq "actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10" "$ROOT_DIR/.github/workflows/check.yml" ||
   ! grep -Fq "make check" "$ROOT_DIR/.github/workflows/check.yml"; then
   printf '%s\n' "GitHub Actions check workflow must check out the repository and run make check." >&2
@@ -894,7 +1676,7 @@ if ! grep -Fq "permissions:" "$ROOT_DIR/.github/workflows/check.yml" ||
 fi
 
 if ! grep -Fq "workflow_dispatch:" "$ROOT_DIR/.github/workflows/check.yml" ||
-  ! grep -Fq "timeout-minutes: 15" "$ROOT_DIR/.github/workflows/check.yml"; then
+  ! grep -Fq "timeout-minutes: 25" "$ROOT_DIR/.github/workflows/check.yml"; then
   printf '%s\n' "GitHub Actions check workflow must support bounded manual verification." >&2
   exit 1
 fi
@@ -909,12 +1691,23 @@ fi
 
 if ! grep -Fq "distributionSha256Sum" "$README" || \
    ! grep -Fq "does not persist checkout credentials" "$README" || \
-   ! grep -Fq "Gradle 9.5.1 wrapper authenticates" "$ROOT_DIR/SECURITY.md" || \
+   ! grep -Fq "Gradle 9.6.0 wrapper authenticates" "$ROOT_DIR/SECURITY.md" || \
    ! grep -Fq "checksum-verified direct wrapper" "$ROOT_DIR/VISION.md" || \
    ! grep -Fq "authenticated Gradle wrapper" "$ROOT_DIR/CHANGES.md"; then
   printf '%s\n' "Documentation must describe authenticated wrapper and checkout boundaries." >&2
   exit 1
 fi
+
+for gradle_96_contract in \
+  "## Status: Completed" \
+  "Gradle 9.6.0" \
+  "bbaeb2fef8710818cf0e261201dab964c572f92b942812df0c3620d62a529a01" \
+  "make check"; do
+  if ! grep -Fq "$gradle_96_contract" "$GRADLE_96_REFRESH_PLAN"; then
+    printf '%s\n' "Gradle 9.6 refresh plan must preserve completion evidence: $gradle_96_contract" >&2
+    exit 1
+  fi
+done
 
 if ! grep -Fq "local.properties" "$README"; then
   printf '%s\n' "README must document local SDK configuration." >&2
@@ -944,17 +1737,21 @@ if ! grep -Fq "only preview-SDK availability advisories are disabled" "$README";
   exit 1
 fi
 
-if ! grep -Fq "./gradlew :Application:lintDebug :Application:lintRelease --no-daemon" "$README"; then
-  printf '%s\n' "README must document the lint gate." >&2
-  exit 1
-fi
+for lint_doc_contract in \
+  "./gradlew :Application:lintDebug --no-daemon" \
+  "./gradlew :Application:lintRelease --no-daemon"; do
+  if ! grep -Fq "$lint_doc_contract" "$README"; then
+    printf '%s\n' "README must document sequential lint command: $lint_doc_contract" >&2
+    exit 1
+  fi
+done
 
 if ! grep -Fq "./gradlew :Application:assembleDebug --no-daemon" "$README"; then
   printf '%s\n' "README must document the debug assemble gate." >&2
   exit 1
 fi
 
-if ! grep -Fq "Instrumentation tests require an Android device or emulator" "$README"; then
+if ! grep -Fq "hosted API 36 gate is configured to execute" "$README"; then
   printf '%s\n' "README must document instrumentation test runtime requirements." >&2
   exit 1
 fi
@@ -1031,8 +1828,8 @@ if ! grep -Fq 'ROOT := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))' "$ROOT_DI
   exit 1
 fi
 
-if [ "$(grep -Fc '$(GRADLE_COMMAND) -p "$(ROOT)"' "$ROOT_DIR/Makefile")" -ne 3 ]; then
-  printf '%s\n' "Makefile must root lint, test, and build Gradle tasks." >&2
+if [ "$(grep -Fc '$(GRADLE_COMMAND) -p "$(ROOT)"' "$ROOT_DIR/Makefile")" -ne 4 ]; then
+  printf '%s\n' "Makefile must root both lint variants, test, and build Gradle tasks." >&2
   exit 1
 fi
 
