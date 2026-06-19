@@ -54,6 +54,8 @@ Helpful reports include:
   permission is granted.
 - Application runtime dependencies are intentionally absent. AndroidX
   dependencies are limited to the instrumentation test configuration.
+- Hosted instrumentation executes only the pre-permission activity/fragment
+  startup assertion; it does not claim camera preview, capture, or device privacy behavior.
 - CameraApp reports picture-save success only after file output closes
   successfully, avoiding false persistence claims when local storage fails.
 - Image-save failures log a generic category without exception details or private output paths.
@@ -65,7 +67,7 @@ If this project requests device permissions such as location, camera, microphone
 
 ## Dependency and Supply Chain Security
 
-The Gradle 9.5.1 wrapper authenticates its official binary distribution with a
+The Gradle 9.6.0 wrapper authenticates its official binary distribution with a
 checked-in SHA-256 before execution. Review all four wrapper files together.
 Hosted Check also uses read-only permissions and a non-persisted checkout token
 so later steps cannot reuse repository credentials.
