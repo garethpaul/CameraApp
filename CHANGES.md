@@ -2,6 +2,9 @@
 
 ## 2026-06-19
 
+- Use a standard-duration hosted permission-denial gesture and wait for the
+  dialog to disappear before polling the app's callback, removing an
+  intermittent instrumentation race on the default branch.
 - Refreshed the authenticated Gradle wrapper from 9.5.1 to 9.6.0 after the
   zero-finding lint gate began rejecting the superseded wrapper release.
 

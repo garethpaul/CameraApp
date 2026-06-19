@@ -68,6 +68,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class SampleTests {
 
     private static final long PERMISSION_DIALOG_TIMEOUT_MS = 10_000;
+    private static final long PERMISSION_DENY_CLICK_DURATION_MS = 100;
     private static final String DENY_BUTTON_RESOURCE =
             "com.android.permissioncontroller:id/permission_deny_button";
 
@@ -90,13 +91,13 @@ public class SampleTests {
                     PERMISSION_DIALOG_TIMEOUT_MS);
             assertNotNull("Camera permission deny button is unavailable", denyButton);
             waitForPermissionRequestPending(scenario, true);
-            denyButton.click();
+            denyButton.click(PERMISSION_DENY_CLICK_DURATION_MS);
+            assertTrue("Camera permission denial action did not dismiss the dialog",
+                    device.wait(Until.gone(By.res(DENY_BUTTON_RESOURCE)),
+                            PERMISSION_DIALOG_TIMEOUT_MS));
             waitForPermissionDenied(scenario);
             assertFalse("Camera permission request is still pending",
                     permissionRequestPending(scenario));
-            assertTrue("Camera permission dialog was shown again after denial",
-                    device.wait(Until.gone(By.res(DENY_BUTTON_RESOURCE)),
-                            PERMISSION_DIALOG_TIMEOUT_MS));
 
             assertEquals(PERMISSION_DENIED,
                     InstrumentationRegistry.getInstrumentation().getTargetContext()
