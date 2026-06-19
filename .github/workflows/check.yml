@@ -15,7 +15,7 @@ concurrency:
 jobs:
   check:
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 25
     steps:
       - name: Check out repository
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
@@ -31,7 +31,13 @@ jobs:
 
       - name: Install Android 16 toolchain
         run: |
-          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" "build-tools;36.1.0"
+          sudo chmod 666 /dev/kvm
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" \
+            "platforms;android-36" \
+            "build-tools;36.1.0" \
+            "platform-tools" \
+            "emulator" \
+            "system-images;android-36;google_apis;x86_64"
 
-      - name: Run full verification
-        run: timeout 12m make check
+      - name: Run full verification and instrumentation
+        run: timeout 22m make check

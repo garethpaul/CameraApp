@@ -59,7 +59,7 @@ Android SDK before invoking the verification targets.
 
 - Use Android Studio to open the project or run the checked-in wrapper when the
   Android SDK is configured.
-- The project uses Gradle 9.5.1, Android Gradle Plugin 9.2.0, compile/target SDK
+- The project uses Gradle 9.6.0, Android Gradle Plugin 9.2.0, compile/target SDK
   36, min SDK 21, and Android Build Tools 36.1.0.
 - The application runtime dependency graph is intentionally empty. AndroidX is
   used only by the instrumentation smoke test.
@@ -79,27 +79,36 @@ JAVA_HOME=/path/to/jdk-17 ANDROID_HOME=/path/to/android-sdk make check
 ```
 
 `make check` runs the source contract, debug and release lint, instrumentation
-APK assembly, and debug APK assembly. The lint gate requires zero findings;
+APK assembly and execution, and debug APK assembly. The lint gate requires zero findings;
 only preview-SDK availability advisories are disabled while API 37 remains a
-preview. Instrumentation tests require an Android device or emulator with
-camera support for runtime execution; the build gate compiles the test APK.
+preview. The hosted API 36 gate is configured to execute pre-permission
+activity/fragment startup, drive the real camera-permission denial action, and
+assert that the activity remains stable and denial remains settled across
+activity recreation; this does not prove permission grant, camera preview, or
+capture behavior.
 
 Focused Gradle commands are available after Android SDK configuration:
 
 ```sh
-./gradlew :Application:lintDebug :Application:lintRelease --no-daemon
+./gradlew :Application:lintDebug --no-daemon
+./gradlew :Application:lintRelease --no-daemon
 ./gradlew :Application:assembleDebugAndroidTest --no-daemon
+./gradlew :Application:connectedDebugAndroidTest --no-daemon
 ./gradlew :Application:assembleDebug --no-daemon
 ```
 
-The wrapper pins the official Gradle 9.5.1 binary distribution and authenticates
+The wrapper pins the official Gradle 9.6.0 binary distribution and authenticates
 it with `distributionSha256Sum`; an empty wrapper cache therefore requires
 access to Gradle's HTTPS distribution service.
 
-GitHub Actions installs JDK 17, Android SDK platform 36, and Build Tools 36.1.0,
-then runs the same `make check` gate on pushes, pull requests, and manual
+GitHub Actions installs JDK 17, Android SDK platform 36, Build Tools 36.1.0, and
+the API 36 Google APIs emulator image, then runs the same `make check` gate on pushes, pull requests, and manual
 dispatches. The workflow uses commit-pinned actions, read-only repository
 access, a bounded runtime, and does not persist checkout credentials.
+
+For local hosts without emulator acceleration, use
+`SKIP_ANDROID_INSTRUMENTATION=1 make check` and record that runtime execution
+was skipped. CI does not set this escape hatch.
 
 When a camera-capable runtime is unavailable, do not claim preview, permission,
 or capture behavior was exercised. Record the missing device validation and
@@ -132,6 +141,10 @@ contracts as camera execution.
 - Camera-device disconnect and error callbacks close their callback device, but only the current device may clear shared state or finish the activity.
 - Capture-result and still-capture completion callbacks reject stale session ownership before mutating capture state or unlocking focus.
 - Current-session still-capture failures unlock focus and resume preview; stale session failures are ignored.
+- Synchronous still-capture and preview-restart failures restore preview state before Camera2 recovery work can throw.
+- Closed-session still-capture and preview-restart operations use the same
+  recovery path instead of escaping with `IllegalStateException`.
+- Missing still-capture dependencies restore preview state before the capture path returns.
 - Configured preview callbacks must still own their exact initiating camera device before publishing preview state; stale sessions close instead.
 - Failed preview callbacks rely on Camera2 session closure and suppress stale UI;
   only the initiating camera lifetime may report configuration failures.
