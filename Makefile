@@ -6,6 +6,7 @@ GRADLE ?= ./gradlew
 ROOT := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 GRADLE_COMMAND := $(if $(filter ./%,$(GRADLE)),$(ROOT)$(patsubst ./%,%,$(GRADLE)),$(GRADLE))
 GRADLE_ENV := ANDROID_HOME="$(ANDROID_HOME)" ANDROID_SDK_ROOT="$(ANDROID_HOME)" JAVA_HOME="$(JAVA_HOME)"
+SKIP_ANDROID_INSTRUMENTATION ?= 0
 
 toolchain:
 	@if [ ! -x "$(JAVA_HOME)/bin/java" ]; then \
@@ -28,7 +29,8 @@ toolchain:
 
 lint: toolchain
 	$(ROOT)scripts/check-baseline.sh
-	$(GRADLE_ENV) $(GRADLE_COMMAND) -p "$(ROOT)" :Application:lintDebug :Application:lintRelease --no-daemon
+	$(GRADLE_ENV) $(GRADLE_COMMAND) -p "$(ROOT)" :Application:lintDebug --no-daemon
+	$(GRADLE_ENV) $(GRADLE_COMMAND) -p "$(ROOT)" :Application:lintRelease --no-daemon
 	@for report in \
 		"$(ROOT)Application/build/reports/lint-results-debug.xml" \
 		"$(ROOT)Application/build/reports/lint-results-release.xml"; do \
@@ -41,6 +43,11 @@ lint: toolchain
 test: toolchain
 	$(ROOT)scripts/check-baseline.sh
 	$(GRADLE_ENV) $(GRADLE_COMMAND) -p "$(ROOT)" :Application:assembleDebugAndroidTest --no-daemon
+	@if [ "$(SKIP_ANDROID_INSTRUMENTATION)" = "1" ]; then \
+		echo "SKIP_ANDROID_INSTRUMENTATION=1; instrumentation APK assembled but runtime execution skipped."; \
+	else \
+		$(GRADLE_ENV) GRADLE="$(GRADLE_COMMAND)" "$(ROOT)scripts/run-instrumentation.sh"; \
+	fi
 
 build: toolchain
 	$(ROOT)scripts/check-baseline.sh
