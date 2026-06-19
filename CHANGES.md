@@ -1,7 +1,45 @@
 # CameraApp Changes
 
+## 2026-06-19
+
+- Refreshed the authenticated Gradle wrapper from 9.5.1 to 9.6.0 after the
+  zero-finding lint gate began rejecting the superseded wrapper release.
+
+## 2026-06-17
+
+- Extended hosted camera-permission denial coverage across activity recreation
+  and verified that the retained fragment neither loses denial state nor
+  restarts the permission request.
+
+## 2026-06-16
+
+- Extended hosted API 36 instrumentation through the real camera-permission
+  denial action and asserted that the activity and fragment remain stable.
+- Added bounded API 36 emulator provisioning and executed the existing
+  pre-permission CameraActivity instrumentation smoke test in hosted CI.
+- Serialized debug and release lint so clean builds cannot race over shared
+  Android lint partial-result state.
+- Capture-result and still-capture completion callbacks reject stale session ownership before mutating capture state or unlocking focus.
+- Current-session still-capture failures unlock focus and resume preview; stale session failures are ignored.
+- Synchronous still-capture and preview-restart failures restore preview state before Camera2 recovery work can throw.
+- Closed-session still-capture and preview-restart operations now recover
+  instead of escaping with `IllegalStateException`.
+- Missing still-capture dependencies restore preview state before the capture path returns.
+
+## 2026-06-15
+
+- Interrupted camera-worker shutdown preserves the interrupt signal and unresolved worker ownership.
+- Bound camera-device disconnect and error side effects to current-device ownership.
+- Bound configured preview sessions to their exact initiating camera device and
+  closed stale sessions before shared preview state publication.
+- Suppressed stale camera-lifetime preview failure UI without invoking failed sessions.
+- Camera runtime diagnostics retain fixed operation categories without exception stack traces or throwable details.
+- Image-save failures log a generic category without exception details or private output paths.
+
 ## 2026-06-14
 
+- Added an exact-head CameraApp device verification matrix with privacy-safe
+  evidence fields and every runtime row explicitly unexecuted.
 - Migrated the build to Android Gradle Plugin 9.2.0, Gradle 9.5.1, JDK 17,
   compile/target SDK 36, and Android Build Tools 36.1.0.
 - Removed unused support-library runtime dependencies while retaining
@@ -16,6 +54,8 @@
   checkout credentials on the modern toolchain.
 - Closed callback-owned images when the background handler rejects a save
   runnable during lifecycle shutdown.
+- CameraApp reports picture-save success only after file output closes
+  successfully instead of treating Camera2 capture completion as persistence.
 
 ## 2026-06-13
 
