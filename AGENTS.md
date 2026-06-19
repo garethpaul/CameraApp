@@ -19,8 +19,8 @@
 - Full baseline: `make check`
 - Combined verification: `make verify`
 - Lint/static checks: `make lint`
-- Tests: `make test` provisions a bounded API 36 emulator and executes the
-  pre-permission instrumentation smoke test by default.
+- Tests: `make test` provisions a bounded API 36 emulator, verifies
+  pre-permission startup, and drives camera-permission denial by default.
 - Build: `make build`
 - Source-only contract: `scripts/check-baseline.sh`
 - Android instrumentation APK: `./gradlew :Application:assembleDebugAndroidTest`
@@ -50,7 +50,7 @@
 ## Safety and gotchas
 
 - Detected references to Twitter. Keep API keys, OAuth credentials, tokens, and account-specific values in local configuration only.
-- This is a preserved Camera2 sample on AGP 9.2.0 and Gradle 9.5.1. Keep JDK
+- This is a preserved Camera2 sample on AGP 9.2.0 and Gradle 9.6.0. Keep JDK
   17, SDK 36, Build Tools 36.1.0, and the wrapper checksum aligned.
 - The application runtime dependency graph is empty; AndroidX belongs only in
   instrumentation test configurations.

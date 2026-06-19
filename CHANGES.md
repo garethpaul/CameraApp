@@ -1,7 +1,20 @@
 # CameraApp Changes
 
+## 2026-06-19
+
+- Refreshed the authenticated Gradle wrapper from 9.5.1 to 9.6.0 after the
+  zero-finding lint gate began rejecting the superseded wrapper release.
+
+## 2026-06-17
+
+- Extended hosted camera-permission denial coverage across activity recreation
+  and verified that the retained fragment neither loses denial state nor
+  restarts the permission request.
+
 ## 2026-06-16
 
+- Extended hosted API 36 instrumentation through the real camera-permission
+  denial action and asserted that the activity and fragment remain stable.
 - Added bounded API 36 emulator provisioning and executed the existing
   pre-permission CameraActivity instrumentation smoke test in hosted CI.
 - Serialized debug and release lint so clean builds cannot race over shared

@@ -59,7 +59,7 @@ Android SDK before invoking the verification targets.
 
 - Use Android Studio to open the project or run the checked-in wrapper when the
   Android SDK is configured.
-- The project uses Gradle 9.5.1, Android Gradle Plugin 9.2.0, compile/target SDK
+- The project uses Gradle 9.6.0, Android Gradle Plugin 9.2.0, compile/target SDK
   36, min SDK 21, and Android Build Tools 36.1.0.
 - The application runtime dependency graph is intentionally empty. AndroidX is
   used only by the instrumentation smoke test.
@@ -81,8 +81,11 @@ JAVA_HOME=/path/to/jdk-17 ANDROID_HOME=/path/to/android-sdk make check
 `make check` runs the source contract, debug and release lint, instrumentation
 APK assembly and execution, and debug APK assembly. The lint gate requires zero findings;
 only preview-SDK availability advisories are disabled while API 37 remains a
-preview. The hosted API 36 emulator executes the pre-permission activity/fragment
-startup assertion; this does not prove camera preview or capture behavior.
+preview. The hosted API 36 gate is configured to execute pre-permission
+activity/fragment startup, drive the real camera-permission denial action, and
+assert that the activity remains stable and denial remains settled across
+activity recreation; this does not prove permission grant, camera preview, or
+capture behavior.
 
 Focused Gradle commands are available after Android SDK configuration:
 
@@ -94,7 +97,7 @@ Focused Gradle commands are available after Android SDK configuration:
 ./gradlew :Application:assembleDebug --no-daemon
 ```
 
-The wrapper pins the official Gradle 9.5.1 binary distribution and authenticates
+The wrapper pins the official Gradle 9.6.0 binary distribution and authenticates
 it with `distributionSha256Sum`; an empty wrapper cache therefore requires
 access to Gradle's HTTPS distribution service.
 

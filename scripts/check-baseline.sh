@@ -44,6 +44,9 @@ SYNCHRONOUS_CAPTURE_RECOVERY_PLAN="$ROOT_DIR/docs/plans/2026-06-16-cameraapp-syn
 MISSING_CAPTURE_DEPENDENCY_PLAN="$ROOT_DIR/docs/plans/2026-06-16-cameraapp-missing-capture-dependency-recovery.md"
 CLOSED_SESSION_CAPTURE_RECOVERY_PLAN="$ROOT_DIR/docs/plans/2026-06-16-cameraapp-closed-session-capture-recovery.md"
 INSTRUMENTATION_EXECUTION_PLAN="$ROOT_DIR/docs/plans/2026-06-16-cameraapp-instrumentation-execution.md"
+PERMISSION_DENIAL_INSTRUMENTATION_PLAN="$ROOT_DIR/docs/plans/2026-06-16-cameraapp-permission-denial-instrumentation.md"
+PERMISSION_DENIAL_RECREATION_PLAN="$ROOT_DIR/docs/plans/2026-06-17-cameraapp-permission-denial-recreation.md"
+GRADLE_96_REFRESH_PLAN="$ROOT_DIR/docs/plans/2026-06-19-gradle-9-6-refresh.md"
 INSTRUMENTATION_RUNNER="$ROOT_DIR/scripts/run-instrumentation.sh"
 XXXHDPI_LAUNCHER="$ROOT_DIR/Application/src/main/res/drawable-xxxhdpi/ic_launcher.png"
 XXXHDPI_INFO="$ROOT_DIR/Application/src/main/res/drawable-xxxhdpi/ic_action_info.png"
@@ -73,9 +76,11 @@ expected_wrapper_properties() {
   cat <<'EOF'
 distributionBase=GRADLE_USER_HOME
 distributionPath=wrapper/dists
-distributionSha256Sum=bafc141b619ad6350fd975fc903156dd5c151998cc8b058e8c1044ab5f7b031f
-distributionUrl=https\://services.gradle.org/distributions/gradle-9.5.1-bin.zip
+distributionSha256Sum=bbaeb2fef8710818cf0e261201dab964c572f92b942812df0c3620d62a529a01
+distributionUrl=https\://services.gradle.org/distributions/gradle-9.6.0-bin.zip
 networkTimeout=10000
+retries=0
+retryBackOffMs=500
 validateDistributionUrl=true
 zipStoreBase=GRADLE_USER_HOME
 zipStorePath=wrapper/dists
@@ -131,6 +136,8 @@ for path in \
   "docs/plans/2026-06-16-cameraapp-missing-capture-dependency-recovery.md" \
   "docs/plans/2026-06-16-cameraapp-closed-session-capture-recovery.md" \
   "docs/plans/2026-06-16-cameraapp-instrumentation-execution.md" \
+  "docs/plans/2026-06-17-cameraapp-permission-denial-recreation.md" \
+  "docs/plans/2026-06-19-gradle-9-6-refresh.md" \
   "scripts/run-instrumentation.sh" \
   "Application/src/main/res/drawable-xxxhdpi/ic_launcher.png" \
   "Application/src/main/res/drawable-xxxhdpi/ic_action_info.png" \
@@ -420,14 +427,14 @@ if [ ! -x "$ROOT_DIR/gradlew" ]; then
 fi
 
 if [ ! -x "$GRADLEW" ] || [ "$(cat "$WRAPPER_PROPERTIES")" != "$(expected_wrapper_properties)" ]; then
-  printf '%s\n' "Generated wrapper must retain the reviewed Gradle 9.5.1 URL and checksum." >&2
+  printf '%s\n' "Generated wrapper must retain the reviewed Gradle 9.6.0 URL and checksum." >&2
   exit 1
 fi
 
-require_sha256 "$GRADLEW" "b187b4c52e749f5760afdd6fadc31b2a98ad35fb249bf0dff03b72650f320409" "Unix wrapper must match the reviewed generated script."
-require_sha256 "$GRADLEW_BAT" "94102713eb8fb22d032397924c0f38ab2da783ba60d07054339f1190a0c4e2cd" "Windows wrapper must match the reviewed generated script."
-require_sha256 "$WRAPPER_JAR" "7d3a4ac4de1c32b59bc6a4eb8ecb8e612ccd0cf1ae1e99f66902da64df296172" "Wrapper JAR must match the reviewed generated artifact."
-require_sha256 "$WRAPPER_PROPERTIES" "dc61433ab2b0a18b8fd92d5f0f0b72ba2401b0393fd9d24a3d4fc3b63a314cd6" "Wrapper properties must match the reviewed checksum contract."
+require_sha256 "$GRADLEW" "ab5c0cad16305af2e619c159c1f58dd68d07fab9c11e36701e109c0277407f7a" "Unix wrapper must match the reviewed generated script."
+require_sha256 "$GRADLEW_BAT" "5c0a21ecd6b3a6292e0746bff3b75fd2d8f47b9ff226ce53dc22b30184ef3bec" "Windows wrapper must match the reviewed generated script."
+require_sha256 "$WRAPPER_JAR" "497c8c2a7e5031f6aa847f88104aa80a93532ec32ee17bdb8d1d2f67a194a9c7" "Wrapper JAR must match the reviewed generated artifact."
+require_sha256 "$WRAPPER_PROPERTIES" "c629b14195c2b627ef184fba4416f5dfce6f69c8b088230965bf3f77b8a1a7b4" "Wrapper properties must match the reviewed checksum contract."
 
 for contract in \
   "id 'com.android.application' version '9.2.0' apply false"; do
@@ -465,7 +472,8 @@ for build_contract in \
   "warningsAsErrors = true" \
   "androidTestImplementation 'androidx.test:core:1.7.0'" \
   "androidTestImplementation 'androidx.test.ext:junit:1.3.0'" \
-  "androidTestImplementation 'androidx.test:runner:1.7.0'"; do
+  "androidTestImplementation 'androidx.test:runner:1.7.0'" \
+  "androidTestImplementation 'androidx.test.uiautomator:uiautomator:2.3.0'"; do
   if ! grep -Fq "$build_contract" "$APP_BUILD"; then
     printf '%s\n' "Application build must preserve modern contract: $build_contract" >&2
     exit 1
@@ -523,7 +531,24 @@ fi
 
 for test_contract in \
   '@RunWith(AndroidJUnit4.class)' \
+  'activitySurvivesCameraPermissionDenial()' \
+  'assertEquals(PERMISSION_DENIED,' \
+  '.checkSelfPermission(Manifest.permission.CAMERA)' \
   'ActivityScenario.launch(CameraActivity.class)' \
+  'Until.findObject(By.res(DENY_BUTTON_RESOURCE))' \
+  'PERMISSION_DIALOG_TIMEOUT_MS = 10_000' \
+  'waitForPermissionRequestPending(scenario, true)' \
+  'denyButton.click()' \
+  'waitForPermissionDenied(scenario)' \
+  'assertFalse("Camera permission request is still pending"' \
+  'Until.gone(By.res(DENY_BUTTON_RESOURCE))' \
+  'scenario.recreate()' \
+  'assertTrue("Camera permission denial was not retained after recreation"' \
+  'assertFalse("Camera permission request restarted after recreation"' \
+  'assertNull("Camera permission dialog was shown after activity recreation"' \
+  'getDeclaredField(' \
+  'cameraPermissionDenied(scenario)' \
+  'fragmentBooleanField(scenario, "mCameraPermissionDenied")' \
   'getFragmentManager().findFragmentById(R.id.container)' \
   'assertNotNull("Camera fragment is null", fragment)'; do
   if ! grep -Fq "$test_contract" "$TEST_FIXTURE"; then
@@ -531,6 +556,38 @@ for test_contract in \
     exit 1
   fi
 done
+
+if [ "$(grep -Fc 'assertCameraFragmentExists(scenario);' "$TEST_FIXTURE")" -ne 3 ]; then
+  printf '%s\n' "Instrumentation fixture must verify the camera fragment before denial, after denial, and after recreation." >&2
+  exit 1
+fi
+
+TEST_FIXTURE_FLAT=$(tr '\n' ' ' < "$TEST_FIXTURE" | tr -s '[:space:]' ' ')
+for recreation_test_contract in \
+  'assertTrue("Camera permission denial was not retained after recreation", cameraPermissionDenied(scenario));' \
+  'assertFalse("Camera permission request restarted after recreation", permissionRequestPending(scenario));' \
+  'assertNull("Camera permission dialog was shown after activity recreation", device.wait(Until.findObject(By.res(DENY_BUTTON_RESOURCE)), PERMISSION_DIALOG_TIMEOUT_MS));'; do
+  if ! printf '%s\n' "$TEST_FIXTURE_FLAT" | grep -Fq "$recreation_test_contract"; then
+    printf '%s\n' "Instrumentation fixture must preserve post-recreation assertion: $recreation_test_contract" >&2
+    exit 1
+  fi
+done
+
+recreate_line=$(grep -nF 'scenario.recreate();' "$TEST_FIXTURE" | cut -d: -f1)
+recreated_fragment_line=$(grep -nF 'assertCameraFragmentExists(scenario);' "$TEST_FIXTURE" | tail -1 | cut -d: -f1)
+retained_denial_line=$(grep -nF 'assertTrue("Camera permission denial was not retained after recreation"' "$TEST_FIXTURE" | cut -d: -f1)
+restarted_request_line=$(grep -nF 'assertFalse("Camera permission request restarted after recreation"' "$TEST_FIXTURE" | cut -d: -f1)
+recreated_dialog_line=$(grep -nF 'assertNull("Camera permission dialog was shown after activity recreation"' "$TEST_FIXTURE" | cut -d: -f1)
+if [ -z "$recreate_line" ] || [ -z "$recreated_fragment_line" ] || \
+   [ -z "$retained_denial_line" ] || [ -z "$restarted_request_line" ] || \
+   [ -z "$recreated_dialog_line" ] || \
+   [ "$recreate_line" -ge "$recreated_fragment_line" ] || \
+   [ "$recreated_fragment_line" -ge "$retained_denial_line" ] || \
+   [ "$retained_denial_line" -ge "$restarted_request_line" ] || \
+   [ "$restarted_request_line" -ge "$recreated_dialog_line" ]; then
+  printf '%s\n' "Instrumentation fixture must verify retained denial state after activity recreation in order." >&2
+  exit 1
+fi
 
 ensure_line=$(grep -n 'if (!ensureCameraPermission(activity))' "$FRAGMENT" | head -n 1 | cut -d: -f1)
 setup_line=$(grep -n 'setUpCameraOutputs(width, height);' "$FRAGMENT" | head -n 1 | cut -d: -f1)
@@ -544,9 +601,12 @@ fi
 
 for permission_contract in \
   'mCameraPermissionRequestPending' \
+  'mCameraPermissionDenied' \
   'requestPermissions(new String[]{Manifest.permission.CAMERA}, REQUEST_CAMERA_PERMISSION)' \
   'public void onRequestPermissionsResult' \
   'mCameraPermissionRequestPending = false' \
+  'if (mCameraPermissionDenied)' \
+  'mCameraPermissionDenied = true' \
   'public void onDestroyView()' \
   'mTextureView = null' \
   'isResumed() && mTextureView != null && mTextureView.isAvailable()' \
@@ -1532,9 +1592,51 @@ README_FLAT=$(tr '\n' ' ' < "$README" | tr -s '[:space:]' ' ')
 for instrumentation_doc_contract in \
   "connectedDebugAndroidTest" \
   "pre-permission activity/fragment startup" \
-  "does not prove camera preview or capture behavior"; do
+  "real camera-permission denial action" \
+  "denial remains settled across activity recreation" \
+  "does not prove permission grant, camera preview, or capture behavior"; do
   if ! printf '%s\n' "$README_FLAT" | grep -Fq "$instrumentation_doc_contract"; then
     printf '%s\n' "README must document hosted instrumentation scope: $instrumentation_doc_contract" >&2
+    exit 1
+  fi
+done
+
+if ! tr '\n' ' ' < "$ROOT_DIR/CHANGES.md" | tr -s '[:space:]' ' ' | \
+    grep -Fq 'retained fragment neither loses denial state nor restarts the permission request'; then
+  printf '%s\n' "CHANGES.md must document post-recreation camera denial coverage." >&2
+  exit 1
+fi
+
+PERMISSION_DENIAL_PLAN_FLAT=$(tr '\n' ' ' < "$PERMISSION_DENIAL_INSTRUMENTATION_PLAN" | tr -s '[:space:]' ' ')
+for permission_denial_plan_contract in \
+  "status: completed" \
+  "camera permission is denied on the fresh hosted install" \
+  "real API 36 permission-controller denial action" \
+  "does not immediately re-request camera permission after denial" \
+  "activity and camera fragment remain alive after denial" \
+  "push and pull-request hosted instrumentation success" \
+  "27656010921" \
+  "27656012503" \
+  "0af9dcf0be82dec5ad4844f922e83a4f3d218eb0"; do
+  if ! printf '%s\n' "$PERMISSION_DENIAL_PLAN_FLAT" | grep -Fq "$permission_denial_plan_contract"; then
+    printf '%s\n' "Permission-denial instrumentation plan must preserve contract: $permission_denial_plan_contract" >&2
+    exit 1
+  fi
+done
+
+PERMISSION_DENIAL_RECREATION_PLAN_FLAT=$(tr '\n' ' ' < "$PERMISSION_DENIAL_RECREATION_PLAN" | tr -s '[:space:]' ' ')
+for permission_denial_recreation_plan_contract in \
+  'status: completed' \
+  'Recreate `CameraActivity` after the denial callback has settled' \
+  'retained fragment still records denial' \
+  'permission dialog does not reappear after recreation' \
+  'Require exact-head push and pull-request hosted instrumentation success' \
+  'Seven isolated mutations were rejected' \
+  'Exact implementation head `dbbca280f4a42759f88a19dda26016bedb62cd44`' \
+  '27679897578' \
+  '27679909628'; do
+  if ! printf '%s\n' "$PERMISSION_DENIAL_RECREATION_PLAN_FLAT" | grep -Fq "$permission_denial_recreation_plan_contract"; then
+    printf '%s\n' "Permission-denial recreation plan must preserve contract: $permission_denial_recreation_plan_contract" >&2
     exit 1
   fi
 done
@@ -1589,12 +1691,23 @@ fi
 
 if ! grep -Fq "distributionSha256Sum" "$README" || \
    ! grep -Fq "does not persist checkout credentials" "$README" || \
-   ! grep -Fq "Gradle 9.5.1 wrapper authenticates" "$ROOT_DIR/SECURITY.md" || \
+   ! grep -Fq "Gradle 9.6.0 wrapper authenticates" "$ROOT_DIR/SECURITY.md" || \
    ! grep -Fq "checksum-verified direct wrapper" "$ROOT_DIR/VISION.md" || \
    ! grep -Fq "authenticated Gradle wrapper" "$ROOT_DIR/CHANGES.md"; then
   printf '%s\n' "Documentation must describe authenticated wrapper and checkout boundaries." >&2
   exit 1
 fi
+
+for gradle_96_contract in \
+  "## Status: Completed" \
+  "Gradle 9.6.0" \
+  "bbaeb2fef8710818cf0e261201dab964c572f92b942812df0c3620d62a529a01" \
+  "make check"; do
+  if ! grep -Fq "$gradle_96_contract" "$GRADLE_96_REFRESH_PLAN"; then
+    printf '%s\n' "Gradle 9.6 refresh plan must preserve completion evidence: $gradle_96_contract" >&2
+    exit 1
+  fi
+done
 
 if ! grep -Fq "local.properties" "$README"; then
   printf '%s\n' "README must document local SDK configuration." >&2
@@ -1638,7 +1751,7 @@ if ! grep -Fq "./gradlew :Application:assembleDebug --no-daemon" "$README"; then
   exit 1
 fi
 
-if ! grep -Fq "hosted API 36 emulator executes" "$README"; then
+if ! grep -Fq "hosted API 36 gate is configured to execute" "$README"; then
   printf '%s\n' "README must document instrumentation test runtime requirements." >&2
   exit 1
 fi
