@@ -537,8 +537,10 @@ for test_contract in \
   'ActivityScenario.launch(CameraActivity.class)' \
   'Until.findObject(By.res(DENY_BUTTON_RESOURCE))' \
   'PERMISSION_DIALOG_TIMEOUT_MS = 10_000' \
+  'PERMISSION_DENY_CLICK_DURATION_MS = 100' \
   'waitForPermissionRequestPending(scenario, true)' \
-  'denyButton.click()' \
+  'denyButton.click(PERMISSION_DENY_CLICK_DURATION_MS)' \
+  'Camera permission denial action did not dismiss the dialog' \
   'waitForPermissionDenied(scenario)' \
   'assertFalse("Camera permission request is still pending"' \
   'Until.gone(By.res(DENY_BUTTON_RESOURCE))' \
@@ -556,6 +558,17 @@ for test_contract in \
     exit 1
   fi
 done
+
+denial_click_line=$(grep -nF 'denyButton.click(PERMISSION_DENY_CLICK_DURATION_MS);' "$TEST_FIXTURE" | cut -d: -f1)
+denial_dialog_line=$(grep -nF 'assertTrue("Camera permission denial action did not dismiss the dialog"' "$TEST_FIXTURE" | cut -d: -f1)
+denial_callback_line=$(grep -nF 'waitForPermissionDenied(scenario);' "$TEST_FIXTURE" | cut -d: -f1)
+if [ -z "$denial_click_line" ] || [ -z "$denial_dialog_line" ] || \
+   [ -z "$denial_callback_line" ] || \
+   [ "$denial_click_line" -ge "$denial_dialog_line" ] || \
+   [ "$denial_dialog_line" -ge "$denial_callback_line" ]; then
+  printf '%s\n' "Instrumentation fixture must wait for permission-dialog dismissal before polling the denial callback." >&2
+  exit 1
+fi
 
 if [ "$(grep -Fc 'assertCameraFragmentExists(scenario);' "$TEST_FIXTURE")" -ne 3 ]; then
   printf '%s\n' "Instrumentation fixture must verify the camera fragment before denial, after denial, and after recreation." >&2
