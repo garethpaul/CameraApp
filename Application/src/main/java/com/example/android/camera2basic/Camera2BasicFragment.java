@@ -37,6 +37,7 @@ import android.hardware.camera2.CameraCharacteristics;
 import android.hardware.camera2.CameraDevice;
 import android.hardware.camera2.CameraManager;
 import android.hardware.camera2.CameraMetadata;
+import android.hardware.camera2.CaptureFailure;
 import android.hardware.camera2.CaptureRequest;
 import android.hardware.camera2.CaptureResult;
 import android.hardware.camera2.TotalCaptureResult;
@@ -155,17 +156,18 @@ public class Camera2BasicFragment extends Fragment implements View.OnClickListen
     private AutoFitTextureView mTextureView;
 
     private boolean mCameraPermissionRequestPending;
+    private boolean mCameraPermissionDenied;
 
     /**
      * A {@link CameraCaptureSession } for camera preview.
      */
 
-    private CameraCaptureSession mCaptureSession;
+    private volatile CameraCaptureSession mCaptureSession;
     /**
      * A reference to the opened {@link CameraDevice}.
      */
 
-    private CameraDevice mCameraDevice;
+    private volatile CameraDevice mCameraDevice;
     /**
      * The {@link android.util.Size} of camera preview.
      */
@@ -189,6 +191,9 @@ public class Camera2BasicFragment extends Fragment implements View.OnClickListen
         public void onDisconnected(CameraDevice cameraDevice) {
             mCameraOpenCloseLock.release();
             cameraDevice.close();
+            if (mCameraDevice != cameraDevice) {
+                return;
+            }
             mCameraDevice = null;
         }
 
@@ -196,6 +201,9 @@ public class Camera2BasicFragment extends Fragment implements View.OnClickListen
         public void onError(CameraDevice cameraDevice, int error) {
             mCameraOpenCloseLock.release();
             cameraDevice.close();
+            if (mCameraDevice != cameraDevice) {
+                return;
+            }
             mCameraDevice = null;
             Activity activity = getActivity();
             if (null != activity) {
@@ -334,12 +342,18 @@ public class Camera2BasicFragment extends Fragment implements View.OnClickListen
         @Override
         public void onCaptureProgressed(CameraCaptureSession session, CaptureRequest request,
                                         CaptureResult partialResult) {
+            if (session != mCaptureSession) {
+                return;
+            }
             process(partialResult);
         }
 
         @Override
         public void onCaptureCompleted(CameraCaptureSession session, CaptureRequest request,
                                        TotalCaptureResult result) {
+            if (session != mCaptureSession) {
+                return;
+            }
             process(result);
         }
 
@@ -633,7 +647,11 @@ public class Camera2BasicFragment extends Fragment implements View.OnClickListen
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M ||
                 activity.checkSelfPermission(Manifest.permission.CAMERA) ==
                         PackageManager.PERMISSION_GRANTED) {
+            mCameraPermissionDenied = false;
             return true;
+        }
+        if (mCameraPermissionDenied) {
+            return false;
         }
         if (!mCameraPermissionRequestPending) {
             mCameraPermissionRequestPending = true;
@@ -654,12 +672,14 @@ public class Camera2BasicFragment extends Fragment implements View.OnClickListen
         boolean granted = grantResults.length > 0 &&
                 grantResults[0] == PackageManager.PERMISSION_GRANTED;
         if (granted) {
+            mCameraPermissionDenied = false;
             if (isResumed() && mTextureView != null && mTextureView.isAvailable()) {
                 openCamera(mTextureView.getWidth(), mTextureView.getHeight());
             }
             return;
         }
 
+        mCameraPermissionDenied = true;
         Activity activity = getActivity();
         if (activity != null) {
             showToast(activity.getString(R.string.camera_permission_denied));
@@ -730,7 +750,8 @@ public class Camera2BasicFragment extends Fragment implements View.OnClickListen
      * Creates a new {@link CameraCaptureSession} for camera preview.
      */
     private void createCameraPreviewSession() {
-        if (mTextureView == null || mCameraDevice == null ||
+        final CameraDevice cameraDevice = mCameraDevice;
+        if (mTextureView == null || cameraDevice == null ||
                 mImageReader == null || mPreviewSize == null) {
             return;
         }
@@ -747,34 +768,36 @@ public class Camera2BasicFragment extends Fragment implements View.OnClickListen
             Surface surface = new Surface(texture);
 
             // We set up a CaptureRequest.Builder with the output Surface.
-            mPreviewRequestBuilder
-                    = mCameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
-            mPreviewRequestBuilder.addTarget(surface);
+            final CaptureRequest.Builder previewRequestBuilder
+                    = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
+            previewRequestBuilder.addTarget(surface);
 
             // Here, we create a CameraCaptureSession for camera preview.
-            mCameraDevice.createCaptureSession(Arrays.asList(surface, mImageReader.getSurface()),
+            cameraDevice.createCaptureSession(Arrays.asList(surface, mImageReader.getSurface()),
                     new CameraCaptureSession.StateCallback() {
 
                         @Override
                         public void onConfigured(CameraCaptureSession cameraCaptureSession) {
-                            // The camera is already closed
-                            if (null == mCameraDevice) {
+                            // The initiating camera is already closed or replaced.
+                            if (mCameraDevice != cameraDevice) {
+                                cameraCaptureSession.close();
                                 return;
                             }
 
                             // When the session is ready, we start displaying the preview.
+                            mPreviewRequestBuilder = previewRequestBuilder;
                             mCaptureSession = cameraCaptureSession;
                             try {
                                 // Auto focus should be continuous for camera preview.
-                                mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AF_MODE,
+                                previewRequestBuilder.set(CaptureRequest.CONTROL_AF_MODE,
                                         CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE);
                                 // Flash is automatically enabled when necessary.
-                                mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AE_MODE,
+                                previewRequestBuilder.set(CaptureRequest.CONTROL_AE_MODE,
                                         CaptureRequest.CONTROL_AE_MODE_ON_AUTO_FLASH);
 
                                 // Finally, we start displaying the camera preview.
-                                mPreviewRequest = mPreviewRequestBuilder.build();
-                                mCaptureSession.setRepeatingRequest(mPreviewRequest,
+                                mPreviewRequest = previewRequestBuilder.build();
+                                cameraCaptureSession.setRepeatingRequest(mPreviewRequest,
                                         mCaptureCallback, mBackgroundHandler);
                             } catch (CameraAccessException e) {
                                 Log.e(TAG, "Unable to start camera preview.");
@@ -783,6 +806,9 @@ public class Camera2BasicFragment extends Fragment implements View.OnClickListen
 
                         @Override
                         public void onConfigureFailed(CameraCaptureSession cameraCaptureSession) {
+                            if (mCameraDevice != cameraDevice) {
+                                return;
+                            }
                             showToast("Failed");
                         }
                     }, null
@@ -887,6 +913,7 @@ public class Camera2BasicFragment extends Fragment implements View.OnClickListen
             final Activity activity = getActivity();
             if (null == activity || null == mCameraDevice ||
                     mImageReader == null || mCaptureSession == null) {
+                mState = STATE_PREVIEW;
                 return;
             }
             // This is the CaptureRequest.Builder that we use to take a picture.
@@ -910,13 +937,26 @@ public class Camera2BasicFragment extends Fragment implements View.OnClickListen
                 @Override
                 public void onCaptureCompleted(CameraCaptureSession session, CaptureRequest request,
                                                TotalCaptureResult result) {
+                    if (session != mCaptureSession) {
+                        return;
+                    }
+                    unlockFocus();
+                }
+
+                @Override
+                public void onCaptureFailed(CameraCaptureSession session, CaptureRequest request,
+                                            CaptureFailure failure) {
+                    if (session != mCaptureSession) {
+                        return;
+                    }
                     unlockFocus();
                 }
             };
 
             mCaptureSession.stopRepeating();
             mCaptureSession.capture(captureBuilder.build(), CaptureCallback, null);
-        } catch (CameraAccessException e) {
+        } catch (CameraAccessException | IllegalStateException e) {
+            unlockFocus();
             Log.e(TAG, "Unable to capture picture.");
         }
     }
@@ -925,6 +965,8 @@ public class Camera2BasicFragment extends Fragment implements View.OnClickListen
      * Unlock the focus. This method should be called when still image capture sequence is finished.
      */
     private void unlockFocus() {
+        // Publish recoverable state before any Camera2 operation can fail.
+        mState = STATE_PREVIEW;
         if (mPreviewRequestBuilder == null || mCaptureSession == null || mPreviewRequest == null) {
             return;
         }
@@ -937,10 +979,9 @@ public class Camera2BasicFragment extends Fragment implements View.OnClickListen
             mCaptureSession.capture(mPreviewRequestBuilder.build(), mCaptureCallback,
                     mBackgroundHandler);
             // After this, the camera will go back to the normal state of preview.
-            mState = STATE_PREVIEW;
             mCaptureSession.setRepeatingRequest(mPreviewRequest, mCaptureCallback,
                     mBackgroundHandler);
-        } catch (CameraAccessException e) {
+        } catch (CameraAccessException | IllegalStateException e) {
             Log.e(TAG, "Unable to resume camera preview.");
         }
     }
