@@ -23,6 +23,16 @@ Priority:
 - Keep camera lifecycle startup tied to an available texture view
 - Keep camera open/close semaphore ownership balanced across failure paths
 - Keep interrupted camera close attempts from releasing unowned permits
+- Interrupted camera-worker shutdown preserves the interrupt signal and unresolved worker ownership.
+- Keep asynchronous preview callbacks bound to their initiating camera device
+- Keep camera-device disconnect and error callbacks bound to the device that initiated them
+- Capture-result and still-capture completion callbacks reject stale session ownership before mutating capture state or unlocking focus.
+- Current-session still-capture failures unlock focus and resume preview; stale session failures are ignored.
+- Synchronous still-capture and preview-restart failures restore preview state before Camera2 recovery work can throw.
+- Closed-session still-capture and preview-restart operations use the same
+  recovery path instead of escaping with `IllegalStateException`.
+- Missing still-capture dependencies restore preview state before the capture path returns.
+- Report preview configuration failures only for the initiating camera lifetime
 - Keep layout control binding tolerant of missing optional controls
 - Keep right-to-left camera control placement tied to logical layout anchors
 - Keep non-overlapping landscape preview and control regions under localization
@@ -34,21 +44,28 @@ Priority:
 - Keep unsupported-camera recovery tolerant of detached fragments
 - Keep unsupported-camera dialogs tolerant of detached activities
 - Keep image capture callbacks tolerant of lifecycle and backpressure edges
+- Keep rejected image-save handoffs from leaking reader capacity
+- CameraApp reports picture-save success only after file output closes
+  successfully
 - Keep camera app data out of platform backup by default
 - Keep UI copy from exposing app-private captured-image paths
+- Image-save failures log a generic category without exception details or private output paths.
+- Camera runtime diagnostics retain fixed operation categories without exception stack traces or throwable details.
 - Make Android SDK and build-tool requirements visible
 - Keep the SDK-free source checker available for focused mutation tests
 - Keep the full JDK 17, SDK 36, lint, test-APK, and app-APK gate in GitHub Actions
-- Keep Gradle 9.5.1 behind a checksum-verified direct wrapper
+- Keep Gradle 9.6.0 behind a checksum-verified direct wrapper
 - Keep the application runtime dependency graph empty
 - Avoid changing camera behavior without device verification notes
 
 Next priorities:
 
+- Execute the CameraApp device verification matrix against an exact commit on
+  a camera-capable emulator and physical device
 - Exercise permission grant, denial, resume, preview, and capture behavior on a
   camera-capable API-23+ device or emulator
-- Add instrumentation coverage for runtime flows when a deterministic
-  camera-capable CI environment is available
+- Keep the deterministic pre-permission activity/fragment instrumentation smoke
+  test running in hosted CI; retain camera preview and capture as device validation
 - Reassess the two preview-SDK lint advisories when Android API 37 is stable
 
 Contribution rules:
