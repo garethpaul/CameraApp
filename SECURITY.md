@@ -29,12 +29,37 @@ Helpful reports include:
 - Review found external API integrations or credential-adjacent configuration; changes in those areas should receive security-focused review before merge.
 - Review found network clients, sockets, web APIs, or service endpoints; changes in those areas should receive security-focused review before merge.
 - Review found mobile permission or privacy-sensitive data handling; changes in those areas should receive security-focused review before merge.
+- Interrupted camera-worker shutdown preserves the interrupt signal and unresolved worker ownership.
+- Stale camera-device callbacks cannot clear replacement state or finish its activity.
+- Capture-result and still-capture completion callbacks reject stale session ownership before mutating capture state or unlocking focus.
+- Current-session still-capture failures unlock focus and resume preview; stale session failures are ignored.
+- Synchronous still-capture and preview-restart failures restore preview state before Camera2 recovery work can throw.
+- Closed-session still-capture and preview-restart operations use the same
+  recovery path instead of escaping with `IllegalStateException`.
+- Missing still-capture dependencies restore preview state before the capture path returns.
+- Stale camera-session callbacks close before publishing preview state.
+- Failed preview callbacks suppress stale failure UI without invoking the already-closed session.
 - Review found file, document, data, or media parsing flows; changes in those areas should receive security-focused review before merge.
 - Dependency manifests detected: build.gradle. Dependency updates should preserve lockfiles when present and avoid introducing packages without a clear maintenance reason.
 - GitHub Actions runs the guarded `make check` baseline with a commit-pinned
-  checkout action, read-only repository access, and hosted Android SDK
-  variables cleared; review workflow, Gradle, and checker changes as part of
-  the supply-chain surface.
+  checkout action, read-only repository access, JDK 17, and pinned Android SDK
+  components; review workflow, Gradle, and checker changes as part of the
+  supply-chain surface.
+- Hosted Android packages are installed with the runner's preinstalled
+  `$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager`; the workflow does not
+  depend on a third-party SDK setup action outside the repository's allowed
+  Actions policy.
+- Camera access is requested at runtime on API 23 and newer. Camera output
+  configuration and `CameraManager.openCamera` must remain unreachable until
+  permission is granted.
+- Application runtime dependencies are intentionally absent. AndroidX
+  dependencies are limited to the instrumentation test configuration.
+- Hosted instrumentation executes only the pre-permission activity/fragment
+  startup assertion; it does not claim camera preview, capture, or device privacy behavior.
+- CameraApp reports picture-save success only after file output closes
+  successfully, avoiding false persistence claims when local storage fails.
+- Image-save failures log a generic category without exception details or private output paths.
+- Camera runtime diagnostics retain fixed operation categories without exception stack traces or throwable details.
 
 ## Mobile Privacy Notes
 
@@ -42,10 +67,10 @@ If this project requests device permissions such as location, camera, microphone
 
 ## Dependency and Supply Chain Security
 
-The generated Gradle 8.14.5 bootstrap retains the legacy Gradle 2.2.1 runtime
-and authenticates its official archive before execution. Review all four
-wrapper files together. Hosted Check also uses a read-only, non-persisted
-checkout token so later steps cannot reuse repository credentials.
+The Gradle 9.6.0 wrapper authenticates its official binary distribution with a
+checked-in SHA-256 before execution. Review all four wrapper files together.
+Hosted Check also uses read-only permissions and a non-persisted checkout token
+so later steps cannot reuse repository credentials.
 
 Dependency updates should come from trusted package managers and should keep lockfiles in sync when lockfiles exist. Do not commit credentials, private keys, tokens, generated secrets, or machine-local configuration. If a vulnerability depends on a compromised package, typosquatting risk, insecure transitive dependency, or unsafe build step, include the package name, affected version, and the path through which it is used.
 
