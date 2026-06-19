@@ -31,6 +31,12 @@ Helpful reports include:
 - Review found mobile permission or privacy-sensitive data handling; changes in those areas should receive security-focused review before merge.
 - Interrupted camera-worker shutdown preserves the interrupt signal and unresolved worker ownership.
 - Stale camera-device callbacks cannot clear replacement state or finish its activity.
+- Capture-result and still-capture completion callbacks reject stale session ownership before mutating capture state or unlocking focus.
+- Current-session still-capture failures unlock focus and resume preview; stale session failures are ignored.
+- Synchronous still-capture and preview-restart failures restore preview state before Camera2 recovery work can throw.
+- Closed-session still-capture and preview-restart operations use the same
+  recovery path instead of escaping with `IllegalStateException`.
+- Missing still-capture dependencies restore preview state before the capture path returns.
 - Stale camera-session callbacks close before publishing preview state.
 - Failed preview callbacks suppress stale failure UI without invoking the already-closed session.
 - Review found file, document, data, or media parsing flows; changes in those areas should receive security-focused review before merge.
@@ -48,6 +54,8 @@ Helpful reports include:
   permission is granted.
 - Application runtime dependencies are intentionally absent. AndroidX
   dependencies are limited to the instrumentation test configuration.
+- Hosted instrumentation executes only the pre-permission activity/fragment
+  startup assertion; it does not claim camera preview, capture, or device privacy behavior.
 - CameraApp reports picture-save success only after file output closes
   successfully, avoiding false persistence claims when local storage fails.
 - Image-save failures log a generic category without exception details or private output paths.
@@ -59,7 +67,7 @@ If this project requests device permissions such as location, camera, microphone
 
 ## Dependency and Supply Chain Security
 
-The Gradle 9.5.1 wrapper authenticates its official binary distribution with a
+The Gradle 9.6.0 wrapper authenticates its official binary distribution with a
 checked-in SHA-256 before execution. Review all four wrapper files together.
 Hosted Check also uses read-only permissions and a non-persisted checkout token
 so later steps cannot reuse repository credentials.

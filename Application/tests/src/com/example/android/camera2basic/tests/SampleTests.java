@@ -33,10 +33,23 @@
 */
 package com.example.android.camera2basic.tests;
 
+import static android.content.pm.PackageManager.PERMISSION_DENIED;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+
+import android.Manifest;
+import android.os.SystemClock;
 
 import androidx.test.core.app.ActivityScenario;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
+import androidx.test.platform.app.InstrumentationRegistry;
+import androidx.test.uiautomator.By;
+import androidx.test.uiautomator.UiDevice;
+import androidx.test.uiautomator.UiObject2;
+import androidx.test.uiautomator.Until;
 
 import com.example.android.camera2basic.Camera2BasicFragment;
 import com.example.android.camera2basic.CameraActivity;
@@ -45,24 +58,117 @@ import com.example.android.camera2basic.R;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
+import java.lang.reflect.Field;
+import java.util.concurrent.atomic.AtomicBoolean;
+
 /**
 * Tests for Camera2Basic sample.
 */
 @RunWith(AndroidJUnit4.class)
 public class SampleTests {
 
+    private static final long PERMISSION_DIALOG_TIMEOUT_MS = 10_000;
+    private static final String DENY_BUTTON_RESOURCE =
+            "com.android.permissioncontroller:id/permission_deny_button";
+
     /**
-    * Test if the test fixture has been set up correctly.
+    * Test pre-permission startup and denial on the pinned hosted API image.
     */
     @Test
-    public void activityCreatesCameraFragmentBeforePermissionGrant() {
+    public void activitySurvivesCameraPermissionDenial() throws Exception {
+        assertEquals(PERMISSION_DENIED,
+                InstrumentationRegistry.getInstrumentation().getTargetContext()
+                        .checkSelfPermission(Manifest.permission.CAMERA));
+
+        UiDevice device = UiDevice.getInstance(InstrumentationRegistry.getInstrumentation());
         try (ActivityScenario<CameraActivity> scenario =
                      ActivityScenario.launch(CameraActivity.class)) {
-            scenario.onActivity(activity -> {
-                Camera2BasicFragment fragment = (Camera2BasicFragment)
-                        activity.getFragmentManager().findFragmentById(R.id.container);
-                assertNotNull("Camera fragment is null", fragment);
-            });
+            assertCameraFragmentExists(scenario);
+
+            UiObject2 denyButton = device.wait(
+                    Until.findObject(By.res(DENY_BUTTON_RESOURCE)),
+                    PERMISSION_DIALOG_TIMEOUT_MS);
+            assertNotNull("Camera permission deny button is unavailable", denyButton);
+            waitForPermissionRequestPending(scenario, true);
+            denyButton.click();
+            waitForPermissionDenied(scenario);
+            assertFalse("Camera permission request is still pending",
+                    permissionRequestPending(scenario));
+            assertTrue("Camera permission dialog was shown again after denial",
+                    device.wait(Until.gone(By.res(DENY_BUTTON_RESOURCE)),
+                            PERMISSION_DIALOG_TIMEOUT_MS));
+
+            assertEquals(PERMISSION_DENIED,
+                    InstrumentationRegistry.getInstrumentation().getTargetContext()
+                            .checkSelfPermission(Manifest.permission.CAMERA));
+            assertCameraFragmentExists(scenario);
+
+            scenario.recreate();
+            assertCameraFragmentExists(scenario);
+            assertTrue("Camera permission denial was not retained after recreation",
+                    cameraPermissionDenied(scenario));
+            assertFalse("Camera permission request restarted after recreation",
+                    permissionRequestPending(scenario));
+            assertNull("Camera permission dialog was shown after activity recreation",
+                    device.wait(Until.findObject(By.res(DENY_BUTTON_RESOURCE)),
+                            PERMISSION_DIALOG_TIMEOUT_MS));
         }
+    }
+
+    private static void waitForPermissionRequestPending(
+            ActivityScenario<CameraActivity> scenario, boolean expected) {
+        long deadline = SystemClock.elapsedRealtime() + PERMISSION_DIALOG_TIMEOUT_MS;
+        do {
+            if (permissionRequestPending(scenario) == expected) {
+                return;
+            }
+            SystemClock.sleep(100);
+        } while (SystemClock.elapsedRealtime() < deadline);
+        throw new AssertionError("Camera permission request state did not become " + expected);
+    }
+
+    private static boolean permissionRequestPending(ActivityScenario<CameraActivity> scenario) {
+        return fragmentBooleanField(scenario, "mCameraPermissionRequestPending");
+    }
+
+    private static void waitForPermissionDenied(ActivityScenario<CameraActivity> scenario) {
+        long deadline = SystemClock.elapsedRealtime() + PERMISSION_DIALOG_TIMEOUT_MS;
+        do {
+            if (cameraPermissionDenied(scenario)) {
+                return;
+            }
+            SystemClock.sleep(100);
+        } while (SystemClock.elapsedRealtime() < deadline);
+        throw new AssertionError("Camera permission denial callback was not observed");
+    }
+
+    private static boolean cameraPermissionDenied(ActivityScenario<CameraActivity> scenario) {
+        return fragmentBooleanField(scenario, "mCameraPermissionDenied");
+    }
+
+    private static boolean fragmentBooleanField(
+            ActivityScenario<CameraActivity> scenario, String fieldName) {
+        AtomicBoolean value = new AtomicBoolean();
+        scenario.onActivity(activity -> {
+            Camera2BasicFragment fragment = (Camera2BasicFragment)
+                    activity.getFragmentManager().findFragmentById(R.id.container);
+            assertNotNull("Camera fragment is null", fragment);
+            try {
+                Field field = Camera2BasicFragment.class.getDeclaredField(fieldName);
+                field.setAccessible(true);
+                value.set(field.getBoolean(fragment));
+            } catch (ReflectiveOperationException exception) {
+                throw new AssertionError("Camera permission state is unavailable", exception);
+            }
+        });
+        return value.get();
+    }
+
+    private static void assertCameraFragmentExists(ActivityScenario<CameraActivity> scenario) {
+        scenario.onActivity(activity -> {
+            Camera2BasicFragment fragment = (Camera2BasicFragment)
+                    activity.getFragmentManager().findFragmentById(R.id.container);
+            assertNotNull("Camera fragment is null", fragment);
+        });
     }
 }
