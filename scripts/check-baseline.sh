@@ -46,6 +46,7 @@ CLOSED_SESSION_CAPTURE_RECOVERY_PLAN="$ROOT_DIR/docs/plans/2026-06-16-cameraapp-
 INSTRUMENTATION_EXECUTION_PLAN="$ROOT_DIR/docs/plans/2026-06-16-cameraapp-instrumentation-execution.md"
 PERMISSION_DENIAL_INSTRUMENTATION_PLAN="$ROOT_DIR/docs/plans/2026-06-16-cameraapp-permission-denial-instrumentation.md"
 PERMISSION_DENIAL_RECREATION_PLAN="$ROOT_DIR/docs/plans/2026-06-17-cameraapp-permission-denial-recreation.md"
+GRADLE_96_REFRESH_PLAN="$ROOT_DIR/docs/plans/2026-06-19-gradle-9-6-refresh.md"
 INSTRUMENTATION_RUNNER="$ROOT_DIR/scripts/run-instrumentation.sh"
 XXXHDPI_LAUNCHER="$ROOT_DIR/Application/src/main/res/drawable-xxxhdpi/ic_launcher.png"
 XXXHDPI_INFO="$ROOT_DIR/Application/src/main/res/drawable-xxxhdpi/ic_action_info.png"
@@ -75,9 +76,11 @@ expected_wrapper_properties() {
   cat <<'EOF'
 distributionBase=GRADLE_USER_HOME
 distributionPath=wrapper/dists
-distributionSha256Sum=bafc141b619ad6350fd975fc903156dd5c151998cc8b058e8c1044ab5f7b031f
-distributionUrl=https\://services.gradle.org/distributions/gradle-9.5.1-bin.zip
+distributionSha256Sum=bbaeb2fef8710818cf0e261201dab964c572f92b942812df0c3620d62a529a01
+distributionUrl=https\://services.gradle.org/distributions/gradle-9.6.0-bin.zip
 networkTimeout=10000
+retries=0
+retryBackOffMs=500
 validateDistributionUrl=true
 zipStoreBase=GRADLE_USER_HOME
 zipStorePath=wrapper/dists
@@ -134,6 +137,7 @@ for path in \
   "docs/plans/2026-06-16-cameraapp-closed-session-capture-recovery.md" \
   "docs/plans/2026-06-16-cameraapp-instrumentation-execution.md" \
   "docs/plans/2026-06-17-cameraapp-permission-denial-recreation.md" \
+  "docs/plans/2026-06-19-gradle-9-6-refresh.md" \
   "scripts/run-instrumentation.sh" \
   "Application/src/main/res/drawable-xxxhdpi/ic_launcher.png" \
   "Application/src/main/res/drawable-xxxhdpi/ic_action_info.png" \
@@ -423,14 +427,14 @@ if [ ! -x "$ROOT_DIR/gradlew" ]; then
 fi
 
 if [ ! -x "$GRADLEW" ] || [ "$(cat "$WRAPPER_PROPERTIES")" != "$(expected_wrapper_properties)" ]; then
-  printf '%s\n' "Generated wrapper must retain the reviewed Gradle 9.5.1 URL and checksum." >&2
+  printf '%s\n' "Generated wrapper must retain the reviewed Gradle 9.6.0 URL and checksum." >&2
   exit 1
 fi
 
-require_sha256 "$GRADLEW" "b187b4c52e749f5760afdd6fadc31b2a98ad35fb249bf0dff03b72650f320409" "Unix wrapper must match the reviewed generated script."
-require_sha256 "$GRADLEW_BAT" "94102713eb8fb22d032397924c0f38ab2da783ba60d07054339f1190a0c4e2cd" "Windows wrapper must match the reviewed generated script."
-require_sha256 "$WRAPPER_JAR" "7d3a4ac4de1c32b59bc6a4eb8ecb8e612ccd0cf1ae1e99f66902da64df296172" "Wrapper JAR must match the reviewed generated artifact."
-require_sha256 "$WRAPPER_PROPERTIES" "dc61433ab2b0a18b8fd92d5f0f0b72ba2401b0393fd9d24a3d4fc3b63a314cd6" "Wrapper properties must match the reviewed checksum contract."
+require_sha256 "$GRADLEW" "ab5c0cad16305af2e619c159c1f58dd68d07fab9c11e36701e109c0277407f7a" "Unix wrapper must match the reviewed generated script."
+require_sha256 "$GRADLEW_BAT" "5c0a21ecd6b3a6292e0746bff3b75fd2d8f47b9ff226ce53dc22b30184ef3bec" "Windows wrapper must match the reviewed generated script."
+require_sha256 "$WRAPPER_JAR" "497c8c2a7e5031f6aa847f88104aa80a93532ec32ee17bdb8d1d2f67a194a9c7" "Wrapper JAR must match the reviewed generated artifact."
+require_sha256 "$WRAPPER_PROPERTIES" "c629b14195c2b627ef184fba4416f5dfce6f69c8b088230965bf3f77b8a1a7b4" "Wrapper properties must match the reviewed checksum contract."
 
 for contract in \
   "id 'com.android.application' version '9.2.0' apply false"; do
@@ -1687,12 +1691,23 @@ fi
 
 if ! grep -Fq "distributionSha256Sum" "$README" || \
    ! grep -Fq "does not persist checkout credentials" "$README" || \
-   ! grep -Fq "Gradle 9.5.1 wrapper authenticates" "$ROOT_DIR/SECURITY.md" || \
+   ! grep -Fq "Gradle 9.6.0 wrapper authenticates" "$ROOT_DIR/SECURITY.md" || \
    ! grep -Fq "checksum-verified direct wrapper" "$ROOT_DIR/VISION.md" || \
    ! grep -Fq "authenticated Gradle wrapper" "$ROOT_DIR/CHANGES.md"; then
   printf '%s\n' "Documentation must describe authenticated wrapper and checkout boundaries." >&2
   exit 1
 fi
+
+for gradle_96_contract in \
+  "## Status: Completed" \
+  "Gradle 9.6.0" \
+  "bbaeb2fef8710818cf0e261201dab964c572f92b942812df0c3620d62a529a01" \
+  "make check"; do
+  if ! grep -Fq "$gradle_96_contract" "$GRADLE_96_REFRESH_PLAN"; then
+    printf '%s\n' "Gradle 9.6 refresh plan must preserve completion evidence: $gradle_96_contract" >&2
+    exit 1
+  fi
+done
 
 if ! grep -Fq "local.properties" "$README"; then
   printf '%s\n' "README must document local SDK configuration." >&2
