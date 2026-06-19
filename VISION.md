@@ -54,7 +54,7 @@ Priority:
 - Make Android SDK and build-tool requirements visible
 - Keep the SDK-free source checker available for focused mutation tests
 - Keep the full JDK 17, SDK 36, lint, test-APK, and app-APK gate in GitHub Actions
-- Keep Gradle 9.5.1 behind a checksum-verified direct wrapper
+- Keep Gradle 9.6.0 behind a checksum-verified direct wrapper
 - Keep the application runtime dependency graph empty
 - Avoid changing camera behavior without device verification notes
 
