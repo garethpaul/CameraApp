@@ -1,7 +1,7 @@
 #!/usr/bin/env sh
 set -eu
 
-ROOT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+ROOT_DIR=$(CDPATH='' cd -- "$(dirname -- "$0")/.." && pwd)
 ANDROID_HOME=${ANDROID_HOME:?ANDROID_HOME must point to the Android SDK.}
 GRADLE=${GRADLE:-"$ROOT_DIR/gradlew"}
 ADB="$ANDROID_HOME/platform-tools/adb"
@@ -11,6 +11,18 @@ SYSTEM_IMAGE=${ANDROID_SYSTEM_IMAGE:-system-images;android-36;google_apis;x86_64
 AVD_NAME=cameraapp-ci
 EMULATOR_SERIAL=emulator-5554
 BOOT_TIMEOUT_SECONDS=${ANDROID_BOOT_TIMEOUT_SECONDS:-180}
+SHUTDOWN_TIMEOUT_SECONDS=${ANDROID_EMULATOR_SHUTDOWN_TIMEOUT_SECONDS:-10}
+
+case "$SHUTDOWN_TIMEOUT_SECONDS" in
+    ''|*[!0-9]*)
+        printf '%s\n' "ANDROID_EMULATOR_SHUTDOWN_TIMEOUT_SECONDS must be a non-negative integer." >&2
+        exit 1
+        ;;
+esac
+while [ "$SHUTDOWN_TIMEOUT_SECONDS" != "0" ] && \
+    [ "${SHUTDOWN_TIMEOUT_SECONDS#0}" != "$SHUTDOWN_TIMEOUT_SECONDS" ]; do
+    SHUTDOWN_TIMEOUT_SECONDS=${SHUTDOWN_TIMEOUT_SECONDS#0}
+done
 
 for executable in "$ADB" "$AVDMANAGER" "$EMULATOR"; do
     if [ ! -x "$executable" ]; then
@@ -24,12 +36,33 @@ export ANDROID_AVD_HOME="$run_root/avd"
 mkdir -p "$ANDROID_AVD_HOME"
 
 cleanup() {
+    cleanup_status=$?
+    trap - 0
+    trap '' 1 2 15
     "$ADB" -s "$EMULATOR_SERIAL" emu kill >/dev/null 2>&1 || true
     if [ -n "${emulator_pid:-}" ]; then
-        kill "$emulator_pid" >/dev/null 2>&1 || true
-        wait "$emulator_pid" >/dev/null 2>&1 || true
+        if kill -0 "$emulator_pid" 2>/dev/null; then
+            kill "$emulator_pid" >/dev/null 2>&1 || true
+            remaining=$SHUTDOWN_TIMEOUT_SECONDS
+            while kill -0 "$emulator_pid" 2>/dev/null && [ "$remaining" -gt 0 ]; do
+                sleep 1
+                remaining=$((remaining - 1))
+            done
+        fi
+        if kill -0 "$emulator_pid" 2>/dev/null; then
+            kill -KILL "$emulator_pid" >/dev/null 2>&1 || true
+            remaining=$SHUTDOWN_TIMEOUT_SECONDS
+            while kill -0 "$emulator_pid" 2>/dev/null && [ "$remaining" -gt 0 ]; do
+                sleep 1
+                remaining=$((remaining - 1))
+            done
+        fi
+        if ! kill -0 "$emulator_pid" 2>/dev/null; then
+            wait "$emulator_pid" >/dev/null 2>&1 || true
+        fi
     fi
     rm -rf -- "$run_root"
+    exit "$cleanup_status"
 }
 trap cleanup 0
 trap 'exit 129' 1

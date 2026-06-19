@@ -105,6 +105,11 @@ GitHub Actions installs JDK 17, Android SDK platform 36, Build Tools 36.1.0, and
 the API 36 Google APIs emulator image, then runs the same `make check` gate on pushes, pull requests, and manual
 dispatches. The workflow uses commit-pinned actions, read-only repository
 access, a bounded runtime, and does not persist checkout credentials.
+After instrumentation, the runner gives the emulator ten seconds to stop before
+escalating to `SIGKILL`, then allows another ten seconds for the PID to disappear
+without blocking the job indefinitely. Set
+`ANDROID_EMULATOR_SHUTDOWN_TIMEOUT_SECONDS` to a non-negative integer to adjust
+each cleanup phase for slower local hosts.
 
 For local hosts without emulator acceleration, use
 `SKIP_ANDROID_INSTRUMENTATION=1 make check` and record that runtime execution

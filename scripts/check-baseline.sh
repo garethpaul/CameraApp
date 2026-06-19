@@ -48,6 +48,7 @@ PERMISSION_DENIAL_INSTRUMENTATION_PLAN="$ROOT_DIR/docs/plans/2026-06-16-cameraap
 PERMISSION_DENIAL_RECREATION_PLAN="$ROOT_DIR/docs/plans/2026-06-17-cameraapp-permission-denial-recreation.md"
 GRADLE_96_REFRESH_PLAN="$ROOT_DIR/docs/plans/2026-06-19-gradle-9-6-refresh.md"
 INSTRUMENTATION_RUNNER="$ROOT_DIR/scripts/run-instrumentation.sh"
+INSTRUMENTATION_CLEANUP_TEST="$ROOT_DIR/scripts/tests/run-instrumentation-cleanup-test.sh"
 XXXHDPI_LAUNCHER="$ROOT_DIR/Application/src/main/res/drawable-xxxhdpi/ic_launcher.png"
 XXXHDPI_INFO="$ROOT_DIR/Application/src/main/res/drawable-xxxhdpi/ic_action_info.png"
 ACTIVITY_LAYOUT="$ROOT_DIR/Application/src/main/res/layout/activity_camera.xml"
@@ -139,6 +140,7 @@ for path in \
   "docs/plans/2026-06-17-cameraapp-permission-denial-recreation.md" \
   "docs/plans/2026-06-19-gradle-9-6-refresh.md" \
   "scripts/run-instrumentation.sh" \
+  "scripts/tests/run-instrumentation-cleanup-test.sh" \
   "Application/src/main/res/drawable-xxxhdpi/ic_launcher.png" \
   "Application/src/main/res/drawable-xxxhdpi/ic_action_info.png" \
   "gradlew" \
@@ -212,6 +214,8 @@ for runner_contract in \
   'get-state' \
   'sys.boot_completed' \
   'kill -0 "$emulator_pid"' \
+  'kill -KILL "$emulator_pid"' \
+  'exit "$cleanup_status"' \
   ':Application:connectedDebugAndroidTest --no-daemon'; do
   if ! grep -Fq -- "$runner_contract" "$INSTRUMENTATION_RUNNER"; then
     printf '%s\n' "Instrumentation runner contract is missing: $runner_contract" >&2
@@ -224,10 +228,22 @@ if [ "$(grep -Fc 'BOOT_TIMEOUT_SECONDS=${ANDROID_BOOT_TIMEOUT_SECONDS:-180}' "$I
   exit 1
 fi
 
+if [ "$(grep -Fc 'SHUTDOWN_TIMEOUT_SECONDS=${ANDROID_EMULATOR_SHUTDOWN_TIMEOUT_SECONDS:-10}' "$INSTRUMENTATION_RUNNER")" -ne 1 ]; then
+  printf '%s\n' "Instrumentation runner must keep a testable ten-second default shutdown deadline." >&2
+  exit 1
+fi
+
 if grep -Fq 'wait-for-device' "$INSTRUMENTATION_RUNNER"; then
   printf '%s\n' "Instrumentation runner must not block outside the bounded boot loop." >&2
   exit 1
 fi
+
+if ! sh -n "$INSTRUMENTATION_CLEANUP_TEST"; then
+  printf '%s\n' "Instrumentation cleanup regression test must pass POSIX shell syntax checks." >&2
+  exit 1
+fi
+
+sh "$INSTRUMENTATION_CLEANUP_TEST"
 
 for xxxhdpi_doc in "$ROOT_DIR/AGENTS.md" "$README" "$ROOT_DIR/CHANGES.md" "$ROOT_DIR/VISION.md"; do
   if ! tr '\n' ' ' < "$xxxhdpi_doc" | tr -s '[:space:]' ' ' | \

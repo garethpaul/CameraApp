@@ -2,6 +2,9 @@
 
 ## 2026-06-19
 
+- Bound emulator shutdown and reap after instrumentation so a process that
+  ignores graceful termination cannot hold the hosted check until its job-level
+  timeout.
 - Use a standard-duration hosted permission-denial gesture and wait for the
   dialog to disappear before polling the app's callback, removing an
   intermittent instrumentation race on the default branch.
