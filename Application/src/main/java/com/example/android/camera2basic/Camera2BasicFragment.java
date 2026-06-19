@@ -156,6 +156,7 @@ public class Camera2BasicFragment extends Fragment implements View.OnClickListen
     private AutoFitTextureView mTextureView;
 
     private boolean mCameraPermissionRequestPending;
+    private boolean mCameraPermissionDenied;
 
     /**
      * A {@link CameraCaptureSession } for camera preview.
@@ -646,7 +647,11 @@ public class Camera2BasicFragment extends Fragment implements View.OnClickListen
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M ||
                 activity.checkSelfPermission(Manifest.permission.CAMERA) ==
                         PackageManager.PERMISSION_GRANTED) {
+            mCameraPermissionDenied = false;
             return true;
+        }
+        if (mCameraPermissionDenied) {
+            return false;
         }
         if (!mCameraPermissionRequestPending) {
             mCameraPermissionRequestPending = true;
@@ -667,12 +672,14 @@ public class Camera2BasicFragment extends Fragment implements View.OnClickListen
         boolean granted = grantResults.length > 0 &&
                 grantResults[0] == PackageManager.PERMISSION_GRANTED;
         if (granted) {
+            mCameraPermissionDenied = false;
             if (isResumed() && mTextureView != null && mTextureView.isAvailable()) {
                 openCamera(mTextureView.getWidth(), mTextureView.getHeight());
             }
             return;
         }
 
+        mCameraPermissionDenied = true;
         Activity activity = getActivity();
         if (activity != null) {
             showToast(activity.getString(R.string.camera_permission_denied));
@@ -948,7 +955,7 @@ public class Camera2BasicFragment extends Fragment implements View.OnClickListen
 
             mCaptureSession.stopRepeating();
             mCaptureSession.capture(captureBuilder.build(), CaptureCallback, null);
-        } catch (CameraAccessException e) {
+        } catch (CameraAccessException | IllegalStateException e) {
             unlockFocus();
             Log.e(TAG, "Unable to capture picture.");
         }
@@ -974,7 +981,7 @@ public class Camera2BasicFragment extends Fragment implements View.OnClickListen
             // After this, the camera will go back to the normal state of preview.
             mCaptureSession.setRepeatingRequest(mPreviewRequest, mCaptureCallback,
                     mBackgroundHandler);
-        } catch (CameraAccessException e) {
+        } catch (CameraAccessException | IllegalStateException e) {
             Log.e(TAG, "Unable to resume camera preview.");
         }
     }

@@ -42,6 +42,12 @@ CAPTURE_CALLBACK_OWNERSHIP_PLAN="$ROOT_DIR/docs/plans/2026-06-16-cameraapp-captu
 CAPTURE_FAILURE_RECOVERY_PLAN="$ROOT_DIR/docs/plans/2026-06-16-cameraapp-capture-failure-recovery.md"
 SYNCHRONOUS_CAPTURE_RECOVERY_PLAN="$ROOT_DIR/docs/plans/2026-06-16-cameraapp-synchronous-capture-recovery.md"
 MISSING_CAPTURE_DEPENDENCY_PLAN="$ROOT_DIR/docs/plans/2026-06-16-cameraapp-missing-capture-dependency-recovery.md"
+CLOSED_SESSION_CAPTURE_RECOVERY_PLAN="$ROOT_DIR/docs/plans/2026-06-16-cameraapp-closed-session-capture-recovery.md"
+INSTRUMENTATION_EXECUTION_PLAN="$ROOT_DIR/docs/plans/2026-06-16-cameraapp-instrumentation-execution.md"
+PERMISSION_DENIAL_INSTRUMENTATION_PLAN="$ROOT_DIR/docs/plans/2026-06-16-cameraapp-permission-denial-instrumentation.md"
+PERMISSION_DENIAL_RECREATION_PLAN="$ROOT_DIR/docs/plans/2026-06-17-cameraapp-permission-denial-recreation.md"
+GRADLE_96_REFRESH_PLAN="$ROOT_DIR/docs/plans/2026-06-19-gradle-9-6-refresh.md"
+INSTRUMENTATION_RUNNER="$ROOT_DIR/scripts/run-instrumentation.sh"
 XXXHDPI_LAUNCHER="$ROOT_DIR/Application/src/main/res/drawable-xxxhdpi/ic_launcher.png"
 XXXHDPI_INFO="$ROOT_DIR/Application/src/main/res/drawable-xxxhdpi/ic_action_info.png"
 ACTIVITY_LAYOUT="$ROOT_DIR/Application/src/main/res/layout/activity_camera.xml"
@@ -70,9 +76,11 @@ expected_wrapper_properties() {
   cat <<'EOF'
 distributionBase=GRADLE_USER_HOME
 distributionPath=wrapper/dists
-distributionSha256Sum=bafc141b619ad6350fd975fc903156dd5c151998cc8b058e8c1044ab5f7b031f
-distributionUrl=https\://services.gradle.org/distributions/gradle-9.5.1-bin.zip
+distributionSha256Sum=bbaeb2fef8710818cf0e261201dab964c572f92b942812df0c3620d62a529a01
+distributionUrl=https\://services.gradle.org/distributions/gradle-9.6.0-bin.zip
 networkTimeout=10000
+retries=0
+retryBackOffMs=500
 validateDistributionUrl=true
 zipStoreBase=GRADLE_USER_HOME
 zipStorePath=wrapper/dists
@@ -126,6 +134,11 @@ for path in \
   "docs/plans/2026-06-16-cameraapp-capture-failure-recovery.md" \
   "docs/plans/2026-06-16-cameraapp-synchronous-capture-recovery.md" \
   "docs/plans/2026-06-16-cameraapp-missing-capture-dependency-recovery.md" \
+  "docs/plans/2026-06-16-cameraapp-closed-session-capture-recovery.md" \
+  "docs/plans/2026-06-16-cameraapp-instrumentation-execution.md" \
+  "docs/plans/2026-06-17-cameraapp-permission-denial-recreation.md" \
+  "docs/plans/2026-06-19-gradle-9-6-refresh.md" \
+  "scripts/run-instrumentation.sh" \
   "Application/src/main/res/drawable-xxxhdpi/ic_launcher.png" \
   "Application/src/main/res/drawable-xxxhdpi/ic_action_info.png" \
   "gradlew" \
@@ -162,8 +175,57 @@ fi
 
 if ! grep -Fq "Android lint must produce zero-finding debug and release XML reports." "$ROOT_DIR/Makefile" || \
    ! grep -Fq "grep -Eq '<issue([[:space:]>])'" "$ROOT_DIR/Makefile" || \
-   ! grep -Fq ":Application:assembleDebugAndroidTest" "$ROOT_DIR/Makefile"; then
+   ! grep -Fq ":Application:assembleDebugAndroidTest" "$ROOT_DIR/Makefile" || \
+   ! grep -Fq 'SKIP_ANDROID_INSTRUMENTATION ?= 0' "$ROOT_DIR/Makefile" || \
+   ! grep -Fq 'GRADLE="$(GRADLE_COMMAND)" "$(ROOT)scripts/run-instrumentation.sh"' "$ROOT_DIR/Makefile"; then
   printf '%s\n' "Make lint must reject every Android lint finding without suppression." >&2
+  exit 1
+fi
+
+for lint_contract in \
+  ':Application:lintDebug --no-daemon' \
+  ':Application:lintRelease --no-daemon'; do
+  if ! grep -Fq "$lint_contract" "$ROOT_DIR/Makefile"; then
+    printf '%s\n' "Make lint must keep sequential variant contract: $lint_contract" >&2
+    exit 1
+  fi
+done
+if grep -Fq ':Application:lintDebug :Application:lintRelease' "$ROOT_DIR/Makefile"; then
+  printf '%s\n' "Debug and release lint must not share one racy Gradle invocation." >&2
+  exit 1
+fi
+
+if [ ! -x "$INSTRUMENTATION_RUNNER" ] || ! sh -n "$INSTRUMENTATION_RUNNER"; then
+  printf '%s\n' "Instrumentation runner must exist and pass POSIX shell syntax checks." >&2
+  exit 1
+fi
+
+for runner_contract in \
+  'SYSTEM_IMAGE=${ANDROID_SYSTEM_IMAGE:-system-images;android-36;google_apis;x86_64}' \
+  'trap cleanup 0' \
+  "trap 'exit 129' 1" \
+  "trap 'exit 130' 2" \
+  "trap 'exit 143' 15" \
+  '"$AVDMANAGER" create avd' \
+  '-no-window' \
+  '-no-snapshot' \
+  'get-state' \
+  'sys.boot_completed' \
+  'kill -0 "$emulator_pid"' \
+  ':Application:connectedDebugAndroidTest --no-daemon'; do
+  if ! grep -Fq -- "$runner_contract" "$INSTRUMENTATION_RUNNER"; then
+    printf '%s\n' "Instrumentation runner contract is missing: $runner_contract" >&2
+    exit 1
+  fi
+done
+
+if [ "$(grep -Fc 'BOOT_TIMEOUT_SECONDS=${ANDROID_BOOT_TIMEOUT_SECONDS:-180}' "$INSTRUMENTATION_RUNNER")" -ne 1 ]; then
+  printf '%s\n' "Instrumentation runner must keep a testable three-minute default boot deadline." >&2
+  exit 1
+fi
+
+if grep -Fq 'wait-for-device' "$INSTRUMENTATION_RUNNER"; then
+  printf '%s\n' "Instrumentation runner must not block outside the bounded boot loop." >&2
   exit 1
 fi
 
@@ -365,14 +427,14 @@ if [ ! -x "$ROOT_DIR/gradlew" ]; then
 fi
 
 if [ ! -x "$GRADLEW" ] || [ "$(cat "$WRAPPER_PROPERTIES")" != "$(expected_wrapper_properties)" ]; then
-  printf '%s\n' "Generated wrapper must retain the reviewed Gradle 9.5.1 URL and checksum." >&2
+  printf '%s\n' "Generated wrapper must retain the reviewed Gradle 9.6.0 URL and checksum." >&2
   exit 1
 fi
 
-require_sha256 "$GRADLEW" "b187b4c52e749f5760afdd6fadc31b2a98ad35fb249bf0dff03b72650f320409" "Unix wrapper must match the reviewed generated script."
-require_sha256 "$GRADLEW_BAT" "94102713eb8fb22d032397924c0f38ab2da783ba60d07054339f1190a0c4e2cd" "Windows wrapper must match the reviewed generated script."
-require_sha256 "$WRAPPER_JAR" "7d3a4ac4de1c32b59bc6a4eb8ecb8e612ccd0cf1ae1e99f66902da64df296172" "Wrapper JAR must match the reviewed generated artifact."
-require_sha256 "$WRAPPER_PROPERTIES" "dc61433ab2b0a18b8fd92d5f0f0b72ba2401b0393fd9d24a3d4fc3b63a314cd6" "Wrapper properties must match the reviewed checksum contract."
+require_sha256 "$GRADLEW" "ab5c0cad16305af2e619c159c1f58dd68d07fab9c11e36701e109c0277407f7a" "Unix wrapper must match the reviewed generated script."
+require_sha256 "$GRADLEW_BAT" "5c0a21ecd6b3a6292e0746bff3b75fd2d8f47b9ff226ce53dc22b30184ef3bec" "Windows wrapper must match the reviewed generated script."
+require_sha256 "$WRAPPER_JAR" "497c8c2a7e5031f6aa847f88104aa80a93532ec32ee17bdb8d1d2f67a194a9c7" "Wrapper JAR must match the reviewed generated artifact."
+require_sha256 "$WRAPPER_PROPERTIES" "c629b14195c2b627ef184fba4416f5dfce6f69c8b088230965bf3f77b8a1a7b4" "Wrapper properties must match the reviewed checksum contract."
 
 for contract in \
   "id 'com.android.application' version '9.2.0' apply false"; do
@@ -410,7 +472,8 @@ for build_contract in \
   "warningsAsErrors = true" \
   "androidTestImplementation 'androidx.test:core:1.7.0'" \
   "androidTestImplementation 'androidx.test.ext:junit:1.3.0'" \
-  "androidTestImplementation 'androidx.test:runner:1.7.0'"; do
+  "androidTestImplementation 'androidx.test:runner:1.7.0'" \
+  "androidTestImplementation 'androidx.test.uiautomator:uiautomator:2.3.0'"; do
   if ! grep -Fq "$build_contract" "$APP_BUILD"; then
     printf '%s\n' "Application build must preserve modern contract: $build_contract" >&2
     exit 1
@@ -468,7 +531,24 @@ fi
 
 for test_contract in \
   '@RunWith(AndroidJUnit4.class)' \
+  'activitySurvivesCameraPermissionDenial()' \
+  'assertEquals(PERMISSION_DENIED,' \
+  '.checkSelfPermission(Manifest.permission.CAMERA)' \
   'ActivityScenario.launch(CameraActivity.class)' \
+  'Until.findObject(By.res(DENY_BUTTON_RESOURCE))' \
+  'PERMISSION_DIALOG_TIMEOUT_MS = 10_000' \
+  'waitForPermissionRequestPending(scenario, true)' \
+  'denyButton.click()' \
+  'waitForPermissionDenied(scenario)' \
+  'assertFalse("Camera permission request is still pending"' \
+  'Until.gone(By.res(DENY_BUTTON_RESOURCE))' \
+  'scenario.recreate()' \
+  'assertTrue("Camera permission denial was not retained after recreation"' \
+  'assertFalse("Camera permission request restarted after recreation"' \
+  'assertNull("Camera permission dialog was shown after activity recreation"' \
+  'getDeclaredField(' \
+  'cameraPermissionDenied(scenario)' \
+  'fragmentBooleanField(scenario, "mCameraPermissionDenied")' \
   'getFragmentManager().findFragmentById(R.id.container)' \
   'assertNotNull("Camera fragment is null", fragment)'; do
   if ! grep -Fq "$test_contract" "$TEST_FIXTURE"; then
@@ -476,6 +556,38 @@ for test_contract in \
     exit 1
   fi
 done
+
+if [ "$(grep -Fc 'assertCameraFragmentExists(scenario);' "$TEST_FIXTURE")" -ne 3 ]; then
+  printf '%s\n' "Instrumentation fixture must verify the camera fragment before denial, after denial, and after recreation." >&2
+  exit 1
+fi
+
+TEST_FIXTURE_FLAT=$(tr '\n' ' ' < "$TEST_FIXTURE" | tr -s '[:space:]' ' ')
+for recreation_test_contract in \
+  'assertTrue("Camera permission denial was not retained after recreation", cameraPermissionDenied(scenario));' \
+  'assertFalse("Camera permission request restarted after recreation", permissionRequestPending(scenario));' \
+  'assertNull("Camera permission dialog was shown after activity recreation", device.wait(Until.findObject(By.res(DENY_BUTTON_RESOURCE)), PERMISSION_DIALOG_TIMEOUT_MS));'; do
+  if ! printf '%s\n' "$TEST_FIXTURE_FLAT" | grep -Fq "$recreation_test_contract"; then
+    printf '%s\n' "Instrumentation fixture must preserve post-recreation assertion: $recreation_test_contract" >&2
+    exit 1
+  fi
+done
+
+recreate_line=$(grep -nF 'scenario.recreate();' "$TEST_FIXTURE" | cut -d: -f1)
+recreated_fragment_line=$(grep -nF 'assertCameraFragmentExists(scenario);' "$TEST_FIXTURE" | tail -1 | cut -d: -f1)
+retained_denial_line=$(grep -nF 'assertTrue("Camera permission denial was not retained after recreation"' "$TEST_FIXTURE" | cut -d: -f1)
+restarted_request_line=$(grep -nF 'assertFalse("Camera permission request restarted after recreation"' "$TEST_FIXTURE" | cut -d: -f1)
+recreated_dialog_line=$(grep -nF 'assertNull("Camera permission dialog was shown after activity recreation"' "$TEST_FIXTURE" | cut -d: -f1)
+if [ -z "$recreate_line" ] || [ -z "$recreated_fragment_line" ] || \
+   [ -z "$retained_denial_line" ] || [ -z "$restarted_request_line" ] || \
+   [ -z "$recreated_dialog_line" ] || \
+   [ "$recreate_line" -ge "$recreated_fragment_line" ] || \
+   [ "$recreated_fragment_line" -ge "$retained_denial_line" ] || \
+   [ "$retained_denial_line" -ge "$restarted_request_line" ] || \
+   [ "$restarted_request_line" -ge "$recreated_dialog_line" ]; then
+  printf '%s\n' "Instrumentation fixture must verify retained denial state after activity recreation in order." >&2
+  exit 1
+fi
 
 ensure_line=$(grep -n 'if (!ensureCameraPermission(activity))' "$FRAGMENT" | head -n 1 | cut -d: -f1)
 setup_line=$(grep -n 'setUpCameraOutputs(width, height);' "$FRAGMENT" | head -n 1 | cut -d: -f1)
@@ -489,9 +601,12 @@ fi
 
 for permission_contract in \
   'mCameraPermissionRequestPending' \
+  'mCameraPermissionDenied' \
   'requestPermissions(new String[]{Manifest.permission.CAMERA}, REQUEST_CAMERA_PERMISSION)' \
   'public void onRequestPermissionsResult' \
   'mCameraPermissionRequestPending = false' \
+  'if (mCameraPermissionDenied)' \
+  'mCameraPermissionDenied = true' \
   'public void onDestroyView()' \
   'mTextureView = null' \
   'isResumed() && mTextureView != null && mTextureView.isAvailable()' \
@@ -520,8 +635,11 @@ for workflow_contract in \
   'actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654' \
   'java-version: "17"' \
   'run: |' \
-  '"$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" "build-tools;36.1.0"' \
-  'timeout 12m make check'; do
+  '"platforms;android-36"' \
+  '"build-tools;36.1.0"' \
+  '"system-images;android-36;google_apis;x86_64"' \
+  'sudo chmod 666 /dev/kvm' \
+  'timeout 22m make check'; do
   if ! grep -Fq "$workflow_contract" "$CI_WORKFLOW"; then
     printf '%s\n' "CI must preserve Android 16 toolchain contract: $workflow_contract" >&2
     exit 1
@@ -530,6 +648,11 @@ done
 
 if grep -Fq 'android-actions/setup-android@' "$CI_WORKFLOW"; then
   printf '%s\n' "CI must not use actions outside this repository's allowed Actions policy." >&2
+  exit 1
+fi
+
+if grep -Fq 'SKIP_ANDROID_INSTRUMENTATION' "$CI_WORKFLOW"; then
+  printf '%s\n' "CI must execute instrumentation without the local runtime skip." >&2
   exit 1
 fi
 
@@ -689,8 +812,9 @@ if grep -Fq 'printStackTrace()' "$FRAGMENT"; then
   exit 1
 fi
 
-if [ "$(grep -Fc 'catch (CameraAccessException e)' "$FRAGMENT")" -ne 8 ]; then
-  printf '%s\n' "Camera error redaction must preserve all eight camera access catch boundaries." >&2
+if [ "$(grep -Fc 'catch (CameraAccessException e)' "$FRAGMENT")" -ne 6 ] || \
+   [ "$(grep -Fc 'catch (CameraAccessException | IllegalStateException e)' "$FRAGMENT")" -ne 2 ]; then
+  printf '%s\n' "Camera error redaction must preserve six access-only and two closed-session recovery boundaries." >&2
   exit 1
 fi
 
@@ -918,12 +1042,12 @@ if [ "$failure_guard_line" -ge "$failure_return_line" ] || \
 fi
 
 capture_exception=$(printf '%s\n' "$still_capture_method" | awk '
-  /catch \(CameraAccessException e\)/ { capture = 1 }
+  /catch \(CameraAccessException \| IllegalStateException e\)/ { capture = 1 }
   capture && /^[[:space:]]*}$/ { exit }
   capture { print }
 ')
 for recovery_marker in \
-  "catch (CameraAccessException e)" \
+  "catch (CameraAccessException | IllegalStateException e)" \
   "unlockFocus();" \
   'Log.e(TAG, "Unable to capture picture.");'; do
   if [ "$(printf '%s\n' "$capture_exception" | grep -Fc "$recovery_marker")" -ne 1 ]; then
@@ -931,6 +1055,7 @@ for recovery_marker in \
     exit 1
   fi
 done
+
 capture_exception_unlock_line=$(printf '%s\n' "$capture_exception" | grep -nF "unlockFocus();" | cut -d: -f1)
 capture_exception_log_line=$(printf '%s\n' "$capture_exception" | grep -nF 'Log.e(TAG, "Unable to capture picture.");' | cut -d: -f1)
 if [ "$capture_exception_unlock_line" -ge "$capture_exception_log_line" ]; then
@@ -943,6 +1068,10 @@ unlock_focus_method=$(awk '
   capture && /@Override/ { exit }
   capture { print }
 ' "$FRAGMENT")
+if [ "$(printf '%s\n' "$unlock_focus_method" | grep -Fc 'catch (CameraAccessException | IllegalStateException e)')" -ne 1 ]; then
+  printf '%s\n' "Focus recovery must absorb closed-session failures after publishing preview state." >&2
+  exit 1
+fi
 for recovery_marker in \
   "mState = STATE_PREVIEW;" \
   "if (mPreviewRequestBuilder == null || mCaptureSession == null || mPreviewRequest == null)" \
@@ -989,6 +1118,30 @@ missing_capture_dependency_guidance="Missing still-capture dependencies restore 
 for guidance_file in AGENTS.md README.md SECURITY.md VISION.md CHANGES.md; do
   if ! grep -Fq "$missing_capture_dependency_guidance" "$ROOT_DIR/$guidance_file"; then
     printf '%s\n' "Missing capture dependency recovery guidance must remain checked in: $guidance_file" >&2
+    exit 1
+  fi
+done
+
+closed_session_capture_guidance="Closed-session still-capture and preview-restart operations use the same recovery path instead of escaping with \`IllegalStateException\`."
+for guidance_file in AGENTS.md README.md SECURITY.md VISION.md; do
+  if ! tr '\n' ' ' < "$ROOT_DIR/$guidance_file" | tr -s '[:space:]' ' ' | \
+      grep -Fq "$closed_session_capture_guidance"; then
+    printf '%s\n' "Closed-session capture recovery guidance must remain checked in: $guidance_file" >&2
+    exit 1
+  fi
+done
+if ! grep -Fq 'Closed-session still-capture and preview-restart operations now recover' "$ROOT_DIR/CHANGES.md"; then
+  printf '%s\n' "CHANGES.md must document closed-session capture recovery." >&2
+  exit 1
+fi
+
+for closed_session_capture_plan_contract in \
+  "Status: Completed" \
+  "make check" \
+  "isolated closed-session mutations were rejected" \
+  "No emulator, physical camera, or live closed-session race"; do
+  if ! grep -Fq "$closed_session_capture_plan_contract" "$CLOSED_SESSION_CAPTURE_RECOVERY_PLAN"; then
+    printf '%s\n' "Closed-session capture recovery plan must record completed verification: $closed_session_capture_plan_contract" >&2
     exit 1
   fi
 done
@@ -1435,6 +1588,74 @@ if ! grep -Fq "GitHub Actions" "$README"; then
   exit 1
 fi
 
+README_FLAT=$(tr '\n' ' ' < "$README" | tr -s '[:space:]' ' ')
+for instrumentation_doc_contract in \
+  "connectedDebugAndroidTest" \
+  "pre-permission activity/fragment startup" \
+  "real camera-permission denial action" \
+  "denial remains settled across activity recreation" \
+  "does not prove permission grant, camera preview, or capture behavior"; do
+  if ! printf '%s\n' "$README_FLAT" | grep -Fq "$instrumentation_doc_contract"; then
+    printf '%s\n' "README must document hosted instrumentation scope: $instrumentation_doc_contract" >&2
+    exit 1
+  fi
+done
+
+if ! tr '\n' ' ' < "$ROOT_DIR/CHANGES.md" | tr -s '[:space:]' ' ' | \
+    grep -Fq 'retained fragment neither loses denial state nor restarts the permission request'; then
+  printf '%s\n' "CHANGES.md must document post-recreation camera denial coverage." >&2
+  exit 1
+fi
+
+PERMISSION_DENIAL_PLAN_FLAT=$(tr '\n' ' ' < "$PERMISSION_DENIAL_INSTRUMENTATION_PLAN" | tr -s '[:space:]' ' ')
+for permission_denial_plan_contract in \
+  "status: completed" \
+  "camera permission is denied on the fresh hosted install" \
+  "real API 36 permission-controller denial action" \
+  "does not immediately re-request camera permission after denial" \
+  "activity and camera fragment remain alive after denial" \
+  "push and pull-request hosted instrumentation success" \
+  "27656010921" \
+  "27656012503" \
+  "0af9dcf0be82dec5ad4844f922e83a4f3d218eb0"; do
+  if ! printf '%s\n' "$PERMISSION_DENIAL_PLAN_FLAT" | grep -Fq "$permission_denial_plan_contract"; then
+    printf '%s\n' "Permission-denial instrumentation plan must preserve contract: $permission_denial_plan_contract" >&2
+    exit 1
+  fi
+done
+
+PERMISSION_DENIAL_RECREATION_PLAN_FLAT=$(tr '\n' ' ' < "$PERMISSION_DENIAL_RECREATION_PLAN" | tr -s '[:space:]' ' ')
+for permission_denial_recreation_plan_contract in \
+  'status: completed' \
+  'Recreate `CameraActivity` after the denial callback has settled' \
+  'retained fragment still records denial' \
+  'permission dialog does not reappear after recreation' \
+  'Require exact-head push and pull-request hosted instrumentation success' \
+  'Seven isolated mutations were rejected' \
+  'Exact implementation head `dbbca280f4a42759f88a19dda26016bedb62cd44`' \
+  '27679897578' \
+  '27679909628'; do
+  if ! printf '%s\n' "$PERMISSION_DENIAL_RECREATION_PLAN_FLAT" | grep -Fq "$permission_denial_recreation_plan_contract"; then
+    printf '%s\n' "Permission-denial recreation plan must preserve contract: $permission_denial_recreation_plan_contract" >&2
+    exit 1
+  fi
+done
+
+for instrumentation_plan_contract in \
+  "status: completed" \
+  "repository-owned API 36 Google APIs emulator" \
+  "Bound emulator discovery and boot completion to three minutes" \
+  ":Application:connectedDebugAndroidTest" \
+  "SKIP_ANDROID_INSTRUMENTATION=1" \
+  "75cbcb75a217599c6ec42446a48461c26ed971b9" \
+  "27640848165" \
+  "27640853374"; do
+  if ! grep -Fq "$instrumentation_plan_contract" "$INSTRUMENTATION_EXECUTION_PLAN"; then
+    printf '%s\n' "Instrumentation execution plan must preserve contract: $instrumentation_plan_contract" >&2
+    exit 1
+  fi
+done
+
 if ! grep -Fq "actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10" "$ROOT_DIR/.github/workflows/check.yml" ||
   ! grep -Fq "make check" "$ROOT_DIR/.github/workflows/check.yml"; then
   printf '%s\n' "GitHub Actions check workflow must check out the repository and run make check." >&2
@@ -1455,7 +1676,7 @@ if ! grep -Fq "permissions:" "$ROOT_DIR/.github/workflows/check.yml" ||
 fi
 
 if ! grep -Fq "workflow_dispatch:" "$ROOT_DIR/.github/workflows/check.yml" ||
-  ! grep -Fq "timeout-minutes: 15" "$ROOT_DIR/.github/workflows/check.yml"; then
+  ! grep -Fq "timeout-minutes: 25" "$ROOT_DIR/.github/workflows/check.yml"; then
   printf '%s\n' "GitHub Actions check workflow must support bounded manual verification." >&2
   exit 1
 fi
@@ -1470,12 +1691,23 @@ fi
 
 if ! grep -Fq "distributionSha256Sum" "$README" || \
    ! grep -Fq "does not persist checkout credentials" "$README" || \
-   ! grep -Fq "Gradle 9.5.1 wrapper authenticates" "$ROOT_DIR/SECURITY.md" || \
+   ! grep -Fq "Gradle 9.6.0 wrapper authenticates" "$ROOT_DIR/SECURITY.md" || \
    ! grep -Fq "checksum-verified direct wrapper" "$ROOT_DIR/VISION.md" || \
    ! grep -Fq "authenticated Gradle wrapper" "$ROOT_DIR/CHANGES.md"; then
   printf '%s\n' "Documentation must describe authenticated wrapper and checkout boundaries." >&2
   exit 1
 fi
+
+for gradle_96_contract in \
+  "## Status: Completed" \
+  "Gradle 9.6.0" \
+  "bbaeb2fef8710818cf0e261201dab964c572f92b942812df0c3620d62a529a01" \
+  "make check"; do
+  if ! grep -Fq "$gradle_96_contract" "$GRADLE_96_REFRESH_PLAN"; then
+    printf '%s\n' "Gradle 9.6 refresh plan must preserve completion evidence: $gradle_96_contract" >&2
+    exit 1
+  fi
+done
 
 if ! grep -Fq "local.properties" "$README"; then
   printf '%s\n' "README must document local SDK configuration." >&2
@@ -1505,17 +1737,21 @@ if ! grep -Fq "only preview-SDK availability advisories are disabled" "$README";
   exit 1
 fi
 
-if ! grep -Fq "./gradlew :Application:lintDebug :Application:lintRelease --no-daemon" "$README"; then
-  printf '%s\n' "README must document the lint gate." >&2
-  exit 1
-fi
+for lint_doc_contract in \
+  "./gradlew :Application:lintDebug --no-daemon" \
+  "./gradlew :Application:lintRelease --no-daemon"; do
+  if ! grep -Fq "$lint_doc_contract" "$README"; then
+    printf '%s\n' "README must document sequential lint command: $lint_doc_contract" >&2
+    exit 1
+  fi
+done
 
 if ! grep -Fq "./gradlew :Application:assembleDebug --no-daemon" "$README"; then
   printf '%s\n' "README must document the debug assemble gate." >&2
   exit 1
 fi
 
-if ! grep -Fq "Instrumentation tests require an Android device or emulator" "$README"; then
+if ! grep -Fq "hosted API 36 gate is configured to execute" "$README"; then
   printf '%s\n' "README must document instrumentation test runtime requirements." >&2
   exit 1
 fi
@@ -1592,8 +1828,8 @@ if ! grep -Fq 'ROOT := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))' "$ROOT_DI
   exit 1
 fi
 
-if [ "$(grep -Fc '$(GRADLE_COMMAND) -p "$(ROOT)"' "$ROOT_DIR/Makefile")" -ne 3 ]; then
-  printf '%s\n' "Makefile must root lint, test, and build Gradle tasks." >&2
+if [ "$(grep -Fc '$(GRADLE_COMMAND) -p "$(ROOT)"' "$ROOT_DIR/Makefile")" -ne 4 ]; then
+  printf '%s\n' "Makefile must root both lint variants, test, and build Gradle tasks." >&2
   exit 1
 fi
 
