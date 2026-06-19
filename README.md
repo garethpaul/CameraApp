@@ -35,8 +35,9 @@ Additional scan context:
 ### Prerequisites
 
 - Git
-- Android Studio or a compatible Android SDK
-- Gradle or the checked-in Gradle wrapper when present
+- JDK 17
+- Android SDK platform 36 and Android Build Tools 36.1.0
+- The checked-in Gradle wrapper; a system Gradle installation is not required
 
 ### Setup
 
@@ -51,44 +52,72 @@ Configure the Android SDK with `ANDROID_HOME` or an untracked `local.properties`
 sdk.dir=/path/to/android-sdk
 ```
 
-The setup commands above are derived from repository files. Legacy mobile, Python, or JavaScript samples may require older SDKs or package versions than a modern workstation uses by default.
+Set `JAVA_HOME` to JDK 17 and `ANDROID_HOME` (or `ANDROID_SDK_ROOT`) to the
+Android SDK before invoking the verification targets.
 
 ## Running or Using the Project
 
-- Use Android Studio to open the project or run `./gradlew assembleDebug` when the Android SDK is configured.
-- This legacy sample uses Gradle 2.2.1, Android Gradle Plugin 1.0.0, compile/min/target SDK 21, and Android Build Tools v24.0.3.
+- Use Android Studio to open the project or run the checked-in wrapper when the
+  Android SDK is configured.
+- The project uses Gradle 9.6.0, Android Gradle Plugin 9.2.0, compile/target SDK
+  36, min SDK 21, and Android Build Tools 36.1.0.
+- The application runtime dependency graph is intentionally empty. AndroidX is
+  used only by the instrumentation smoke test.
 
 ## Testing and Verification
 
 Run the SDK-free source baseline check first:
 
 ```sh
-make check
 scripts/check-baseline.sh
 ```
 
-GitHub Actions runs `make check` on pushes, pull requests, and manual
-dispatches. The workflow uses a commit-pinned checkout action, read-only
-repository access, and a bounded runtime. It explicitly clears hosted Android
-SDK variables so the legacy Gradle 2.2.1 project takes the documented SDK-free
-path instead of running against an incompatible modern toolchain.
-The job does not persist checkout credentials after source retrieval.
-
-Then run Gradle after Android SDK configuration is available:
+Run the complete build gate with explicit toolchain paths:
 
 ```sh
-ANDROID_HOME=/home/gjones/android-sdk ./gradlew lint --no-daemon
-ANDROID_HOME=/home/gjones/android-sdk ./gradlew assembleDebug --no-daemon
+JAVA_HOME=/path/to/jdk-17 ANDROID_HOME=/path/to/android-sdk make check
 ```
 
-The direct wrapper uses a Gradle 8.14.5-generated bootstrap while retaining the
-legacy Gradle 2.2.1 runtime. Its `distributionSha256Sum` authenticates the
-official archive before execution; an empty wrapper cache therefore requires
+`make check` runs the source contract, debug and release lint, instrumentation
+APK assembly and execution, and debug APK assembly. The lint gate requires zero findings;
+only preview-SDK availability advisories are disabled while API 37 remains a
+preview. The hosted API 36 gate is configured to execute pre-permission
+activity/fragment startup, drive the real camera-permission denial action, and
+assert that the activity remains stable and denial remains settled across
+activity recreation; this does not prove permission grant, camera preview, or
+capture behavior.
+
+Focused Gradle commands are available after Android SDK configuration:
+
+```sh
+./gradlew :Application:lintDebug --no-daemon
+./gradlew :Application:lintRelease --no-daemon
+./gradlew :Application:assembleDebugAndroidTest --no-daemon
+./gradlew :Application:connectedDebugAndroidTest --no-daemon
+./gradlew :Application:assembleDebug --no-daemon
+```
+
+The wrapper pins the official Gradle 9.6.0 binary distribution and authenticates
+it with `distributionSha256Sum`; an empty wrapper cache therefore requires
 access to Gradle's HTTPS distribution service.
 
-The Gradle lint configuration suppresses only the legacy `LintError` for the missing API database infrastructure issue. Instrumentation tests require an Android device or emulator with camera support.
+GitHub Actions installs JDK 17, Android SDK platform 36, Build Tools 36.1.0, and
+the API 36 Google APIs emulator image, then runs the same `make check` gate on pushes, pull requests, and manual
+dispatches. The workflow uses commit-pinned actions, read-only repository
+access, a bounded runtime, and does not persist checkout credentials.
 
-When the required SDK or runtime is unavailable, use static checks and source review first, then verify on a machine that has the matching platform toolchain.
+For local hosts without emulator acceleration, use
+`SKIP_ANDROID_INSTRUMENTATION=1 make check` and record that runtime execution
+was skipped. CI does not set this escape hatch.
+
+When a camera-capable runtime is unavailable, do not claim preview, permission,
+or capture behavior was exercised. Record the missing device validation and
+retain the lint, APK, manifest, and static ordering evidence.
+
+Use [`DEVICE_VERIFICATION.md`](DEVICE_VERIFICATION.md) to record exact-head
+emulator or physical-camera evidence. Keep unavailable runtime scenarios as
+explicit unexecuted rows rather than treating lint, APK assembly, or static
+contracts as camera execution.
 
 ## Configuration and Secrets
 
@@ -108,6 +137,17 @@ When the required SDK or runtime is unavailable, use static checks and source re
 - This looks like a legacy Android project or sample. Expect Android SDK, Gradle, and support-library versions to matter.
 - Camera background thread startup is idempotent; repeated resume/start paths
   must not replace an already-running handler thread.
+- Interrupted camera-worker shutdown preserves the interrupt signal and unresolved worker ownership.
+- Camera-device disconnect and error callbacks close their callback device, but only the current device may clear shared state or finish the activity.
+- Capture-result and still-capture completion callbacks reject stale session ownership before mutating capture state or unlocking focus.
+- Current-session still-capture failures unlock focus and resume preview; stale session failures are ignored.
+- Synchronous still-capture and preview-restart failures restore preview state before Camera2 recovery work can throw.
+- Closed-session still-capture and preview-restart operations use the same
+  recovery path instead of escaping with `IllegalStateException`.
+- Missing still-capture dependencies restore preview state before the capture path returns.
+- Configured preview callbacks must still own their exact initiating camera device before publishing preview state; stale sessions close instead.
+- Failed preview callbacks rely on Camera2 session closure and suppress stale UI;
+  only the initiating camera lifetime may report configuration failures.
 - Synchronous camera-open failures release the open/close semaphore before
   pause or teardown can wait on it.
 - Camera close releases the semaphore only after successful acquisition and
@@ -116,11 +156,20 @@ When the required SDK or runtime is unavailable, use static checks and source re
   so queued UI messages do not retain a detached camera fragment.
 - ImageReader backpressure is handled by dropping a backed-up capture callback
   before it can crash the still-image save path.
+- During background-thread shutdown, rejected background-handler handoffs close
+  the acquired image so the two-slot reader cannot be exhausted by an ownerless
+  capture.
+- CameraApp reports picture-save success only after file output closes
+  successfully; Camera2 capture completion alone does not claim persistence.
 - Android backup is disabled for the app because the sample handles camera
   capture state and app-specific image output.
 - Resume skips camera open until the texture view is recreated, avoiding retained
   fragment camera work before the view hierarchy exists.
+- Retained fragments clear the texture view at view teardown, so delayed camera
+  permission results cannot reopen against a stale view hierarchy.
 - Capture completion UI does not expose the app-private output file path.
+- Image-save failures log a generic category without exception details or private output paths.
+- Camera runtime diagnostics retain fixed operation categories without exception stack traces or throwable details.
 - Picture and info controls are listener-bound only when present in the current
   layout.
 - The application enables RTL mirroring, and portrait and landscape camera
@@ -129,6 +178,10 @@ When the required SDK or runtime is unavailable, use static checks and source re
   localized picture/info controls from overlapping the camera surface.
 - Unreachable Android sample-template resources are not packaged; the active
   camera layouts, application theme, and dialog copy remain intact.
+- The active theme owns a single black window background, avoiding a redundant
+  activity-root paint while preserving the camera launch/fallback surface.
+- The active launcher and info resources include a complete xxxhdpi icon family,
+  and SDK-backed verification requires a zero-finding Android lint report.
 - Unsupported-camera error dialogs require an attached fragment manager before
   display.
 - Unsupported-camera dialogs also require an attached activity before display.
@@ -141,6 +194,8 @@ When the required SDK or runtime is unavailable, use static checks and source re
   retained-fragment texture resume guard.
 - See `docs/plans/2026-06-09-cameraapp-save-toast-path-privacy.md` for the
   capture saved-toast privacy baseline.
+- See `docs/plans/2026-06-14-cameraapp-save-success-notification.md` for the
+  success-only file-output notification boundary.
 - See `docs/plans/2026-06-09-cameraapp-control-binding-guard.md` for the
   picture/info control binding guard.
 - See `docs/plans/2026-06-09-cameraapp-error-dialog-fragment-manager.md` for
@@ -159,6 +214,10 @@ When the required SDK or runtime is unavailable, use static checks and source re
   preview/control region separation.
 - See `docs/plans/2026-06-13-cameraapp-inactive-template-resources.md` for the
   inactive sample-template resource boundary.
+- See `docs/plans/2026-06-13-cameraapp-window-background-overdraw.md` for the
+  camera window background ownership boundary.
+- See `docs/plans/2026-06-13-cameraapp-xxxhdpi-icons.md` for the active icon
+  density and zero-finding lint boundary.
 
 ## Contributing
 
