@@ -213,8 +213,23 @@ for runner_contract in \
   '-no-snapshot' \
   'get-state' \
   'sys.boot_completed' \
-  'kill -0 "$emulator_pid"' \
-  'kill -KILL "$emulator_pid"' \
+  'HELPER_TIMEOUT_SECONDS=${ANDROID_EMULATOR_HELPER_TIMEOUT_SECONDS:-1}' \
+  'SETUP_HELPER_TIMEOUT_SECONDS=${ANDROID_EMULATOR_SETUP_HELPER_TIMEOUT_SECONDS:-5}' \
+  'find_standard_tool sleep /bin/sleep /usr/bin/sleep' \
+  'CGROUP_ROOT=${ANDROID_EMULATOR_CGROUP_ROOT:-/sys/fs/cgroup}' \
+  'cgroup.kill' \
+  'run_bounded_command' \
+  'finish_async_bounded_helper' \
+  'run_cgroup_admin_with_timeout' \
+  'prepare_emulator_containment' \
+  'attach_emulator_to_containment "$emulator_pid"' \
+  'mkfifo "$launcher_fifo"' \
+  'signal_containment_term' \
+  'kill_containment_unit' \
+  'wait_for_containment_empty' \
+  'remove_containment_unit' \
+  'pid_is_live "$emulator_pid"' \
+  'Emulator containment cleanup failed.' \
   'exit "$cleanup_status"' \
   ':Application:connectedDebugAndroidTest --no-daemon'; do
   if ! grep -Fq -- "$runner_contract" "$INSTRUMENTATION_RUNNER"; then
@@ -233,6 +248,11 @@ if [ "$(grep -Fc 'SHUTDOWN_TIMEOUT_SECONDS=${ANDROID_EMULATOR_SHUTDOWN_TIMEOUT_S
   exit 1
 fi
 
+if [ "$(grep -Fc 'HELPER_TIMEOUT_SECONDS=${ANDROID_EMULATOR_HELPER_TIMEOUT_SECONDS:-1}' "$INSTRUMENTATION_RUNNER")" -ne 1 ]; then
+  printf '%s\n' "Instrumentation runner must keep a bounded one-second cleanup helper default." >&2
+  exit 1
+fi
+
 if grep -Fq 'wait-for-device' "$INSTRUMENTATION_RUNNER"; then
   printf '%s\n' "Instrumentation runner must not block outside the bounded boot loop." >&2
   exit 1
@@ -242,6 +262,34 @@ if ! sh -n "$INSTRUMENTATION_CLEANUP_TEST"; then
   printf '%s\n' "Instrumentation cleanup regression test must pass POSIX shell syntax checks." >&2
   exit 1
 fi
+
+for cleanup_test_contract in \
+  'fake-emulator.c' \
+  'setsid()' \
+  'double-fork-setsid' \
+  'resistant-tree' \
+  'fork-race' \
+  'fork-storm' \
+  'unrelated-decoy' \
+  'malformed-cgroup-pids' \
+  'missing-containment' \
+  'hung-adb-kill' \
+  'failing-adb-kill' \
+  'missing-adb' \
+  'helper-term-resistance' \
+  'simultaneous-signals' \
+  'cgroup-kill-failure' \
+  'cgroup-removal-failure' \
+  'nested-cgroup-name' \
+  'concurrent-cgroups' \
+  'wall-time-bound' \
+  'ANDROID_EMULATOR_HELPER_TIMEOUT_SECONDS' \
+  'CLEANUP_TEST_CASES'; do
+  if ! grep -Fq "$cleanup_test_contract" "$INSTRUMENTATION_CLEANUP_TEST"; then
+    printf '%s\n' "Instrumentation cleanup regression test is missing contract: $cleanup_test_contract" >&2
+    exit 1
+  fi
+done
 
 sh "$INSTRUMENTATION_CLEANUP_TEST"
 

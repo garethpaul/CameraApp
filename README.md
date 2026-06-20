@@ -105,11 +105,15 @@ GitHub Actions installs JDK 17, Android SDK platform 36, Build Tools 36.1.0, and
 the API 36 Google APIs emulator image, then runs the same `make check` gate on pushes, pull requests, and manual
 dispatches. The workflow uses commit-pinned actions, read-only repository
 access, a bounded runtime, and does not persist checkout credentials.
-After instrumentation, the runner gives the emulator ten seconds to stop before
-escalating to `SIGKILL`, then allows another ten seconds for the PID to disappear
-without blocking the job indefinitely. Set
-`ANDROID_EMULATOR_SHUTDOWN_TIMEOUT_SECONDS` to a non-negative integer to adjust
-each cleanup phase for slower local hosts.
+The instrumentation runner requires writable cgroup v2 containment with
+`cgroup.kill`. It creates a per-run cgroup, attaches the blocked emulator
+launcher before releasing it, and fails closed before AVD provisioning when
+containment is unavailable. During cleanup, `adb emu kill` runs as a bounded
+helper while cgroup TERM and `cgroup.kill` escalation proceed independently.
+Set `ANDROID_EMULATOR_SHUTDOWN_TIMEOUT_SECONDS` to a non-negative integer to
+adjust containment shutdown waits, `ANDROID_EMULATOR_HELPER_TIMEOUT_SECONDS` to
+adjust cleanup helper bounds, and `ANDROID_EMULATOR_SETUP_HELPER_TIMEOUT_SECONDS`
+to adjust bounded containment setup helpers for slower local hosts.
 
 For local hosts without emulator acceleration, use
 `SKIP_ANDROID_INSTRUMENTATION=1 make check` and record that runtime execution
