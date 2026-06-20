@@ -602,8 +602,11 @@ for test_contract in \
   'Until.findObject(By.res(DENY_BUTTON_RESOURCE))' \
   'PERMISSION_DIALOG_TIMEOUT_MS = 10_000' \
   'PERMISSION_DENY_CLICK_DURATION_MS = 100' \
+  'PERMISSION_DENY_RETRY_WAIT_MS = 1_000' \
   'waitForPermissionRequestPending(scenario, true)' \
+  'dismissPermissionDialog(device)' \
   'denyButton.click(PERMISSION_DENY_CLICK_DURATION_MS)' \
+  'catch (StaleObjectException ignored)' \
   'Camera permission denial action did not dismiss the dialog' \
   'waitForPermissionDenied(scenario)' \
   'assertFalse("Camera permission request is still pending"' \
@@ -623,14 +626,43 @@ for test_contract in \
   fi
 done
 
-denial_click_line=$(grep -nF 'denyButton.click(PERMISSION_DENY_CLICK_DURATION_MS);' "$TEST_FIXTURE" | cut -d: -f1)
-denial_dialog_line=$(grep -nF 'assertTrue("Camera permission denial action did not dismiss the dialog"' "$TEST_FIXTURE" | cut -d: -f1)
+denial_helper_line=$(grep -nF 'dismissPermissionDialog(device);' "$TEST_FIXTURE" | head -1 | cut -d: -f1)
 denial_callback_line=$(grep -nF 'waitForPermissionDenied(scenario);' "$TEST_FIXTURE" | cut -d: -f1)
-if [ -z "$denial_click_line" ] || [ -z "$denial_dialog_line" ] || \
-   [ -z "$denial_callback_line" ] || \
-   [ "$denial_click_line" -ge "$denial_dialog_line" ] || \
-   [ "$denial_dialog_line" -ge "$denial_callback_line" ]; then
-  printf '%s\n' "Instrumentation fixture must wait for permission-dialog dismissal before polling the denial callback." >&2
+if [ -z "$denial_helper_line" ] || [ -z "$denial_callback_line" ] || \
+   [ "$denial_helper_line" -ge "$denial_callback_line" ]; then
+  printf '%s\n' "Instrumentation fixture must dismiss the permission dialog before polling the denial callback." >&2
+  exit 1
+fi
+
+DENIAL_HELPER=$(sed -n \
+  '/private static void dismissPermissionDialog(UiDevice device)/,/private static void waitForPermissionRequestPending/p' \
+  "$TEST_FIXTURE")
+for denial_retry_contract in \
+  'do {' \
+  'UiObject2 denyButton = device.wait(' \
+  'Until.findObject(By.res(DENY_BUTTON_RESOURCE))' \
+  'PERMISSION_DENY_RETRY_WAIT_MS);' \
+  'if (denyButton == null)' \
+  'denyButton.click(PERMISSION_DENY_CLICK_DURATION_MS);' \
+  'catch (StaleObjectException ignored)' \
+  'device.wait(Until.gone(By.res(DENY_BUTTON_RESOURCE))' \
+  '} while (SystemClock.elapsedRealtime() < deadline);'; do
+  if ! printf '%s\n' "$DENIAL_HELPER" | grep -Fq "$denial_retry_contract"; then
+    printf '%s\n' "Instrumentation fixture must preserve bounded denial retry contract: $denial_retry_contract" >&2
+    exit 1
+  fi
+done
+
+denial_find_line=$(printf '%s\n' "$DENIAL_HELPER" | grep -nF 'UiObject2 denyButton = device.wait(' | cut -d: -f1)
+denial_click_line=$(printf '%s\n' "$DENIAL_HELPER" | grep -nF 'denyButton.click(PERMISSION_DENY_CLICK_DURATION_MS);' | cut -d: -f1)
+denial_gone_line=$(printf '%s\n' "$DENIAL_HELPER" | grep -nF 'device.wait(Until.gone(By.res(DENY_BUTTON_RESOURCE))' | cut -d: -f1)
+denial_loop_line=$(printf '%s\n' "$DENIAL_HELPER" | grep -nF '} while (SystemClock.elapsedRealtime() < deadline);' | cut -d: -f1)
+if [ -z "$denial_find_line" ] || [ -z "$denial_click_line" ] || \
+   [ -z "$denial_gone_line" ] || [ -z "$denial_loop_line" ] || \
+   [ "$denial_find_line" -ge "$denial_click_line" ] || \
+   [ "$denial_click_line" -ge "$denial_gone_line" ] || \
+   [ "$denial_gone_line" -ge "$denial_loop_line" ]; then
+  printf '%s\n' "Instrumentation fixture must retry a fresh bounded permission-denial gesture until dismissal." >&2
   exit 1
 fi
 
