@@ -1,0 +1,91 @@
+name: Trusted CameraApp Gate
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: trusted-cameraapp-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  base-owned-trusted-gate:
+    name: base-owned-trusted-gate
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    environment:
+      name: cameraapp-trusted-verifier-v1
+    steps:
+      - name: Check out trusted workflow commit
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          repository: ${{ github.event.repository.full_name }}
+          ref: ${{ github.workflow_sha }}
+          path: trusted-base
+          fetch-depth: 1
+          persist-credentials: false
+          set-safe-directory: false
+          submodules: false
+          lfs: false
+
+      - name: Verify protected environment policy
+        shell: /bin/bash --noprofile --norc -p -euo pipefail {0}
+        env:
+          REPOSITORY_SLUG: ${{ github.event.repository.full_name }}
+          ENVIRONMENT_NAME: cameraapp-trusted-verifier-v1
+          DEPLOYMENT_APP_SLUG: github-actions
+        run: |
+          exec /usr/bin/env -i \
+            HOME=/tmp/cameraapp-workflow-home \
+            LANG=C.UTF-8 \
+            LC_ALL=C.UTF-8 \
+            PATH=/usr/bin:/bin \
+            REPOSITORY_SLUG="$REPOSITORY_SLUG" \
+            ENVIRONMENT_NAME="$ENVIRONMENT_NAME" \
+            DEPLOYMENT_APP_SLUG="$DEPLOYMENT_APP_SLUG" \
+            /usr/bin/python3 -I -S -B trusted-base/trusted-verifier/verify_environment.py \
+              --repository "$REPOSITORY_SLUG" \
+              --environment "$ENVIRONMENT_NAME" \
+              --deployment-app "$DEPLOYMENT_APP_SLUG"
+
+      - name: Fetch candidate as untrusted data
+        shell: /bin/bash --noprofile --norc -p -euo pipefail {0}
+        env:
+          HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          case "$HEAD_SHA" in
+            [0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f]) ;;
+            *) exit 1 ;;
+          esac
+          case "$HEAD_REPO" in
+            ""|*[!A-Za-z0-9_.\/-]*) exit 1 ;;
+          esac
+          /usr/bin/git init candidate
+          /usr/bin/git -C candidate config advice.detachedHead false
+          /usr/bin/git -C candidate remote add pr "$GITHUB_SERVER_URL/$HEAD_REPO.git"
+          /usr/bin/git -C candidate fetch --no-tags --filter=blob:none --depth=2 pr "$HEAD_SHA"
+          /usr/bin/git -C candidate checkout --detach "$HEAD_SHA"
+
+      - name: Verify exact reviewed CameraApp semantic bytes
+        shell: /bin/bash --noprofile --norc -p -euo pipefail {0}
+        env:
+          TRUSTED_BASE_SHA: ${{ github.workflow_sha }}
+          CANDIDATE_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          exec /usr/bin/env -i \
+            HOME=/tmp/cameraapp-workflow-home \
+            LANG=C.UTF-8 \
+            LC_ALL=C.UTF-8 \
+            PATH=/usr/bin:/bin \
+            TRUSTED_BASE_SHA="$TRUSTED_BASE_SHA" \
+            CANDIDATE_HEAD_SHA="$CANDIDATE_HEAD_SHA" \
+            /bin/sh -p trusted-base/trusted-verifier/run-hermetic.sh \
+              --base-repository trusted-base \
+              --candidate-repository candidate \
+              --base-sha "$TRUSTED_BASE_SHA" \
+              --head-sha "$CANDIDATE_HEAD_SHA" \
+              --receipt /tmp/cameraapp-trusted-receipt.json

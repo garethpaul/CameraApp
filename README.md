@@ -13,6 +13,8 @@ This README is based on the checked-in source, manifests, scripts, and repositor
 
 - `README.md` - project overview and local usage notes
 - `.github/workflows/check.yml` - GitHub Actions baseline for `make check`
+- `.github/workflows/trusted-cameraapp-gate.yml` - base-owned trusted
+  pull-request verifier bootstrap
 - `build.gradle` - Android or Gradle build configuration
 - `.google` - source or example code
 - `Application` - source or example code
@@ -20,6 +22,8 @@ This README is based on the checked-in source, manifests, scripts, and repositor
 - `gradle` - source or example code
 - `gradlew` - Android or Gradle build configuration
 - `scripts` - source or example code
+- `trusted-verifier` - isolated Python verifier, policy, expected semantic
+  bytes, and hostile bootstrap regressions
 - `SECURITY.md` - security reporting and disclosure guidance
 - `VISION.md` - project direction and maintenance guardrails
 
@@ -72,6 +76,12 @@ Run the SDK-free source baseline check first:
 scripts/check-baseline.sh
 ```
 
+Run the trusted bootstrap regression suite directly:
+
+```sh
+/usr/bin/python3 -I -S -B -m unittest discover -s trusted-verifier/tests -p 'test_*.py' -v
+```
+
 Run the complete build gate with explicit toolchain paths:
 
 ```sh
@@ -102,9 +112,18 @@ it with `distributionSha256Sum`; an empty wrapper cache therefore requires
 access to Gradle's HTTPS distribution service.
 
 GitHub Actions installs JDK 17, Android SDK platform 36, Build Tools 36.1.0, and
-the API 36 Google APIs emulator image, then runs the same `make check` gate on pushes, pull requests, and manual
+the API 36 Google APIs emulator image, then runs the trusted bootstrap unit
+suite and the same `make check` gate on pushes, pull requests, and manual
 dispatches. The workflow uses commit-pinned actions, read-only repository
 access, a bounded runtime, and does not persist checkout credentials.
+
+The trusted `pull_request_target` workflow is base-owned and treats the
+candidate checkout as data only. It uses isolated Python from
+`trusted-verifier`, rejects workflow/script spoofing and direct-gate replacement
+candidates, and must be paired with the `cameraapp-trusted-verifier-v1`
+protected environment before it is a merge authority. The ordinary `Check`
+workflow remains diagnostic; do not treat a pull-request-controlled check name
+or workflow file as the trusted gate.
 The instrumentation runner requires writable cgroup v2 containment with
 `cgroup.kill`. It creates a per-run cgroup, attaches the blocked emulator
 launcher before releasing it, and fails closed before AVD provisioning when
@@ -196,6 +215,9 @@ contracts as camera execution.
 - Unsupported-camera dialogs also require an attached activity before display.
 - Root Makefile and Gradle wrapper commands resolve the repository path from the
   Makefile itself, including out-of-tree `make -f` verification.
+- Trusted pull-request validation is owned by the base branch, runs isolated
+  Python, validates exact reviewed semantic bytes, and rejects candidate
+  workflow/script changes before any later Android execution can be considered.
 - See `SECURITY.md` for vulnerability reporting and safe research guidance.
 - See `VISION.md` for project direction and contribution guardrails.
 - See `CHANGES.md` for the maintenance history.
@@ -227,6 +249,8 @@ contracts as camera execution.
   camera window background ownership boundary.
 - See `docs/plans/2026-06-13-cameraapp-xxxhdpi-icons.md` for the active icon
   density and zero-finding lint boundary.
+- See `docs/plans/2026-06-20-cameraapp-trusted-direct-gate-v3.md` for the
+  trusted direct-gate bootstrap and protected-environment rollout.
 
 ## Contributing
 

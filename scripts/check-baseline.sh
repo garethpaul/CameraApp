@@ -60,6 +60,14 @@ GRADLEW="$ROOT_DIR/gradlew"
 GRADLEW_BAT="$ROOT_DIR/gradlew.bat"
 WRAPPER_JAR="$ROOT_DIR/gradle/wrapper/gradle-wrapper.jar"
 CI_WORKFLOW="$ROOT_DIR/.github/workflows/check.yml"
+TRUSTED_GATE_WORKFLOW="$ROOT_DIR/.github/workflows/trusted-cameraapp-gate.yml"
+TRUSTED_GATE_PLAN="$ROOT_DIR/docs/plans/2026-06-20-cameraapp-trusted-direct-gate-v3.md"
+TRUSTED_GATE_POLICY="$ROOT_DIR/trusted-verifier/policy.json"
+TRUSTED_GATE_RUNNER="$ROOT_DIR/trusted-verifier/run-hermetic.sh"
+TRUSTED_GATE_VERIFIER="$ROOT_DIR/trusted-verifier/verify_candidate.py"
+TRUSTED_ENV_VERIFIER="$ROOT_DIR/trusted-verifier/verify_environment.py"
+TRUSTED_GATE_TEST="$ROOT_DIR/trusted-verifier/tests/test_bootstrap.py"
+TRUSTED_GATE_EXPECTED_SAMPLE="$ROOT_DIR/trusted-verifier/expected/SampleTests.java"
 BACKUP_RULES="$ROOT_DIR/Application/src/main/res/xml/backup_rules.xml"
 DATA_EXTRACTION_RULES="$ROOT_DIR/Application/src/main/res/xml/data_extraction_rules.xml"
 
@@ -109,6 +117,7 @@ require_file() {
 for path in \
   ".gitignore" \
   ".github/workflows/check.yml" \
+  ".github/workflows/trusted-cameraapp-gate.yml" \
   "README.md" \
   "docs/plans/2026-06-08-cameraapp-build-hygiene-baseline.md" \
   "docs/plans/2026-06-09-cameraapp-image-reader-backpressure.md" \
@@ -139,8 +148,15 @@ for path in \
   "docs/plans/2026-06-16-cameraapp-instrumentation-execution.md" \
   "docs/plans/2026-06-17-cameraapp-permission-denial-recreation.md" \
   "docs/plans/2026-06-19-gradle-9-6-refresh.md" \
+  "docs/plans/2026-06-20-cameraapp-trusted-direct-gate-v3.md" \
   "scripts/run-instrumentation.sh" \
   "scripts/tests/run-instrumentation-cleanup-test.sh" \
+  "trusted-verifier/policy.json" \
+  "trusted-verifier/run-hermetic.sh" \
+  "trusted-verifier/verify_candidate.py" \
+  "trusted-verifier/verify_environment.py" \
+  "trusted-verifier/tests/test_bootstrap.py" \
+  "trusted-verifier/expected/SampleTests.java" \
   "Application/src/main/res/drawable-xxxhdpi/ic_launcher.png" \
   "Application/src/main/res/drawable-xxxhdpi/ic_action_info.png" \
   "gradlew" \
@@ -199,6 +215,18 @@ fi
 
 if [ ! -x "$INSTRUMENTATION_RUNNER" ] || ! sh -n "$INSTRUMENTATION_RUNNER"; then
   printf '%s\n' "Instrumentation runner must exist and pass POSIX shell syntax checks." >&2
+  exit 1
+fi
+
+if [ ! -x "$TRUSTED_GATE_RUNNER" ] || ! sh -n "$TRUSTED_GATE_RUNNER" || \
+   [ ! -x "$TRUSTED_GATE_VERIFIER" ] || ! /usr/bin/python3 -m py_compile "$TRUSTED_GATE_VERIFIER" || \
+   [ ! -x "$TRUSTED_ENV_VERIFIER" ] || ! /usr/bin/python3 -m py_compile "$TRUSTED_ENV_VERIFIER"; then
+  printf '%s\n' "Trusted CameraApp verifier launchers must be executable and parseable." >&2
+  exit 1
+fi
+
+if ! cmp -s "$TEST_FIXTURE" "$TRUSTED_GATE_EXPECTED_SAMPLE"; then
+  printf '%s\n' "Trusted semantic template must match the reviewed CameraApp permission retry test bytes." >&2
   exit 1
 fi
 
@@ -744,6 +772,7 @@ for workflow_contract in \
   'actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654' \
   'java-version: "17"' \
   'run: |' \
+  "/usr/bin/python3 -I -S -B -m unittest discover -s trusted-verifier/tests -p 'test_*.py' -v" \
   '"platforms;android-36"' \
   '"build-tools;36.1.0"' \
   '"system-images;android-36;google_apis;x86_64"' \
@@ -1797,6 +1826,77 @@ if [ "$(grep -Ec '^[[:space:]]*permissions:' "$CI_WORKFLOW")" -ne 1 ] || \
   printf '%s\n' "Check workflow must keep exact read-only permissions and two required commands." >&2
   exit 1
 fi
+
+for trusted_workflow_contract in \
+  'pull_request_target:' \
+  'permissions:' \
+  'contents: read' \
+  'environment:' \
+  'name: cameraapp-trusted-verifier-v1' \
+  'ref: ${{ github.workflow_sha }}' \
+  'HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}' \
+  'HEAD_SHA: ${{ github.event.pull_request.head.sha }}' \
+  '/usr/bin/git -C candidate fetch --no-tags --filter=blob:none --depth=2 pr "$HEAD_SHA"' \
+  '/usr/bin/git -C candidate checkout --detach "$HEAD_SHA"' \
+  'persist-credentials: false' \
+  'set-safe-directory: false' \
+  'submodules: false' \
+  'lfs: false' \
+  '/usr/bin/python3 -I -S -B trusted-base/trusted-verifier/verify_environment.py' \
+  '/bin/sh -p trusted-base/trusted-verifier/run-hermetic.sh'; do
+  if ! grep -Fq "$trusted_workflow_contract" "$TRUSTED_GATE_WORKFLOW"; then
+    printf '%s\n' "Trusted CameraApp workflow must preserve contract: $trusted_workflow_contract" >&2
+    exit 1
+  fi
+done
+
+if grep -Eq 'write-all|:[[:space:]]*write|secrets\.|actions/cache|candidate/(Makefile|scripts)|make check|./gradlew' "$TRUSTED_GATE_WORKFLOW"; then
+  printf '%s\n' "Trusted CameraApp workflow must not execute candidate code or request writable/secrets authority." >&2
+  exit 1
+fi
+
+for trusted_policy_contract in \
+  '"bootstrap_exact_default": "31ef456ccdba0527407a6ec253e1b5e9bbbe6a1a"' \
+  '"environment": "cameraapp-trusted-verifier-v1"' \
+  '"diagnostic_check_context_is_authoritative": false' \
+  '"kind": "required_protected_environment_deployment"' \
+  '"required_environment_branch": "master"' \
+  '"15c0885755c41aa18aeb92a85193facdb61fb55c"' \
+  '"67b2352a032ff956c4034e9215c53709d5e340bf"' \
+  '"max_bytes": 20000' \
+  '"trusted-verifier/verify_environment.py"' \
+  '"trusted-verifier/expected/SampleTests.java"'; do
+  if ! grep -Fq "$trusted_policy_contract" "$TRUSTED_GATE_POLICY"; then
+    printf '%s\n' "Trusted CameraApp policy must preserve contract: $trusted_policy_contract" >&2
+    exit 1
+  fi
+done
+
+for trusted_test_contract in \
+  'test_pull_request_candidate_cannot_noop_or_symlink_direct_gate' \
+  'test_candidate_workflow_spoofing_extra_commits_files_and_modes_are_rejected' \
+  'test_environment_preflight_rejects_environment_or_app_mismatch' \
+  'test_shallow_candidate_history_is_rejected' \
+  'test_fake_tools_and_python_startup_are_ignored' \
+  'test_archive_path_and_size_limits_reject_hostile_candidates'; do
+  if ! grep -Fq "$trusted_test_contract" "$TRUSTED_GATE_TEST"; then
+    printf '%s\n' "Trusted CameraApp regression suite must preserve: $trusted_test_contract" >&2
+    exit 1
+  fi
+done
+
+for trusted_plan_contract in \
+  "Phase 1" \
+  "Phase 2" \
+  "cameraapp-trusted-verifier-v1" \
+  "required protected environment deployment" \
+  "No GitHub writes" \
+  "15c0885755c41aa18aeb92a85193facdb61fb55c and 67b2352a032ff956c4034e9215c53709d5e340bf remain rejected sibling non-ancestors"; do
+  if ! grep -Fq "$trusted_plan_contract" "$TRUSTED_GATE_PLAN"; then
+    printf '%s\n' "Trusted CameraApp rollout plan must preserve: $trusted_plan_contract" >&2
+    exit 1
+  fi
+done
 
 if ! grep -Fq "distributionSha256Sum" "$README" || \
    ! grep -Fq "does not persist checkout credentials" "$README" || \

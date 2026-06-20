@@ -40,4 +40,6 @@ jobs:
             "system-images;android-36;google_apis;x86_64"
 
       - name: Run full verification and instrumentation
-        run: timeout 22m make check
+        run: |
+          /usr/bin/python3 -I -S -B -m unittest discover -s trusted-verifier/tests -p 'test_*.py' -v
+          timeout 22m make check
