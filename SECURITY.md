@@ -72,6 +72,12 @@ checked-in SHA-256 before execution. Review all four wrapper files together.
 Hosted Check also uses read-only permissions and a non-persisted checkout token
 so later steps cannot reuse repository credentials.
 
+The trusted pull-request bootstrap uses `pull_request_target` only from the
+base workflow SHA. It checks the candidate as untrusted data, runs isolated
+Python verifier bytes from the base branch, grants no secrets, and relies on the
+`cameraapp-trusted-verifier-v1` protected environment deployment as the required
+merge authority after that environment is configured.
+
 Dependency updates should come from trusted package managers and should keep lockfiles in sync when lockfiles exist. Do not commit credentials, private keys, tokens, generated secrets, or machine-local configuration. If a vulnerability depends on a compromised package, typosquatting risk, insecure transitive dependency, or unsafe build step, include the package name, affected version, and the path through which it is used.
 
 ## Safe Research Guidelines

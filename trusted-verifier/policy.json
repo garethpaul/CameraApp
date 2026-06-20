@@ -1,0 +1,30 @@
+{
+  "bootstrap_exact_default": "31ef456ccdba0527407a6ec253e1b5e9bbbe6a1a",
+  "expected_files": {
+    "Application/tests/src/com/example/android/camera2basic/tests/SampleTests.java": {
+      "max_bytes": 20000,
+      "mode": "100644",
+      "sha256": "38617c16a5ef8f67b47b645d78127d403f67cb94dc2a05bb096cc7ce065340ee",
+      "template": "expected/SampleTests.java"
+    }
+  },
+  "merge_authority": {
+    "diagnostic_check_context_is_authoritative": false,
+    "environment": "cameraapp-trusted-verifier-v1",
+    "kind": "required_protected_environment_deployment",
+    "required_environment_branch": "master"
+  },
+  "rejected_bootstrap_ancestors": [
+    "15c0885755c41aa18aeb92a85193facdb61fb55c",
+    "67b2352a032ff956c4034e9215c53709d5e340bf"
+  ],
+  "schema": 1,
+  "trusted_paths": [
+    ".github/workflows/trusted-cameraapp-gate.yml",
+    "trusted-verifier/policy.json",
+    "trusted-verifier/run-hermetic.sh",
+    "trusted-verifier/verify_candidate.py",
+    "trusted-verifier/verify_environment.py",
+    "trusted-verifier/expected/SampleTests.java"
+  ]
+}

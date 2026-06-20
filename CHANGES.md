@@ -2,6 +2,9 @@
 
 ## 2026-06-20
 
+- Added a base-owned trusted `pull_request_target` bootstrap that treats
+  pull-request CameraApp checkouts as data, rejects v2 direct-gate replacement
+  candidates, and documents the protected-environment rollout prerequisite.
 - Retry a freshly acquired permission-dialog denial control within the existing
   timeout when API 36 drops an emulator touch, while retaining callback and
   recreation assertions.
