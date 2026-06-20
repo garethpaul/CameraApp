@@ -1,5 +1,11 @@
 # CameraApp Changes
 
+## 2026-06-20
+
+- Retry a freshly acquired permission-dialog denial control within the existing
+  timeout when API 36 drops an emulator touch, while retaining callback and
+  recreation assertions.
+
 ## 2026-06-19
 
 - Bound emulator cleanup in a per-run cgroup v2 containment unit and run

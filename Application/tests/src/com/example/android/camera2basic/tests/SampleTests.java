@@ -47,6 +47,7 @@ import androidx.test.core.app.ActivityScenario;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.platform.app.InstrumentationRegistry;
 import androidx.test.uiautomator.By;
+import androidx.test.uiautomator.StaleObjectException;
 import androidx.test.uiautomator.UiDevice;
 import androidx.test.uiautomator.UiObject2;
 import androidx.test.uiautomator.Until;
@@ -69,6 +70,7 @@ public class SampleTests {
 
     private static final long PERMISSION_DIALOG_TIMEOUT_MS = 10_000;
     private static final long PERMISSION_DENY_CLICK_DURATION_MS = 100;
+    private static final long PERMISSION_DENY_RETRY_WAIT_MS = 1_000;
     private static final String DENY_BUTTON_RESOURCE =
             "com.android.permissioncontroller:id/permission_deny_button";
 
@@ -86,15 +88,8 @@ public class SampleTests {
                      ActivityScenario.launch(CameraActivity.class)) {
             assertCameraFragmentExists(scenario);
 
-            UiObject2 denyButton = device.wait(
-                    Until.findObject(By.res(DENY_BUTTON_RESOURCE)),
-                    PERMISSION_DIALOG_TIMEOUT_MS);
-            assertNotNull("Camera permission deny button is unavailable", denyButton);
             waitForPermissionRequestPending(scenario, true);
-            denyButton.click(PERMISSION_DENY_CLICK_DURATION_MS);
-            assertTrue("Camera permission denial action did not dismiss the dialog",
-                    device.wait(Until.gone(By.res(DENY_BUTTON_RESOURCE)),
-                            PERMISSION_DIALOG_TIMEOUT_MS));
+            dismissPermissionDialog(device);
             waitForPermissionDenied(scenario);
             assertFalse("Camera permission request is still pending",
                     permissionRequestPending(scenario));
@@ -114,6 +109,28 @@ public class SampleTests {
                     device.wait(Until.findObject(By.res(DENY_BUTTON_RESOURCE)),
                             PERMISSION_DIALOG_TIMEOUT_MS));
         }
+    }
+
+    private static void dismissPermissionDialog(UiDevice device) {
+        long deadline = SystemClock.elapsedRealtime() + PERMISSION_DIALOG_TIMEOUT_MS;
+        do {
+            UiObject2 denyButton = device.wait(
+                    Until.findObject(By.res(DENY_BUTTON_RESOURCE)),
+                    PERMISSION_DENY_RETRY_WAIT_MS);
+            if (denyButton == null) {
+                continue;
+            }
+            try {
+                denyButton.click(PERMISSION_DENY_CLICK_DURATION_MS);
+            } catch (StaleObjectException ignored) {
+                continue;
+            }
+            if (device.wait(Until.gone(By.res(DENY_BUTTON_RESOURCE)),
+                    PERMISSION_DENY_RETRY_WAIT_MS)) {
+                return;
+            }
+        } while (SystemClock.elapsedRealtime() < deadline);
+        throw new AssertionError("Camera permission denial action did not dismiss the dialog");
     }
 
     private static void waitForPermissionRequestPending(
