@@ -682,7 +682,8 @@ if case_selected failed-test; then
 fi
 if case_selected already-dead-emulator; then
     reset_case_env
-    run_case already-dead-emulator already-dead 0 0 1 30
+    FAKE_GRADLE_STOPS_EMULATOR=1
+    run_case already-dead-emulator resistant 0 0 1 30
 fi
 if case_selected term-signal; then
     reset_case_env
