@@ -3,7 +3,7 @@
 ANDROID_HOME ?= /home/gjones/android-sdk
 JAVA_HOME ?=
 GRADLE ?= ./gradlew
-ROOT := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
+override ROOT := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 GRADLE_COMMAND := $(if $(filter ./%,$(GRADLE)),$(ROOT)$(patsubst ./%,%,$(GRADLE)),$(GRADLE))
 GRADLE_ENV := ANDROID_HOME="$(ANDROID_HOME)" ANDROID_SDK_ROOT="$(ANDROID_HOME)" JAVA_HOME="$(JAVA_HOME)"
 SKIP_ANDROID_INSTRUMENTATION ?= 0

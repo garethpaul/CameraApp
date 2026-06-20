@@ -1898,10 +1898,10 @@ if [ ! -f "$ROOT_DIR/Makefile" ]; then
   exit 1
 fi
 
-if ! grep -Fq 'ROOT := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))' "$ROOT_DIR/Makefile" || \
+if ! grep -Fq 'override ROOT := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))' "$ROOT_DIR/Makefile" || \
    ! grep -Fq 'GRADLE_COMMAND :=' "$ROOT_DIR/Makefile" || \
    ! grep -Fq '$(GRADLE_COMMAND) -p "$(ROOT)"' "$ROOT_DIR/Makefile"; then
-  printf '%s\n' "Makefile must run Gradle relative to its own repository root." >&2
+  printf '%s\n' "Makefile must run Gradle relative to its own repository root and reject command-line overrides." >&2
   exit 1
 fi
 
