@@ -2,6 +2,9 @@
 
 ## 2026-06-19
 
+- Bound emulator cleanup in a per-run cgroup v2 containment unit and run
+  cleanup helpers, including `adb emu kill`, under short timeouts so hung
+  helpers cannot block TERM or `cgroup.kill` escalation.
 - Use a standard-duration hosted permission-denial gesture and wait for the
   dialog to disappear before polling the app's callback, removing an
   intermittent instrumentation race on the default branch.
