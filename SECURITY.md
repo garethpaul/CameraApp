@@ -45,8 +45,13 @@ Helpful reports include:
   checkout action, read-only repository access, JDK 17, and pinned Android SDK
   components; review workflow, Gradle, and checker changes as part of the
   supply-chain surface.
-- The Make gate rejects startup makefiles, later recipe replacement,
-  non-executing/error-ignoring modes, and Make syntax in toolchain inputs.
+- The Make gate rejects non-executing/error-ignoring modes and Make syntax in
+  toolchain inputs for repository-controlled invocations. Caller-supplied GNU
+  Make startup files and additional `-f` makefiles remain caller parse
+  authority: startup and later makefiles can execute code before repository
+  checks. Caller-supplied later makefiles, including target-specific MAKEFILE_LIST restoration, target-specific SHELL/.SHELLFLAGS overrides, and double-colon public recipes, are outside the local Make trust boundary.
+  The harness reproduces those caller-controlled paths and separately proves
+  that a later makefile without `MAKEFILE_LIST` restoration is rejected.
 - Hosted Android packages are installed with the runner's preinstalled
   `$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager`; the workflow does not
   depend on a third-party SDK setup action outside the repository's allowed

@@ -98,6 +98,14 @@ assert that the activity remains stable and denial remains settled across
 activity recreation; this does not prove permission grant, camera preview, or
 capture behavior.
 
+Startup makefiles can execute parse-time Make functions before the repository
+Makefile rejects them. Caller-supplied later makefiles, including target-specific MAKEFILE_LIST restoration, target-specific SHELL/.SHELLFLAGS overrides, and double-colon public recipes, are outside the local Make trust boundary.
+The regression harness reproduces those later-makefile false-success paths and
+also keeps a marker-backed rejecting control for later makefiles that do not
+restore `MAKEFILE_LIST`. For repository-controlled verification, invoke
+`/usr/bin/make` without `MAKEFILES` and without extra `-f` inputs, or use the
+hosted workflow and trusted verifier.
+
 Focused Gradle commands are available after Android SDK configuration:
 
 ```sh
@@ -215,7 +223,9 @@ contracts as camera execution.
   display.
 - Unsupported-camera dialogs also require an attached activity before display.
 - Root Makefile and Gradle wrapper commands resolve the repository path from the
-  Makefile itself, including out-of-tree `make -f` verification.
+  Makefile itself for the repository-controlled invocation, including
+  out-of-tree `make -f` verification without caller startup files or extra
+  makefiles.
 - Trusted pull-request validation is owned by the base branch, runs isolated
   Python, validates exact reviewed semantic bytes, and rejects candidate
   workflow/script changes before any later Android execution can be considered.
