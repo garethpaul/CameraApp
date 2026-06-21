@@ -1,5 +1,13 @@
 # CameraApp Changes
 
+## 2026-06-21
+
+- Bound the public verification targets to the repository Makefile, canonical
+  root, system shell, literal Android/JDK/Gradle inputs, and executing Make
+  modes, with a hermetic hostile-invocation regression harness.
+- Invoke the normal hosted gate through `/usr/bin/make` while preserving the
+  base-owned trusted pull-request verifier and full API 36 instrumentation.
+
 ## 2026-06-20
 
 - Added a base-owned trusted `pull_request_target` bootstrap that treats

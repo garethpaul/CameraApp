@@ -174,6 +174,7 @@ for path in \
   "Application/src/main/res/layout-land/fragment_camera2_basic.xml" \
   "Application/tests/AndroidManifest.xml" \
   "Application/tests/src/com/example/android/camera2basic/tests/SampleTests.java" \
+  "scripts/test-makefile-root.sh" \
   "Application/src/main/java/com/example/android/camera2basic/Camera2BasicFragment.java"; do
   require_file "$path"
 done
@@ -194,8 +195,8 @@ fi
 if ! grep -Fq "Android lint must produce zero-finding debug and release XML reports." "$ROOT_DIR/Makefile" || \
    ! grep -Fq "grep -Eq '<issue([[:space:]>])'" "$ROOT_DIR/Makefile" || \
    ! grep -Fq ":Application:assembleDebugAndroidTest" "$ROOT_DIR/Makefile" || \
-   ! grep -Fq 'SKIP_ANDROID_INSTRUMENTATION ?= 0' "$ROOT_DIR/Makefile" || \
-   ! grep -Fq 'GRADLE="$(GRADLE_COMMAND)" "$(ROOT)scripts/run-instrumentation.sh"' "$ROOT_DIR/Makefile"; then
+   ! grep -Fq 'override SKIP_ANDROID_INSTRUMENTATION := 0' "$ROOT_DIR/Makefile" || \
+   ! grep -Fq "GRADLE='\$(REPOSITORY_GRADLE_LITERAL)' /bin/sh '\$(REPOSITORY_ROOT_LITERAL)/scripts/run-instrumentation.sh'" "$ROOT_DIR/Makefile"; then
   printf '%s\n' "Make lint must reject every Android lint finding without suppression." >&2
   exit 1
 fi
@@ -777,7 +778,7 @@ for workflow_contract in \
   '"build-tools;36.1.0"' \
   '"system-images;android-36;google_apis;x86_64"' \
   'sudo chmod 666 /dev/kvm' \
-  'timeout 22m make check'; do
+  'timeout 22m /usr/bin/make check'; do
   if ! grep -Fq "$workflow_contract" "$CI_WORKFLOW"; then
     printf '%s\n' "CI must preserve Android 16 toolchain contract: $workflow_contract" >&2
     exit 1
@@ -1795,8 +1796,8 @@ for instrumentation_plan_contract in \
 done
 
 if ! grep -Fq "actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10" "$ROOT_DIR/.github/workflows/check.yml" ||
-  ! grep -Fq "make check" "$ROOT_DIR/.github/workflows/check.yml"; then
-  printf '%s\n' "GitHub Actions check workflow must check out the repository and run make check." >&2
+  ! grep -Fq "/usr/bin/make check" "$ROOT_DIR/.github/workflows/check.yml"; then
+  printf '%s\n' "GitHub Actions check workflow must check out the repository and run the system Make gate." >&2
   exit 1
 fi
 
@@ -2030,15 +2031,23 @@ if [ ! -f "$ROOT_DIR/Makefile" ]; then
   exit 1
 fi
 
-if ! grep -Fq 'override ROOT := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))' "$ROOT_DIR/Makefile" || \
-   ! grep -Fq 'GRADLE_COMMAND :=' "$ROOT_DIR/Makefile" || \
-   ! grep -Fq '$(GRADLE_COMMAND) -p "$(ROOT)"' "$ROOT_DIR/Makefile"; then
-  printf '%s\n' "Makefile must run Gradle relative to its own repository root and reject command-line overrides." >&2
+if ! grep -Fq '.DEFAULT_GOAL := check' "$ROOT_DIR/Makefile" || \
+   ! grep -Fq 'override ROOT := $(shell' "$ROOT_DIR/Makefile" || \
+   ! grep -Fq 'MAKEFILES must be empty; repository verification requires this Makefile to be loaded alone' "$ROOT_DIR/Makefile" || \
+   ! grep -Fq 'non-executing or error-ignoring MAKEFLAGS are not supported for repository verification' "$ROOT_DIR/Makefile" || \
+   ! grep -Fq "'\$(REPOSITORY_GRADLE_LITERAL)' -p '\$(REPOSITORY_ROOT_LITERAL)'" "$ROOT_DIR/Makefile"; then
+  printf '%s\n' "Makefile must preserve repository-root, system-Make, startup-file, and execution-mode authority." >&2
   exit 1
 fi
 
-if [ "$(grep -Fc '$(GRADLE_COMMAND) -p "$(ROOT)"' "$ROOT_DIR/Makefile")" -ne 4 ]; then
+if [ "$(grep -Fc "'\$(REPOSITORY_GRADLE_LITERAL)' -p '\$(REPOSITORY_ROOT_LITERAL)'" "$ROOT_DIR/Makefile")" -ne 4 ]; then
   printf '%s\n' "Makefile must root both lint variants, test, and build Gradle tasks." >&2
+  exit 1
+fi
+
+if [ ! -x "$ROOT_DIR/scripts/test-makefile-root.sh" ] || \
+   ! sh -n "$ROOT_DIR/scripts/test-makefile-root.sh"; then
+  printf '%s\n' "Make authority regression harness must remain executable and syntactically valid." >&2
   exit 1
 fi
 

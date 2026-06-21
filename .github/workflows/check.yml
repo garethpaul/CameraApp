@@ -42,4 +42,4 @@ jobs:
       - name: Run full verification and instrumentation
         run: |
           /usr/bin/python3 -I -S -B -m unittest discover -s trusted-verifier/tests -p 'test_*.py' -v
-          timeout 22m make check
+          timeout 22m /usr/bin/make check

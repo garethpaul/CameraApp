@@ -85,10 +85,11 @@ Run the trusted bootstrap regression suite directly:
 Run the complete build gate with explicit toolchain paths:
 
 ```sh
-JAVA_HOME=/path/to/jdk-17 ANDROID_HOME=/path/to/android-sdk make check
+JAVA_HOME=/path/to/jdk-17 ANDROID_HOME=/path/to/android-sdk /usr/bin/make check
 ```
 
-`make check` runs the source contract, debug and release lint, instrumentation
+`/usr/bin/make check` runs the source contract, Make authority regressions,
+debug and release lint, instrumentation
 APK assembly and execution, and debug APK assembly. The lint gate requires zero findings;
 only preview-SDK availability advisories are disabled while API 37 remains a
 preview. The hosted API 36 gate is configured to execute pre-permission
@@ -113,7 +114,7 @@ access to Gradle's HTTPS distribution service.
 
 GitHub Actions installs JDK 17, Android SDK platform 36, Build Tools 36.1.0, and
 the API 36 Google APIs emulator image, then runs the trusted bootstrap unit
-suite and the same `make check` gate on pushes, pull requests, and manual
+suite and the same `/usr/bin/make check` gate on pushes, pull requests, and manual
 dispatches. The workflow uses commit-pinned actions, read-only repository
 access, a bounded runtime, and does not persist checkout credentials.
 
