@@ -41,10 +41,12 @@ Helpful reports include:
 - Failed preview callbacks suppress stale failure UI without invoking the already-closed session.
 - Review found file, document, data, or media parsing flows; changes in those areas should receive security-focused review before merge.
 - Dependency manifests detected: build.gradle. Dependency updates should preserve lockfiles when present and avoid introducing packages without a clear maintenance reason.
-- GitHub Actions runs the guarded `make check` baseline with a commit-pinned
+- GitHub Actions runs the guarded `/usr/bin/make check` baseline with a commit-pinned
   checkout action, read-only repository access, JDK 17, and pinned Android SDK
   components; review workflow, Gradle, and checker changes as part of the
   supply-chain surface.
+- The Make gate rejects startup makefiles, later recipe replacement,
+  non-executing/error-ignoring modes, and Make syntax in toolchain inputs.
 - Hosted Android packages are installed with the runner's preinstalled
   `$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager`; the workflow does not
   depend on a third-party SDK setup action outside the repository's allowed
