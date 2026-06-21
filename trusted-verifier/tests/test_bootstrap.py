@@ -5,6 +5,7 @@ import shutil
 import subprocess
 import tempfile
 import unittest
+from unittest import mock
 from pathlib import Path
 
 
@@ -13,8 +14,14 @@ TRUSTED = ROOT / "trusted-verifier"
 WORKFLOW = ".github/workflows/check.yml"
 TRUSTED_WORKFLOW = ROOT / ".github/workflows/trusted-cameraapp-gate.yml"
 CI_CHECK = "scripts/ci-check.sh"
-BASE_SHA = "31ef456ccdba0527407a6ec253e1b5e9bbbe6a1a"
-TARGET = "Application/tests/src/com/example/android/camera2basic/tests/SampleTests.java"
+AUTHORIZED_PATHS = {
+    "README.md",
+    "SECURITY.md",
+    "docs/plans/2026-06-21-cameraapp-make-authority.md",
+    "scripts/check-baseline.sh",
+    "scripts/test-makefile-root.sh",
+}
+UNAUTHORIZED_PATH = "Application/build.gradle"
 
 
 def run(command, cwd=None, env=None):
@@ -127,9 +134,11 @@ class TrustedDirectGateBootstrapTests(unittest.TestCase):
         trusted_workflow.parent.mkdir(parents=True)
         shutil.copy2(TRUSTED_WORKFLOW, trusted_workflow)
         shutil.copytree(TRUSTED, self.base / "trusted-verifier", ignore=shutil.ignore_patterns("__pycache__"))
-        target = self.base / TARGET
-        target.parent.mkdir(parents=True)
-        target.write_text("pre-reviewed CameraApp semantic bytes\n", encoding="utf-8")
+        policy = json.loads((TRUSTED / "policy.json").read_text(encoding="utf-8"))
+        for path in policy["expected_files"]:
+            target = self.base / path
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text("pre-reviewed CameraApp semantic bytes\n", encoding="utf-8")
 
         git(self.base, "add", ".")
         git(self.base, "commit", "--quiet", "-m", "test: trusted direct gate base")
@@ -139,10 +148,16 @@ class TrustedDirectGateBootstrapTests(unittest.TestCase):
         self.assertEqual(clone.returncode, 0, clone.stdout)
         git(self.candidate, "config", "user.name", "CameraApp Semantic Candidate")
         git(self.candidate, "config", "user.email", "cameraapp-semantic-candidate@example.invalid")
-        (self.candidate / TARGET).write_bytes((TRUSTED / "expected/SampleTests.java").read_bytes())
-        git(self.candidate, "add", TARGET)
+        for path, contract in policy["expected_files"].items():
+            target = self.candidate / path
+            target.write_bytes((TRUSTED / contract["template"]).read_bytes())
+            target.chmod(int(contract["mode"], 8) & 0o777)
+            git(self.candidate, "add", path)
         git(self.candidate, "commit", "--quiet", "-m", "fix: apply reviewed CameraApp semantic bytes")
         return base_sha, git(self.candidate, "rev-parse", "HEAD")
+
+    def policy(self):
+        return json.loads((TRUSTED / "policy.json").read_text(encoding="utf-8"))
 
     def verify_candidate(self, base_sha, head_sha, env=None):
         return run(
@@ -218,7 +233,7 @@ class TrustedDirectGateBootstrapTests(unittest.TestCase):
         text = TRUSTED_WORKFLOW.read_text(encoding="utf-8")
         required = (
             "pull_request_target:",
-            "permissions:\n  contents: read",
+            "permissions:\n  actions: read\n  contents: read",
             "environment:\n      name: cameraapp-trusted-verifier-v1",
             "ref: ${{ github.workflow_sha }}",
             "HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}",
@@ -230,6 +245,8 @@ class TrustedDirectGateBootstrapTests(unittest.TestCase):
             "submodules: false",
             "lfs: false",
             "/usr/bin/python3 -I -S -B trusted-base/trusted-verifier/verify_environment.py",
+            "GITHUB_API_TOKEN: ${{ github.token }}",
+            'GITHUB_API_TOKEN="$GITHUB_API_TOKEN"',
             "/bin/sh -p trusted-base/trusted-verifier/run-hermetic.sh",
         )
         for contract in required:
@@ -248,6 +265,51 @@ class TrustedDirectGateBootstrapTests(unittest.TestCase):
             self.assertNotIn(contract, text)
         self.assertLess(text.index("Verify protected environment policy"), text.index("Fetch candidate as untrusted data"))
         self.assertNotRegex(text, r"(?m)^\s*run:\s*.*candidate")
+
+    def test_environment_api_requests_use_explicit_bearer_token(self):
+        verifier = load_environment_verifier()
+        requests = []
+
+        class Response:
+            status = 200
+
+            @staticmethod
+            def read():
+                return b'{"ok": true}'
+
+        class Connection:
+            def __init__(self, host, timeout, context):
+                self.host = host
+                self.timeout = timeout
+                self.context = context
+
+            def request(self, method, path, headers):
+                requests.append((method, path, headers))
+
+            @staticmethod
+            def getresponse():
+                return Response()
+
+            @staticmethod
+            def close():
+                pass
+
+        with mock.patch.object(verifier.http.client, "HTTPSConnection", Connection):
+            payload = verifier.fetch_json("/repos/garethpaul/CameraApp/environments/test", "test-token")
+
+        self.assertEqual(payload, {"ok": True})
+        self.assertEqual(len(requests), 1)
+        self.assertEqual(requests[0][2]["Authorization"], "Bearer test-token")
+
+        with self.assertRaises(verifier.EnvironmentError):
+            verifier.fetch_json("/repos/garethpaul/CameraApp/environments/test", "")
+
+    def test_policy_authorizes_only_reviewed_documentation_and_harness_paths(self):
+        policy = self.policy()
+
+        self.assertEqual(set(policy["expected_files"]), AUTHORIZED_PATHS)
+        self.assertNotIn(UNAUTHORIZED_PATH, policy["expected_files"])
+        self.assertNotIn(".github/workflows/trusted-cameraapp-gate.yml", policy["expected_files"])
 
     def test_environment_preflight_rejects_environment_or_app_mismatch(self):
         verifier = load_environment_verifier()
@@ -288,7 +350,7 @@ class TrustedDirectGateBootstrapTests(unittest.TestCase):
         self.assertEqual(receipt["status"], "passed")
         self.assertEqual(receipt["trusted_base_sha"], base_sha)
         self.assertEqual(receipt["candidate_head_sha"], head_sha)
-        self.assertEqual(set(receipt["verified_files"]), {TARGET})
+        self.assertEqual(set(receipt["verified_files"]), set(self.policy()["expected_files"]))
 
     def test_candidate_workflow_spoofing_extra_commits_files_and_modes_are_rejected(self):
         cases = {
@@ -299,7 +361,8 @@ class TrustedDirectGateBootstrapTests(unittest.TestCase):
                 "candidate changed-file boundary differs",
             ),
             "extra-file": lambda: (
-                (self.candidate / "SECURITY.md").write_text("extra\n", encoding="utf-8"),
+                (self.candidate / UNAUTHORIZED_PATH).parent.mkdir(parents=True, exist_ok=True),
+                (self.candidate / UNAUTHORIZED_PATH).write_text("extra\n", encoding="utf-8"),
                 self.amend_candidate(),
                 "candidate changed-file boundary differs",
             ),
@@ -311,8 +374,8 @@ class TrustedDirectGateBootstrapTests(unittest.TestCase):
                 "trusted base must be the candidate's sole parent",
             ),
             "mode": lambda: (
-                (self.candidate / TARGET).chmod(0o755),
-                git(self.candidate, "add", TARGET),
+                (self.candidate / sorted(self.policy()["expected_files"])[0]).chmod(0o755),
+                git(self.candidate, "add", sorted(self.policy()["expected_files"])[0]),
                 git(self.candidate, "commit", "--amend", "--quiet", "--no-edit"),
                 git(self.candidate, "rev-parse", "HEAD"),
                 "candidate mode differs from reviewed mode",
@@ -393,7 +456,10 @@ class TrustedDirectGateBootstrapTests(unittest.TestCase):
                 "candidate path uses unsupported separator",
             ),
             "oversized-reviewed-blob": lambda: (
-                (self.candidate / TARGET).write_text("x" * 20001, encoding="utf-8"),
+                (self.candidate / sorted(self.policy()["expected_files"])[0]).write_text(
+                    "x" * (self.policy()["expected_files"][sorted(self.policy()["expected_files"])[0]]["max_bytes"] + 1),
+                    encoding="utf-8",
+                ),
                 self.amend_candidate(),
                 "candidate blob exceeds trusted size limit",
             ),

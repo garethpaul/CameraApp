@@ -1,0 +1,102 @@
+# Security Policy
+
+## Supported Versions
+
+The supported security scope for `CameraApp` is the current default branch, `master`. Older commits, tags, branches, forks, demos, and generated artifacts are not actively supported unless the repository explicitly marks them as maintained.
+
+Project summary: No GitHub description is currently set.
+
+## Reporting a Vulnerability
+
+Please report suspected vulnerabilities through GitHub's private vulnerability reporting or by opening a draft GitHub Security Advisory for `garethpaul/CameraApp` when that option is available. If GitHub does not show a private reporting option for this repository, contact the repository owner through GitHub and avoid posting exploit details publicly until the issue can be assessed.
+
+Do not open a public issue that includes exploit code, secrets, personal data, or detailed reproduction steps for an unpatched vulnerability.
+
+## What to Include
+
+Helpful reports include:
+
+- the affected file, endpoint, permission, dependency, or workflow
+- a concise impact statement explaining what an attacker could do
+- reproduction steps using test data and accounts you control
+- the branch, commit SHA, platform version, device, runtime, or dependency versions used
+- logs, screenshots, or proof-of-concept snippets that demonstrate impact without exposing private data
+
+## Project Security Posture
+
+- This repository appears to be an Android mobile application or sample. The active security scope is the code and documentation on the default branch.
+- Review found authentication, token, or session-related code paths; changes in those areas should receive security-focused review before merge.
+- Review found external API integrations or credential-adjacent configuration; changes in those areas should receive security-focused review before merge.
+- Review found network clients, sockets, web APIs, or service endpoints; changes in those areas should receive security-focused review before merge.
+- Review found mobile permission or privacy-sensitive data handling; changes in those areas should receive security-focused review before merge.
+- Interrupted camera-worker shutdown preserves the interrupt signal and unresolved worker ownership.
+- Stale camera-device callbacks cannot clear replacement state or finish its activity.
+- Capture-result and still-capture completion callbacks reject stale session ownership before mutating capture state or unlocking focus.
+- Current-session still-capture failures unlock focus and resume preview; stale session failures are ignored.
+- Synchronous still-capture and preview-restart failures restore preview state before Camera2 recovery work can throw.
+- Closed-session still-capture and preview-restart operations use the same
+  recovery path instead of escaping with `IllegalStateException`.
+- Missing still-capture dependencies restore preview state before the capture path returns.
+- Stale camera-session callbacks close before publishing preview state.
+- Failed preview callbacks suppress stale failure UI without invoking the already-closed session.
+- Review found file, document, data, or media parsing flows; changes in those areas should receive security-focused review before merge.
+- Dependency manifests detected: build.gradle. Dependency updates should preserve lockfiles when present and avoid introducing packages without a clear maintenance reason.
+- GitHub Actions runs the guarded `/usr/bin/make check` baseline with a commit-pinned
+  checkout action, read-only repository access, JDK 17, and pinned Android SDK
+  components; review workflow, Gradle, and checker changes as part of the
+  supply-chain surface.
+- The Make gate rejects non-executing/error-ignoring modes and Make syntax in
+  toolchain inputs for repository-controlled invocations. Caller-supplied GNU
+  Make startup files and additional `-f` makefiles remain caller parse
+  authority: startup and later makefiles can execute code before repository
+  checks. Caller-supplied later makefiles, including target-specific MAKEFILE_LIST restoration, target-specific SHELL/.SHELLFLAGS overrides, and double-colon public recipes, are outside the local Make trust boundary.
+  The harness reproduces those caller-controlled paths and separately proves
+  that a later makefile without `MAKEFILE_LIST` restoration is rejected.
+- Hosted Android packages are installed with the runner's preinstalled
+  `$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager`; the workflow does not
+  depend on a third-party SDK setup action outside the repository's allowed
+  Actions policy.
+- Camera access is requested at runtime on API 23 and newer. Camera output
+  configuration and `CameraManager.openCamera` must remain unreachable until
+  permission is granted.
+- Application runtime dependencies are intentionally absent. AndroidX
+  dependencies are limited to the instrumentation test configuration.
+- Hosted instrumentation executes only the pre-permission activity/fragment
+  startup assertion; it does not claim camera preview, capture, or device privacy behavior.
+- CameraApp reports picture-save success only after file output closes
+  successfully, avoiding false persistence claims when local storage fails.
+- Image-save failures log a generic category without exception details or private output paths.
+- Camera runtime diagnostics retain fixed operation categories without exception stack traces or throwable details.
+
+## Mobile Privacy Notes
+
+If this project requests device permissions such as location, camera, microphone, contacts, Bluetooth, health data, or local storage access, reports should describe the permission involved and whether sensitive data can be accessed, persisted, or transmitted unexpectedly. Please avoid testing against real third-party user data or accounts you do not control.
+
+## Dependency and Supply Chain Security
+
+The Gradle 9.6.0 wrapper authenticates its official binary distribution with a
+checked-in SHA-256 before execution. Review all four wrapper files together.
+Hosted Check also uses read-only permissions and a non-persisted checkout token
+so later steps cannot reuse repository credentials.
+
+The trusted pull-request bootstrap uses `pull_request_target` only from the
+base workflow SHA. It checks the candidate as untrusted data, runs isolated
+Python verifier bytes from the base branch, grants no secrets, and relies on the
+`cameraapp-trusted-verifier-v1` protected environment deployment as the required
+merge authority after that environment is configured.
+
+Dependency updates should come from trusted package managers and should keep lockfiles in sync when lockfiles exist. Do not commit credentials, private keys, tokens, generated secrets, or machine-local configuration. If a vulnerability depends on a compromised package, typosquatting risk, insecure transitive dependency, or unsafe build step, include the package name, affected version, and the path through which it is used.
+
+## Safe Research Guidelines
+
+Good-faith research is welcome when it stays within these boundaries:
+
+- use only accounts, devices, data, and infrastructure that you own or have explicit permission to test
+- avoid destructive actions, persistence, spam, phishing, social engineering, or denial-of-service testing
+- minimize access to personal data and stop testing immediately if private data is exposed
+- do not exfiltrate secrets or third-party data; report the minimum evidence needed to verify impact
+- keep vulnerability details confidential until the maintainer has assessed the report
+
+## Maintainer Response
+
+The maintainer will review complete reports as availability allows, prioritize issues by exploitability and impact, and coordinate a fix or mitigation when the affected code is still maintained. For sample, archived, or educational repositories, the likely remediation may be documentation, dependency updates, or clearly marking unsupported code rather than a production-style patch release.

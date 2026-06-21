@@ -2,6 +2,7 @@
 import argparse
 import http.client
 import json
+import os
 import re
 import ssl
 import sys
@@ -21,7 +22,9 @@ def require_isolated_python():
         raise EnvironmentError("environment verifier requires isolated Python with -I -S")
 
 
-def fetch_json(path):
+def fetch_json(path, token):
+    if not token:
+        raise EnvironmentError("GitHub API token is required")
     connection = http.client.HTTPSConnection(
         "api.github.com",
         timeout=15,
@@ -33,6 +36,7 @@ def fetch_json(path):
             path,
             headers={
                 "Accept": "application/vnd.github+json",
+                "Authorization": f"Bearer {token}",
                 "User-Agent": "cameraapp-trusted-environment-verifier/1",
                 "X-GitHub-Api-Version": "2022-11-28",
             },
@@ -83,10 +87,11 @@ def verify(arguments):
     require_isolated_python()
     if not REPOSITORY_PATTERN.fullmatch(arguments.repository):
         raise EnvironmentError("repository must be an owner/name slug")
+    token = os.environ.get("GITHUB_API_TOKEN", "")
     encoded_environment = urllib.parse.quote(arguments.environment, safe="")
     root = f"/repos/{arguments.repository}/environments/{encoded_environment}"
-    environment = fetch_json(root)
-    policies = fetch_json(f"{root}/deployment-branch-policies?per_page=100")
+    environment = fetch_json(root, token)
+    policies = fetch_json(f"{root}/deployment-branch-policies?per_page=100", token)
     validate_environment(environment, policies, arguments.environment, arguments.deployment_app)
     print("protected environment policy is configured for exact master deployments")
 

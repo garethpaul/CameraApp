@@ -67,6 +67,7 @@ TRUSTED_GATE_RUNNER="$ROOT_DIR/trusted-verifier/run-hermetic.sh"
 TRUSTED_GATE_VERIFIER="$ROOT_DIR/trusted-verifier/verify_candidate.py"
 TRUSTED_ENV_VERIFIER="$ROOT_DIR/trusted-verifier/verify_environment.py"
 TRUSTED_GATE_TEST="$ROOT_DIR/trusted-verifier/tests/test_bootstrap.py"
+MAKE_AUTHORITY_PLAN="$ROOT_DIR/docs/plans/2026-06-21-cameraapp-make-authority.md"
 BACKUP_RULES="$ROOT_DIR/Application/src/main/res/xml/backup_rules.xml"
 DATA_EXTRACTION_RULES="$ROOT_DIR/Application/src/main/res/xml/data_extraction_rules.xml"
 
@@ -2057,6 +2058,26 @@ if [ ! -x "$ROOT_DIR/scripts/test-makefile-root.sh" ] || \
   printf '%s\n' "Make authority regression harness must remain executable and syntactically valid." >&2
   exit 1
 fi
+
+for make_harness_contract in \
+  "startup parse-time caller boundary" \
+  "target-specific MAKEFILE_LIST restoration caller boundary" \
+  "target-specific override shell false-success boundary" \
+  "later double-colon append caller boundary" \
+  "marker-backed later Makefile rejection"; do
+  if ! grep -Fq "$make_harness_contract" "$ROOT_DIR/scripts/test-makefile-root.sh"; then
+    printf '%s\n' "Make authority regression harness must preserve marker coverage: $make_harness_contract" >&2
+    exit 1
+  fi
+done
+
+MAKE_CALLER_AUTHORITY_BOUNDARY="Caller-supplied later makefiles, including target-specific MAKEFILE_LIST restoration, target-specific SHELL/.SHELLFLAGS overrides, and double-colon public recipes, are outside the local Make trust boundary."
+for make_boundary_doc in "$README" "$ROOT_DIR/SECURITY.md" "$MAKE_AUTHORITY_PLAN"; do
+  if ! grep -Fq "$MAKE_CALLER_AUTHORITY_BOUNDARY" "$make_boundary_doc"; then
+    printf '%s\n' "Make authority docs must preserve caller-authority boundary: $make_boundary_doc" >&2
+    exit 1
+  fi
+done
 
 if ! grep -Fq "runs-on: ubuntu-24.04" "$ROOT_DIR/.github/workflows/check.yml" || \
    ! grep -Fq "cancel-in-progress: true" "$ROOT_DIR/.github/workflows/check.yml"; then

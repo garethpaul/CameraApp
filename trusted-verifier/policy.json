@@ -1,11 +1,35 @@
 {
   "bootstrap_exact_default": "31ef456ccdba0527407a6ec253e1b5e9bbbe6a1a",
   "expected_files": {
-    "Application/tests/src/com/example/android/camera2basic/tests/SampleTests.java": {
+    "README.md": {
       "max_bytes": 20000,
       "mode": "100644",
-      "sha256": "38617c16a5ef8f67b47b645d78127d403f67cb94dc2a05bb096cc7ce065340ee",
-      "template": "expected/SampleTests.java"
+      "sha256": "cf4917fab093604b7c72b182f9c40da7dd7e77805f3e2126557f0b0efcd9f2c9",
+      "template": "expected/pr32/README.md"
+    },
+    "SECURITY.md": {
+      "max_bytes": 10000,
+      "mode": "100644",
+      "sha256": "ae51085a21903a19635e04fec217b483a9328721cb849063051c24f7432499e0",
+      "template": "expected/pr32/SECURITY.md"
+    },
+    "docs/plans/2026-06-21-cameraapp-make-authority.md": {
+      "max_bytes": 5000,
+      "mode": "100644",
+      "sha256": "b793db5c57ca4b67f1a3a9659035b945ca3acb7e453ef70a9eaced93d28abfda",
+      "template": "expected/pr32/docs/plans/2026-06-21-cameraapp-make-authority.md"
+    },
+    "scripts/check-baseline.sh": {
+      "max_bytes": 120000,
+      "mode": "100755",
+      "sha256": "7c58bf256ae5bde2220ba38f61cd24595d96d3528bed2afa9bc60c8de02a9519",
+      "template": "expected/pr32/scripts/check-baseline.sh"
+    },
+    "scripts/test-makefile-root.sh": {
+      "max_bytes": 12000,
+      "mode": "100755",
+      "sha256": "641131b09b3919a8b4d65bcab19b8c04a13d7a41d4bbad7780ee584ebed5fe04",
+      "template": "expected/pr32/scripts/test-makefile-root.sh"
     }
   },
   "merge_authority": {
@@ -25,6 +49,10 @@
     "trusted-verifier/run-hermetic.sh",
     "trusted-verifier/verify_candidate.py",
     "trusted-verifier/verify_environment.py",
-    "trusted-verifier/expected/SampleTests.java"
+    "trusted-verifier/expected/pr32/README.md",
+    "trusted-verifier/expected/pr32/SECURITY.md",
+    "trusted-verifier/expected/pr32/docs/plans/2026-06-21-cameraapp-make-authority.md",
+    "trusted-verifier/expected/pr32/scripts/check-baseline.sh",
+    "trusted-verifier/expected/pr32/scripts/test-makefile-root.sh"
   ]
 }

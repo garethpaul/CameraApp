@@ -74,3 +74,22 @@ receipt and separately reviewed trusted bytes/config.
 Hosted Android runtime validation still requires JDK 17, Android SDK platform
 36, Build Tools 36.1.0, an API 36 Google APIs emulator image, writable cgroup v2
 containment, and the protected environment described above.
+
+## 2026-06-21 Base-Owned Repair
+
+The environment preflight originally called the GitHub environments API
+without authentication, so hosted runs received HTTP 403 before candidate
+validation. The workflow now grants only `actions: read`, passes the built-in
+workflow token only into the isolated preflight process, and sends it as a
+Bearer token on both environment-policy requests. Candidate code still never
+runs under `pull_request_target`, and the environment remains restricted to the
+single `master` deployment branch policy.
+
+The exact-file policy now authorizes only the reviewed documentation bytes from
+closed PR #32 plus repaired successor bytes for its two Make harness scripts.
+The authorized paths are `README.md`, `SECURITY.md`, the Make-authority plan,
+and those two scripts. Application, Gradle, workflow, and all other paths remain
+outside the accepted candidate boundary. PR #32 remains closed because its
+parent predates this base-owned repair and its baseline script carries the old
+policy assertion; any later publication must be a new single commit directly
+on the repaired default branch.

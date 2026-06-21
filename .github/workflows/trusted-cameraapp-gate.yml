@@ -5,6 +5,7 @@ on:
     types: [opened, synchronize, reopened, ready_for_review]
 
 permissions:
+  actions: read
   contents: read
 
 concurrency:
@@ -37,6 +38,7 @@ jobs:
           REPOSITORY_SLUG: ${{ github.event.repository.full_name }}
           ENVIRONMENT_NAME: cameraapp-trusted-verifier-v1
           DEPLOYMENT_APP_SLUG: github-actions
+          GITHUB_API_TOKEN: ${{ github.token }}
         run: |
           exec /usr/bin/env -i \
             HOME=/tmp/cameraapp-workflow-home \
@@ -46,6 +48,7 @@ jobs:
             REPOSITORY_SLUG="$REPOSITORY_SLUG" \
             ENVIRONMENT_NAME="$ENVIRONMENT_NAME" \
             DEPLOYMENT_APP_SLUG="$DEPLOYMENT_APP_SLUG" \
+            GITHUB_API_TOKEN="$GITHUB_API_TOKEN" \
             /usr/bin/python3 -I -S -B trusted-base/trusted-verifier/verify_environment.py \
               --repository "$REPOSITORY_SLUG" \
               --environment "$ENVIRONMENT_NAME" \

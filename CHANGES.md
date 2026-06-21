@@ -2,6 +2,10 @@
 
 ## 2026-06-21
 
+- Repaired the base-owned environment preflight with only `actions: read`,
+  authenticated API reads, and exact authorization for the reviewed #32
+  documentation plus repaired Make-harness successor bytes while keeping
+  runtime paths excluded.
 - Bound the public verification targets to the repository Makefile, canonical
   root, system shell, literal Android/JDK/Gradle inputs, and executing Make
   modes, with a hermetic hostile-invocation regression harness.
