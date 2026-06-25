@@ -1,5 +1,51 @@
 # CameraApp Changes
 
+## 2026-06-25 15:40 PDT - P1 - Recover failed preview startup ownership
+
+### Summary
+
+Synchronous preview-start failures no longer leave a failed capture session,
+request builder, or request published as current shared camera state.
+
+### Work completed
+
+- Added an ownership-guarded `onConfigured()` recovery path for camera access,
+  closed-session, and invalid repeating-request failures.
+- Clear callback-owned preview fields before closing the failed session.
+- Added an exact source contract and documented the reviewed behavior.
+
+### Threads
+
+- Continued: Camera2 callback ownership and synchronous failure recovery.
+- Started or stopped: none.
+
+### Files changed
+
+- `Camera2BasicFragment.java` - recover failed preview startup ownership.
+- `scripts/check-baseline.sh` - enforce unique cleanup markers and ordering.
+- Repository guidance and the completed preview-recovery implementation plan.
+
+### Validation
+
+- RED: the source baseline rejected the missing ownership recovery marker.
+- GREEN: focused, hostile mutation, full, trusted, hosted, and review evidence
+  remains pending.
+
+### Bugs / findings
+
+- P1: `onConfigured()` published shared preview state before a repeating request
+  could fail synchronously, leaving an unusable session visible to later work.
+
+### Blockers
+
+- The base-owned exact trusted-verifier policy must be bootstrapped and merged
+  separately before this semantic child can be authorized.
+
+### Next action
+
+- Build the exact policy templates, merge the independently reviewed bootstrap,
+  then apply this repair as one direct child of the new default branch.
+
 ## 2026-06-25 16:00 PDT - P1 - Authorize preview startup recovery bytes
 
 ### Summary

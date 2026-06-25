@@ -169,6 +169,8 @@ contracts as camera execution.
 - Interrupted camera-worker shutdown preserves the interrupt signal and unresolved worker ownership.
 - Camera-device disconnect and error callbacks close their callback device, but only the current device may clear shared state or finish the activity.
 - Capture-result and still-capture completion callbacks reject stale session ownership before mutating capture state or unlocking focus.
+- Preview-session startup failures clear callback-owned shared preview fields
+  and close the failed session instead of publishing unusable camera state.
 - Current-session still-capture failures unlock focus and resume preview; stale session failures are ignored.
 - Synchronous still-capture and preview-restart failures restore preview state before Camera2 recovery work can throw.
 - Closed-session still-capture and preview-restart operations use the same
@@ -254,6 +256,8 @@ contracts as camera execution.
   density and zero-finding lint boundary.
 - See `docs/plans/2026-06-20-cameraapp-trusted-direct-gate-v3.md` for the
   trusted direct-gate bootstrap and protected-environment rollout.
+- See `docs/plans/2026-06-25-cameraapp-preview-session-recovery.md` for
+  synchronous preview-start ownership recovery.
 
 ## Contributing
 

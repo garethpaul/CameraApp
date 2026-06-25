@@ -44,6 +44,7 @@ SYNCHRONOUS_CAPTURE_RECOVERY_PLAN="$ROOT_DIR/docs/plans/2026-06-16-cameraapp-syn
 MISSING_CAPTURE_DEPENDENCY_PLAN="$ROOT_DIR/docs/plans/2026-06-16-cameraapp-missing-capture-dependency-recovery.md"
 CLOSED_SESSION_CAPTURE_RECOVERY_PLAN="$ROOT_DIR/docs/plans/2026-06-16-cameraapp-closed-session-capture-recovery.md"
 FOCUS_STATE_RECOVERY_PLAN="$ROOT_DIR/docs/plans/2026-06-25-cameraapp-focus-state-recovery.md"
+PREVIEW_SESSION_RECOVERY_PLAN="$ROOT_DIR/docs/plans/2026-06-25-cameraapp-preview-session-recovery.md"
 INSTRUMENTATION_EXECUTION_PLAN="$ROOT_DIR/docs/plans/2026-06-16-cameraapp-instrumentation-execution.md"
 PERMISSION_DENIAL_INSTRUMENTATION_PLAN="$ROOT_DIR/docs/plans/2026-06-16-cameraapp-permission-denial-instrumentation.md"
 PERMISSION_DENIAL_RECREATION_PLAN="$ROOT_DIR/docs/plans/2026-06-17-cameraapp-permission-denial-recreation.md"
@@ -153,6 +154,7 @@ for path in \
   "docs/plans/2026-06-20-cameraapp-trusted-direct-gate-v3.md" \
   "docs/plans/2026-06-25-cameraapp-focus-trusted-policy.md" \
   "docs/plans/2026-06-25-cameraapp-preview-trusted-policy.md" \
+  "docs/plans/2026-06-25-cameraapp-preview-session-recovery.md" \
   "scripts/run-instrumentation.sh" \
   "scripts/tests/run-instrumentation-cleanup-test.sh" \
   "trusted-verifier/policy.json" \
@@ -968,9 +970,10 @@ if grep -Fq 'printStackTrace()' "$FRAGMENT"; then
   exit 1
 fi
 
-if [ "$(grep -Fc 'catch (CameraAccessException e)' "$FRAGMENT")" -ne 4 ] || \
-   [ "$(grep -Fc 'catch (CameraAccessException | IllegalStateException e)' "$FRAGMENT")" -ne 4 ]; then
-  printf '%s\n' "Camera error redaction must preserve four access-only and four closed-session recovery boundaries." >&2
+if [ "$(grep -Fc 'catch (CameraAccessException e)' "$FRAGMENT")" -ne 3 ] || \
+   [ "$(grep -Fc 'catch (CameraAccessException | IllegalStateException e)' "$FRAGMENT")" -ne 4 ] || \
+   [ "$(grep -Fc 'catch (CameraAccessException | IllegalStateException |' "$FRAGMENT")" -ne 1 ]; then
+  printf '%s\n' "Camera error redaction must preserve three access-only, four closed-session, and one preview-start recovery boundary." >&2
   exit 1
 fi
 
@@ -1068,6 +1071,38 @@ configure_failed_callback=$(printf '%s\n' "$preview_session_method" | awk '
   capture && /^[[:space:]]*}, null$/ { exit }
   capture { print }
 ')
+
+preview_start_recovery=$(printf '%s\n' "$configured_callback" | awk '
+  /catch \(CameraAccessException \| IllegalStateException \|/ { capture = 1 }
+  capture { print }
+')
+if [ "$(printf '%s\n' "$preview_start_recovery" | grep -Fc "IllegalArgumentException e)")" -ne 1 ]; then
+  printf '%s\n' "Preview-start recovery must include invalid repeating-request failures." >&2
+  exit 1
+fi
+for recovery_marker in \
+  "if (mCaptureSession == cameraCaptureSession)" \
+  "mCaptureSession = null;" \
+  "mPreviewRequestBuilder = null;" \
+  "mPreviewRequest = null;" \
+  "cameraCaptureSession.close();"; do
+  if [ "$(printf '%s\n' "$preview_start_recovery" | grep -Fc "$recovery_marker")" -ne 1 ]; then
+    printf '%s\n' "Preview-start failure recovery marker must be unique: $recovery_marker" >&2
+    exit 1
+  fi
+done
+preview_recovery_guard_line=$(printf '%s\n' "$preview_start_recovery" | grep -nF "if (mCaptureSession == cameraCaptureSession)" | cut -d: -f1)
+preview_session_clear_line=$(printf '%s\n' "$preview_start_recovery" | grep -nF "mCaptureSession = null;" | cut -d: -f1)
+preview_builder_clear_line=$(printf '%s\n' "$preview_start_recovery" | grep -nF "mPreviewRequestBuilder = null;" | cut -d: -f1)
+preview_request_clear_line=$(printf '%s\n' "$preview_start_recovery" | grep -nF "mPreviewRequest = null;" | cut -d: -f1)
+preview_session_close_line=$(printf '%s\n' "$preview_start_recovery" | grep -nF "cameraCaptureSession.close();" | cut -d: -f1)
+if [ "$preview_recovery_guard_line" -ge "$preview_session_clear_line" ] || \
+  [ "$preview_session_clear_line" -ge "$preview_builder_clear_line" ] || \
+  [ "$preview_builder_clear_line" -ge "$preview_request_clear_line" ] || \
+  [ "$preview_request_clear_line" -ge "$preview_session_close_line" ]; then
+  printf '%s\n' "Preview-start failure must clear owned preview state before closing the failed session." >&2
+  exit 1
+fi
 
 if [ "$(grep -Fc "private volatile CameraDevice mCameraDevice;" "$FRAGMENT")" -ne 1 ]; then
   printf '%s\n' "Camera device ownership must remain visible across lifecycle and callback threads." >&2
@@ -1555,7 +1590,6 @@ done
 
 for configured_marker in \
   "if (mCameraDevice != cameraDevice)" \
-  "cameraCaptureSession.close();" \
   "return;" \
   "mPreviewRequestBuilder = previewRequestBuilder;" \
   "mCaptureSession = cameraCaptureSession;" \
@@ -1566,9 +1600,13 @@ for configured_marker in \
     exit 1
   fi
 done
+if [ "$(printf '%s\n' "$configured_callback" | grep -Fc "cameraCaptureSession.close();")" -ne 2 ]; then
+  printf '%s\n' "Configured preview callbacks must close stale and failed sessions exactly once each." >&2
+  exit 1
+fi
 
 stale_guard_line=$(printf '%s\n' "$configured_callback" | grep -nF "if (mCameraDevice != cameraDevice)" | cut -d: -f1)
-stale_close_line=$(printf '%s\n' "$configured_callback" | grep -nF "cameraCaptureSession.close();" | cut -d: -f1)
+stale_close_line=$(printf '%s\n' "$configured_callback" | grep -nF "cameraCaptureSession.close();" | head -n 1 | cut -d: -f1)
 stale_return_line=$(printf '%s\n' "$configured_callback" | grep -nF "return;" | cut -d: -f1)
 builder_publish_line=$(printf '%s\n' "$configured_callback" | grep -nF "mPreviewRequestBuilder = previewRequestBuilder;" | cut -d: -f1)
 session_publish_line=$(printf '%s\n' "$configured_callback" | grep -nF "mCaptureSession = cameraCaptureSession;" | cut -d: -f1)
@@ -2300,6 +2338,13 @@ if ! grep -Fq "Status: Completed" "$PREVIEW_TRUSTED_POLICY_PLAN" || \
    ! grep -Fq "one direct child" "$PREVIEW_TRUSTED_POLICY_PLAN" || \
    ! grep -Fq "exact eight-file synthetic semantic child" "$PREVIEW_TRUSTED_POLICY_PLAN"; then
   printf '%s\n' "CameraApp preview trusted policy plan must record status, topology, and exact-child evidence." >&2
+  exit 1
+fi
+
+if ! grep -Fq "Status: Completed" "$PREVIEW_SESSION_RECOVERY_PLAN" || \
+   ! grep -Fq "RED: the source baseline rejected the missing preview ownership guard" "$PREVIEW_SESSION_RECOVERY_PLAN" || \
+   ! grep -Fq "exact-head Codex review" "$PREVIEW_SESSION_RECOVERY_PLAN"; then
+  printf '%s\n' "CameraApp preview session recovery plan must record status, red evidence, and merge gates." >&2
   exit 1
 fi
 

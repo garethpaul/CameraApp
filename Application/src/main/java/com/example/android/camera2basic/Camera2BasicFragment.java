@@ -799,7 +799,14 @@ public class Camera2BasicFragment extends Fragment implements View.OnClickListen
                                 mPreviewRequest = previewRequestBuilder.build();
                                 cameraCaptureSession.setRepeatingRequest(mPreviewRequest,
                                         mCaptureCallback, mBackgroundHandler);
-                            } catch (CameraAccessException e) {
+                            } catch (CameraAccessException | IllegalStateException |
+                                     IllegalArgumentException e) {
+                                if (mCaptureSession == cameraCaptureSession) {
+                                    mCaptureSession = null;
+                                    mPreviewRequestBuilder = null;
+                                    mPreviewRequest = null;
+                                }
+                                cameraCaptureSession.close();
                                 Log.e(TAG, "Unable to start camera preview.");
                             }
                         }
