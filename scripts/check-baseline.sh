@@ -43,6 +43,7 @@ CAPTURE_FAILURE_RECOVERY_PLAN="$ROOT_DIR/docs/plans/2026-06-16-cameraapp-capture
 SYNCHRONOUS_CAPTURE_RECOVERY_PLAN="$ROOT_DIR/docs/plans/2026-06-16-cameraapp-synchronous-capture-recovery.md"
 MISSING_CAPTURE_DEPENDENCY_PLAN="$ROOT_DIR/docs/plans/2026-06-16-cameraapp-missing-capture-dependency-recovery.md"
 CLOSED_SESSION_CAPTURE_RECOVERY_PLAN="$ROOT_DIR/docs/plans/2026-06-16-cameraapp-closed-session-capture-recovery.md"
+FOCUS_STATE_RECOVERY_PLAN="$ROOT_DIR/docs/plans/2026-06-25-cameraapp-focus-state-recovery.md"
 INSTRUMENTATION_EXECUTION_PLAN="$ROOT_DIR/docs/plans/2026-06-16-cameraapp-instrumentation-execution.md"
 PERMISSION_DENIAL_INSTRUMENTATION_PLAN="$ROOT_DIR/docs/plans/2026-06-16-cameraapp-permission-denial-instrumentation.md"
 PERMISSION_DENIAL_RECREATION_PLAN="$ROOT_DIR/docs/plans/2026-06-17-cameraapp-permission-denial-recreation.md"
@@ -965,9 +966,9 @@ if grep -Fq 'printStackTrace()' "$FRAGMENT"; then
   exit 1
 fi
 
-if [ "$(grep -Fc 'catch (CameraAccessException e)' "$FRAGMENT")" -ne 6 ] || \
-   [ "$(grep -Fc 'catch (CameraAccessException | IllegalStateException e)' "$FRAGMENT")" -ne 2 ]; then
-  printf '%s\n' "Camera error redaction must preserve six access-only and two closed-session recovery boundaries." >&2
+if [ "$(grep -Fc 'catch (CameraAccessException e)' "$FRAGMENT")" -ne 4 ] || \
+   [ "$(grep -Fc 'catch (CameraAccessException | IllegalStateException e)' "$FRAGMENT")" -ne 4 ]; then
+  printf '%s\n' "Camera error redaction must preserve four access-only and four closed-session recovery boundaries." >&2
   exit 1
 fi
 
@@ -1124,6 +1125,122 @@ still_capture_method=$(awk '
   capture && /private void unlockFocus\(\)/ { exit }
   capture { print }
 ' "$FRAGMENT")
+
+lock_focus_method=$(awk '
+  /private void lockFocus\(\)/ { capture = 1 }
+  capture && /private void runPrecaptureSequence\(\)/ { exit }
+  capture { print }
+' "$FRAGMENT")
+lock_focus_dependency_guard=$(printf '%s\n' "$lock_focus_method" | awk '
+  /if \(mPreviewRequestBuilder == null \|\| mCaptureSession == null\)/ { capture = 1 }
+  capture && /try \{/ { exit }
+  capture { print }
+')
+for recovery_marker in \
+  "if (mPreviewRequestBuilder == null || mCaptureSession == null)" \
+  "mState = STATE_PREVIEW;" \
+  'showToast("Camera unavailable");' \
+  "return;"; do
+  if [ "$(printf '%s\n' "$lock_focus_dependency_guard" | grep -Fc "$recovery_marker")" -ne 1 ]; then
+    printf '%s\n' "Missing focus dependency recovery marker must be unique: $recovery_marker" >&2
+    exit 1
+  fi
+done
+lock_focus_dependency_state_line=$(printf '%s\n' "$lock_focus_dependency_guard" | grep -nF "mState = STATE_PREVIEW;" | cut -d: -f1)
+lock_focus_dependency_return_line=$(printf '%s\n' "$lock_focus_dependency_guard" | grep -nF "return;" | cut -d: -f1)
+if [ "$lock_focus_dependency_state_line" -ge "$lock_focus_dependency_return_line" ]; then
+  printf '%s\n' "Missing focus dependencies must restore preview state before returning." >&2
+  exit 1
+fi
+
+lock_focus_recovery=$(printf '%s\n' "$lock_focus_method" | awk '
+  /catch \(CameraAccessException \| IllegalStateException e\)/ { capture = 1 }
+  capture { print }
+')
+for recovery_marker in \
+  "catch (CameraAccessException | IllegalStateException e)" \
+  "unlockFocus();" \
+  'Log.e(TAG, "Unable to lock camera focus.");'; do
+  if [ "$(printf '%s\n' "$lock_focus_recovery" | grep -Fc "$recovery_marker")" -ne 1 ]; then
+    printf '%s\n' "Focus-lock failure recovery marker must be unique: $recovery_marker" >&2
+    exit 1
+  fi
+done
+lock_focus_state_line=$(printf '%s\n' "$lock_focus_recovery" | grep -nF "unlockFocus();" | cut -d: -f1)
+lock_focus_log_line=$(printf '%s\n' "$lock_focus_recovery" | grep -nF 'Log.e(TAG, "Unable to lock camera focus.");' | cut -d: -f1)
+if [ "$lock_focus_state_line" -ge "$lock_focus_log_line" ]; then
+  printf '%s\n' "Synchronous focus-lock failures must restore preview state before reporting the failure." >&2
+  exit 1
+fi
+
+precapture_method=$(awk '
+  /private void runPrecaptureSequence\(\)/ { capture = 1 }
+  capture && /private void captureStillPicture\(\)/ { exit }
+  capture { print }
+' "$FRAGMENT")
+precapture_dependency_guard=$(printf '%s\n' "$precapture_method" | awk '
+  /if \(mPreviewRequestBuilder == null \|\| mCaptureSession == null\)/ { capture = 1 }
+  capture && /try \{/ { exit }
+  capture { print }
+')
+for recovery_marker in \
+  "if (mPreviewRequestBuilder == null || mCaptureSession == null)" \
+  "mState = STATE_PREVIEW;" \
+  'showToast("Camera unavailable");' \
+  "return;"; do
+  if [ "$(printf '%s\n' "$precapture_dependency_guard" | grep -Fc "$recovery_marker")" -ne 1 ]; then
+    printf '%s\n' "Missing precapture dependency recovery marker must be unique: $recovery_marker" >&2
+    exit 1
+  fi
+done
+precapture_dependency_state_line=$(printf '%s\n' "$precapture_dependency_guard" | grep -nF "mState = STATE_PREVIEW;" | cut -d: -f1)
+precapture_dependency_return_line=$(printf '%s\n' "$precapture_dependency_guard" | grep -nF "return;" | cut -d: -f1)
+if [ "$precapture_dependency_state_line" -ge "$precapture_dependency_return_line" ]; then
+  printf '%s\n' "Missing precapture dependencies must restore preview state before returning." >&2
+  exit 1
+fi
+
+precapture_failure_recovery=$(printf '%s\n' "$precapture_method" | awk '
+  /catch \(CameraAccessException \| IllegalStateException e\)/ { capture = 1 }
+  capture { print }
+')
+for recovery_marker in \
+  "catch (CameraAccessException | IllegalStateException e)" \
+  "unlockFocus();" \
+  'Log.e(TAG, "Unable to run camera precapture sequence.");'; do
+  if [ "$(printf '%s\n' "$precapture_failure_recovery" | grep -Fc "$recovery_marker")" -ne 1 ]; then
+    printf '%s\n' "Precapture failure recovery marker must be unique: $recovery_marker" >&2
+    exit 1
+  fi
+done
+precapture_failure_state_line=$(printf '%s\n' "$precapture_failure_recovery" | grep -nF "unlockFocus();" | cut -d: -f1)
+precapture_failure_log_line=$(printf '%s\n' "$precapture_failure_recovery" | grep -nF 'Log.e(TAG, "Unable to run camera precapture sequence.");' | cut -d: -f1)
+if [ "$precapture_failure_state_line" -ge "$precapture_failure_log_line" ]; then
+  printf '%s\n' "Synchronous precapture failures must restore preview state before reporting the failure." >&2
+  exit 1
+fi
+
+focus_state_guidance='Missing, failed, or closed-session focus and precapture operations restore preview state instead of leaving the capture state machine waiting.'
+for focus_state_doc in AGENTS.md README.md SECURITY.md; do
+  if ! grep -Fq "$focus_state_guidance" "$ROOT_DIR/$focus_state_doc"; then
+    printf '%s\n' "$focus_state_doc must document focus and precapture state recovery." >&2
+    exit 1
+  fi
+done
+focus_request_guidance='Submitted focus or precapture failures clear AF/AE triggers and restart repeating preview when dependencies remain available.'
+for focus_request_doc in AGENTS.md README.md SECURITY.md; do
+  if ! grep -Fq "$focus_request_guidance" "$ROOT_DIR/$focus_request_doc"; then
+    printf '%s\n' "$focus_request_doc must document submitted focus and precapture request recovery." >&2
+    exit 1
+  fi
+done
+if ! grep -Fq 'Keep missing, failed, or closed-session focus and precapture operations from leaving the capture state machine waiting.' "$ROOT_DIR/VISION.md" || \
+   ! grep -Fq 'Keep submitted focus and precapture failures from retaining stale AF/AE triggers or abandoning repeating preview.' "$ROOT_DIR/VISION.md" || \
+   ! grep -Fq 'Camera2 focus and precapture startup failures now restore preview state' "$ROOT_DIR/CHANGES.md"; then
+  printf '%s\n' "Vision and changelog must document focus and precapture state recovery." >&2
+  exit 1
+fi
+
 missing_capture_dependency_guard=$(printf '%s\n' "$still_capture_method" | awk '
   /if \(null == activity \|\| null == mCameraDevice \|\|/ { capture = 1 }
   capture && /\/\/ This is the CaptureRequest.Builder/ { exit }
@@ -1228,6 +1345,7 @@ fi
 for recovery_marker in \
   "mState = STATE_PREVIEW;" \
   "if (mPreviewRequestBuilder == null || mCaptureSession == null || mPreviewRequest == null)" \
+  "CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER_IDLE" \
   "mCaptureSession.capture(mPreviewRequestBuilder.build(), mCaptureCallback," \
   "try {"; do
   if [ "$(printf '%s\n' "$unlock_focus_method" | grep -Fc "$recovery_marker")" -ne 1 ]; then
@@ -1238,9 +1356,15 @@ done
 preview_state_line=$(printf '%s\n' "$unlock_focus_method" | grep -nF "mState = STATE_PREVIEW;" | cut -d: -f1)
 preview_guard_line=$(printf '%s\n' "$unlock_focus_method" | grep -nF "if (mPreviewRequestBuilder == null || mCaptureSession == null || mPreviewRequest == null)" | cut -d: -f1)
 preview_try_line=$(printf '%s\n' "$unlock_focus_method" | grep -nF "try {" | cut -d: -f1)
+precapture_idle_line=$(printf '%s\n' "$unlock_focus_method" | grep -nF "CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER_IDLE" | cut -d: -f1)
+preview_capture_line=$(printf '%s\n' "$unlock_focus_method" | grep -nF "mCaptureSession.capture(mPreviewRequestBuilder.build(), mCaptureCallback," | cut -d: -f1)
 if [ "$preview_state_line" -ge "$preview_guard_line" ] || \
-  [ "$preview_state_line" -ge "$preview_try_line" ]; then
+   [ "$preview_state_line" -ge "$preview_try_line" ]; then
   printf '%s\n' "Focus recovery must publish preview state before nullable or throwing Camera2 work." >&2
+  exit 1
+fi
+if [ "$precapture_idle_line" -ge "$preview_capture_line" ]; then
+  printf '%s\n' "Focus recovery must clear the precapture trigger before submitting its recovery request." >&2
   exit 1
 fi
 
@@ -2160,6 +2284,13 @@ fi
 
 if ! grep -Fq "Status: Completed" "$CAMERA_CLOSE_LOCK_PLAN" || ! grep -Fq "make check" "$CAMERA_CLOSE_LOCK_PLAN"; then
   printf '%s\n' "CameraApp camera close lock plan must record completed status and make check verification." >&2
+  exit 1
+fi
+
+if ! grep -Fq "Status: Completed" "$FOCUS_STATE_RECOVERY_PLAN" || \
+   ! grep -Fq "scripts/check-baseline.sh" "$FOCUS_STATE_RECOVERY_PLAN" || \
+   ! grep -Fq "The local environment has no Android SDK, emulator, or physical camera" "$FOCUS_STATE_RECOVERY_PLAN"; then
+  printf '%s\n' "CameraApp focus state recovery plan must record status, verification, and device limits." >&2
   exit 1
 fi
 

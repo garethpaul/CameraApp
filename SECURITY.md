@@ -37,6 +37,8 @@ Helpful reports include:
 - Closed-session still-capture and preview-restart operations use the same
   recovery path instead of escaping with `IllegalStateException`.
 - Missing still-capture dependencies restore preview state before the capture path returns.
+- Missing, failed, or closed-session focus and precapture operations restore preview state instead of leaving the capture state machine waiting.
+- Submitted focus or precapture failures clear AF/AE triggers and restart repeating preview when dependencies remain available.
 - Stale camera-session callbacks close before publishing preview state.
 - Failed preview callbacks suppress stale failure UI without invoking the already-closed session.
 - Review found file, document, data, or media parsing flows; changes in those areas should receive security-focused review before merge.

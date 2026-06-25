@@ -866,6 +866,7 @@ public class Camera2BasicFragment extends Fragment implements View.OnClickListen
      */
     private void lockFocus() {
         if (mPreviewRequestBuilder == null || mCaptureSession == null) {
+            mState = STATE_PREVIEW;
             showToast("Camera unavailable");
             return;
         }
@@ -877,7 +878,8 @@ public class Camera2BasicFragment extends Fragment implements View.OnClickListen
             mState = STATE_WAITING_LOCK;
             mCaptureSession.setRepeatingRequest(mPreviewRequestBuilder.build(), mCaptureCallback,
                     mBackgroundHandler);
-        } catch (CameraAccessException e) {
+        } catch (CameraAccessException | IllegalStateException e) {
+            unlockFocus();
             Log.e(TAG, "Unable to lock camera focus.");
         }
     }
@@ -888,6 +890,7 @@ public class Camera2BasicFragment extends Fragment implements View.OnClickListen
      */
     private void runPrecaptureSequence() {
         if (mPreviewRequestBuilder == null || mCaptureSession == null) {
+            mState = STATE_PREVIEW;
             showToast("Camera unavailable");
             return;
         }
@@ -899,7 +902,8 @@ public class Camera2BasicFragment extends Fragment implements View.OnClickListen
             mState = STATE_WAITING_PRECAPTURE;
             mCaptureSession.capture(mPreviewRequestBuilder.build(), mCaptureCallback,
                     mBackgroundHandler);
-        } catch (CameraAccessException e) {
+        } catch (CameraAccessException | IllegalStateException e) {
+            unlockFocus();
             Log.e(TAG, "Unable to run camera precapture sequence.");
         }
     }
@@ -974,6 +978,8 @@ public class Camera2BasicFragment extends Fragment implements View.OnClickListen
             // Reset the autofucos trigger
             mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AF_TRIGGER,
                     CameraMetadata.CONTROL_AF_TRIGGER_CANCEL);
+            mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER,
+                    CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER_IDLE);
             mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AE_MODE,
                     CaptureRequest.CONTROL_AE_MODE_ON_AUTO_FLASH);
             mCaptureSession.capture(mPreviewRequestBuilder.build(), mCaptureCallback,
