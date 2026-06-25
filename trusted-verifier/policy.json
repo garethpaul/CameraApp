@@ -16,7 +16,7 @@
     "CHANGES.md": {
       "max_bytes": 15000,
       "mode": "100644",
-      "sha256": "8501b33a3420288e67735629b71624cc35777491fb6333b5c4eba5292c1f1ae0",
+      "sha256": "32223f47e8dc953ac16467f9c045ee202780d948110071f3b69d4da7c04c9ba8",
       "template": "expected/focus-state/CHANGES.md"
     },
     "README.md": {
@@ -46,7 +46,7 @@
     "scripts/check-baseline.sh": {
       "max_bytes": 120000,
       "mode": "100755",
-      "sha256": "77350aabce0dbb1a3e03ce2a223ea2693ca21dc0787e3988d5e387d803000e29",
+      "sha256": "199284f086e445c68e7a7cea2483215cab86c111b326026366583c5c869fe866",
       "template": "expected/focus-state/scripts/check-baseline.sh"
     }
   },

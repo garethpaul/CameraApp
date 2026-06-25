@@ -240,6 +240,11 @@ if [ ! -d "$TRUSTED_GATE_EXPECTED_ROOT" ] || \
   exit 1
 fi
 
+if [ "$(grep -Fc '"mCaptureSession.capture(mPreviewRequestBuilder.build(), mCaptureCallback,"' "$TRUSTED_GATE_EXPECTED_ROOT/scripts/check-baseline.sh")" -ne 3 ]; then
+  printf '%s\n' "Trusted focus-state checker must require one recovery capture marker before ordering checks." >&2
+  exit 1
+fi
+
 for runner_contract in \
   'SYSTEM_IMAGE=${ANDROID_SYSTEM_IMAGE:-system-images;android-36;google_apis;x86_64}' \
   'trap cleanup 0' \
@@ -1223,6 +1228,7 @@ fi
 for recovery_marker in \
   "mState = STATE_PREVIEW;" \
   "if (mPreviewRequestBuilder == null || mCaptureSession == null || mPreviewRequest == null)" \
+  "mCaptureSession.capture(mPreviewRequestBuilder.build(), mCaptureCallback," \
   "try {"; do
   if [ "$(printf '%s\n' "$unlock_focus_method" | grep -Fc "$recovery_marker")" -ne 1 ]; then
     printf '%s\n' "Focus recovery marker must be unique: $recovery_marker" >&2
