@@ -13,8 +13,9 @@ TRUSTED = ROOT / "trusted-verifier"
 WORKFLOW = ".github/workflows/check.yml"
 TRUSTED_WORKFLOW = ROOT / ".github/workflows/trusted-cameraapp-gate.yml"
 CI_CHECK = "scripts/ci-check.sh"
-BASE_SHA = "31ef456ccdba0527407a6ec253e1b5e9bbbe6a1a"
-TARGET = "Application/tests/src/com/example/android/camera2basic/tests/SampleTests.java"
+POLICY = json.loads((TRUSTED / "policy.json").read_text(encoding="utf-8"))
+EXPECTED_FILES = POLICY["expected_files"]
+TARGET = next(path for path, contract in EXPECTED_FILES.items() if contract["mode"] == "100644")
 
 
 def run(command, cwd=None, env=None):
@@ -127,9 +128,11 @@ class TrustedDirectGateBootstrapTests(unittest.TestCase):
         trusted_workflow.parent.mkdir(parents=True)
         shutil.copy2(TRUSTED_WORKFLOW, trusted_workflow)
         shutil.copytree(TRUSTED, self.base / "trusted-verifier", ignore=shutil.ignore_patterns("__pycache__"))
-        target = self.base / TARGET
-        target.parent.mkdir(parents=True)
-        target.write_text("pre-reviewed CameraApp semantic bytes\n", encoding="utf-8")
+        for path, contract in EXPECTED_FILES.items():
+            target = self.base / path
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text("pre-reviewed CameraApp semantic bytes\n", encoding="utf-8")
+            target.chmod(int(contract["mode"], 8) & 0o777)
 
         git(self.base, "add", ".")
         git(self.base, "commit", "--quiet", "-m", "test: trusted direct gate base")
@@ -139,8 +142,12 @@ class TrustedDirectGateBootstrapTests(unittest.TestCase):
         self.assertEqual(clone.returncode, 0, clone.stdout)
         git(self.candidate, "config", "user.name", "CameraApp Semantic Candidate")
         git(self.candidate, "config", "user.email", "cameraapp-semantic-candidate@example.invalid")
-        (self.candidate / TARGET).write_bytes((TRUSTED / "expected/SampleTests.java").read_bytes())
-        git(self.candidate, "add", TARGET)
+        for path, contract in EXPECTED_FILES.items():
+            target = self.candidate / path
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_bytes((TRUSTED / contract["template"]).read_bytes())
+            target.chmod(int(contract["mode"], 8) & 0o777)
+        git(self.candidate, "add", *EXPECTED_FILES)
         git(self.candidate, "commit", "--quiet", "-m", "fix: apply reviewed CameraApp semantic bytes")
         return base_sha, git(self.candidate, "rev-parse", "HEAD")
 
@@ -288,7 +295,7 @@ class TrustedDirectGateBootstrapTests(unittest.TestCase):
         self.assertEqual(receipt["status"], "passed")
         self.assertEqual(receipt["trusted_base_sha"], base_sha)
         self.assertEqual(receipt["candidate_head_sha"], head_sha)
-        self.assertEqual(set(receipt["verified_files"]), {TARGET})
+        self.assertEqual(set(receipt["verified_files"]), set(EXPECTED_FILES))
 
     def test_candidate_workflow_spoofing_extra_commits_files_and_modes_are_rejected(self):
         cases = {
@@ -299,7 +306,7 @@ class TrustedDirectGateBootstrapTests(unittest.TestCase):
                 "candidate changed-file boundary differs",
             ),
             "extra-file": lambda: (
-                (self.candidate / "SECURITY.md").write_text("extra\n", encoding="utf-8"),
+                (self.candidate / "UNREVIEWED.md").write_text("extra\n", encoding="utf-8"),
                 self.amend_candidate(),
                 "candidate changed-file boundary differs",
             ),
@@ -393,7 +400,9 @@ class TrustedDirectGateBootstrapTests(unittest.TestCase):
                 "candidate path uses unsupported separator",
             ),
             "oversized-reviewed-blob": lambda: (
-                (self.candidate / TARGET).write_text("x" * 20001, encoding="utf-8"),
+                (self.candidate / TARGET).write_text(
+                    "x" * (EXPECTED_FILES[TARGET]["max_bytes"] + 1), encoding="utf-8"
+                ),
                 self.amend_candidate(),
                 "candidate blob exceeds trusted size limit",
             ),
