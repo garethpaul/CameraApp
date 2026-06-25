@@ -1,5 +1,57 @@
 # CameraApp Changes
 
+## 2026-06-25 10:45 PDT - P1 - Recover focus and precapture state
+
+### Summary
+
+Camera2 focus and precapture startup failures now restore preview state, clear
+stale AF/AE triggers, and resume repeating preview instead of waiting for
+callbacks that cannot arrive.
+
+### Work completed
+
+- Restored preview state for missing dependencies, Camera2 access failures, and
+  closed-session failures in both focus and precapture startup paths.
+- Routed submitted-request failures through focus unlock and repeating-preview
+  recovery, including an explicit precapture-trigger reset.
+- Added ordered SDK-free contracts and hostile mutations for every recovery
+  branch.
+
+### Threads
+
+- Reviewed: Codex review found missing dependency and trigger recovery; the
+  equivalent final semantic bytes passed independent review.
+- Started, continued, or stopped: none.
+
+### Files changed
+
+- `Camera2BasicFragment.java` - restores camera and capture state.
+- `scripts/check-baseline.sh` - enforces dependency, exception, and trigger
+  recovery.
+- Maintenance docs and plan - record the invariant and device boundary.
+
+### Validation
+
+- `scripts/check-baseline.sh` - passed.
+- `scripts/test-makefile-root.sh` - passed.
+- Five hostile state and trigger recovery mutations - rejected as expected.
+- Exact rebased head review and hosted API 36 checks are required before merge.
+
+### Bugs / findings
+
+- P1: synchronous focus or precapture failures could strand the capture state
+  machine outside preview with stale AF/AE trigger state.
+
+### Blockers
+
+- Local Android compilation and camera execution remain unavailable because the
+  environment has no Android SDK, emulator, or physical camera.
+
+### Next action
+
+- Merge only after the base-owned trusted gate, both API 36 checks, CodeQL, and
+  exact-head Codex review pass.
+
 ## 2026-06-25 10:33 PDT - P1 - Prepare exact focus-recovery authority
 
 ### Summary
