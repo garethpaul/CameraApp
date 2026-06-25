@@ -1,6 +1,6 @@
 # CameraApp Changes
 
-## 2026-06-25 10:45 PDT - P1 - Recover focus and precapture state
+## 2026-06-25 11:15 PDT - P1 - Recover focus and precapture state
 
 ### Summary
 
@@ -51,6 +51,50 @@ callbacks that cannot arrive.
 
 - Merge only after the base-owned trusted gate, both API 36 checks, CodeQL, and
   exact-head Codex review pass.
+
+## 2026-06-25 11:00 PDT - P1 - Close trusted recovery-check gap
+
+### Summary
+
+The exact focus-recovery checker now requires one recovery capture submission
+before comparing its ordering with the AF/AE trigger reset.
+
+### Work completed
+
+- Added a unique recovery-capture marker contract to the reviewed semantic
+  checker and its base-owned policy assertion.
+- Updated the trusted script and changelog digests without broadening the
+  eight-file semantic boundary.
+
+### Threads
+
+- Reviewed: Codex review found the missing-marker false-negative.
+- Started, continued, or stopped: none.
+
+### Files changed
+
+- `scripts/check-baseline.sh` and its trusted template - reject missing or
+  duplicated recovery capture submissions.
+- `trusted-verifier/policy.json` - binds the corrected script and changelog.
+
+### Validation
+
+- Missing recovery-capture hostile mutation - rejected.
+- Trusted verifier tests and exact synthetic child - passed.
+
+### Bugs / findings
+
+- P1: an empty line-number operand inside a shell `if` could emit an error yet
+  allow the checker to continue successfully.
+
+### Blockers
+
+- The old trusted policy must reject this policy-changing bootstrap by design.
+
+### Next action
+
+- Verify, review, and merge this narrow bootstrap, then rebuild PR #34 from the
+  corrected exact templates.
 
 ## 2026-06-25 10:33 PDT - P1 - Prepare exact focus-recovery authority
 
