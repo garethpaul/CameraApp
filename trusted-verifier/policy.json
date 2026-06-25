@@ -1,53 +1,53 @@
 {
-  "bootstrap_exact_default": "b7d170c3375ac136dc8618afefbb80347ed2db33",
+  "bootstrap_exact_default": "d83c5f209bafd5733a1d1937fe0f2efea72a2706",
   "expected_files": {
     "AGENTS.md": {
       "max_bytes": 10000,
       "mode": "100644",
-      "sha256": "301144cb4c27fb43157a1c0bab7acd8183422fcba243cfd7e7c25d1f8eb163dd",
-      "template": "expected/focus-state/AGENTS.md"
+      "sha256": "8887186b0a31a101be106ede322e0e4aed1b05063c61d33d0d1347621bc55463",
+      "template": "expected/preview-session/AGENTS.md"
     },
     "Application/src/main/java/com/example/android/camera2basic/Camera2BasicFragment.java": {
       "max_bytes": 50000,
       "mode": "100644",
-      "sha256": "10e0d534798df96c7d3f68fc596929c67c189c3d21108b8868fc442de94abdaf",
-      "template": "expected/focus-state/Application/src/main/java/com/example/android/camera2basic/Camera2BasicFragment.java"
+      "sha256": "d65aa418827287717a5255a2cd56fc99f3dda44d11886dc7a61215604792a786",
+      "template": "expected/preview-session/Application/src/main/java/com/example/android/camera2basic/Camera2BasicFragment.java"
     },
     "CHANGES.md": {
-      "max_bytes": 15000,
+      "max_bytes": 20000,
       "mode": "100644",
-      "sha256": "32223f47e8dc953ac16467f9c045ee202780d948110071f3b69d4da7c04c9ba8",
-      "template": "expected/focus-state/CHANGES.md"
+      "sha256": "7034b8e964386fb3c36924092a45f6b963c48fa9fbbd53f73352ac5aa097fa12",
+      "template": "expected/preview-session/CHANGES.md"
     },
     "README.md": {
       "max_bytes": 20000,
       "mode": "100644",
-      "sha256": "83630be77902af533ec993c0735dfdfb553c1c25de85fa0c03d557559a1079c1",
-      "template": "expected/focus-state/README.md"
+      "sha256": "3998035d7b992425a95c0b7e3ded252a08190fa4475d993352251854abd1a60c",
+      "template": "expected/preview-session/README.md"
     },
     "SECURITY.md": {
       "max_bytes": 12000,
       "mode": "100644",
-      "sha256": "e93c6c44d0fb1118b6f95a315c102d7126602b9cc18a7f42d5d0b919f3ae1902",
-      "template": "expected/focus-state/SECURITY.md"
+      "sha256": "559b8790b8b1bd650d76915b468f8295096a8c202ec17d87d90c34e0b40b1a65",
+      "template": "expected/preview-session/SECURITY.md"
     },
     "VISION.md": {
       "max_bytes": 10000,
       "mode": "100644",
-      "sha256": "bedba9f71c39e3f188f6118130a9483828c18e780654dbf810e35f6923d20178",
-      "template": "expected/focus-state/VISION.md"
+      "sha256": "0e7e886c8a65a1b9fb5f08ab51c19ed67ff29af8b51503a661b6dd4387f12325",
+      "template": "expected/preview-session/VISION.md"
     },
-    "docs/plans/2026-06-25-cameraapp-focus-state-recovery.md": {
+    "docs/plans/2026-06-25-cameraapp-preview-session-recovery.md": {
       "max_bytes": 5000,
       "mode": "100644",
-      "sha256": "4fef895172bf865ffcc4414b65c12ce1dc5ba1e142591c78405f230b78810d40",
-      "template": "expected/focus-state/docs/plans/2026-06-25-cameraapp-focus-state-recovery.md"
+      "sha256": "52eaa97aa7b737609b704e7b87edbe3296d2b4aaade726a9c17afc0f4e126868",
+      "template": "expected/preview-session/docs/plans/2026-06-25-cameraapp-preview-session-recovery.md"
     },
     "scripts/check-baseline.sh": {
       "max_bytes": 120000,
       "mode": "100755",
-      "sha256": "199284f086e445c68e7a7cea2483215cab86c111b326026366583c5c869fe866",
-      "template": "expected/focus-state/scripts/check-baseline.sh"
+      "sha256": "56f07d762d75bf614ddedf179e74f2ba612962743f48f56407e75f01c3e61785",
+      "template": "expected/preview-session/scripts/check-baseline.sh"
     }
   },
   "merge_authority": {
@@ -67,13 +67,13 @@
     "trusted-verifier/run-hermetic.sh",
     "trusted-verifier/verify_candidate.py",
     "trusted-verifier/verify_environment.py",
-    "trusted-verifier/expected/focus-state/AGENTS.md",
-    "trusted-verifier/expected/focus-state/Application/src/main/java/com/example/android/camera2basic/Camera2BasicFragment.java",
-    "trusted-verifier/expected/focus-state/CHANGES.md",
-    "trusted-verifier/expected/focus-state/README.md",
-    "trusted-verifier/expected/focus-state/SECURITY.md",
-    "trusted-verifier/expected/focus-state/VISION.md",
-    "trusted-verifier/expected/focus-state/docs/plans/2026-06-25-cameraapp-focus-state-recovery.md",
-    "trusted-verifier/expected/focus-state/scripts/check-baseline.sh"
+    "trusted-verifier/expected/preview-session/AGENTS.md",
+    "trusted-verifier/expected/preview-session/Application/src/main/java/com/example/android/camera2basic/Camera2BasicFragment.java",
+    "trusted-verifier/expected/preview-session/CHANGES.md",
+    "trusted-verifier/expected/preview-session/README.md",
+    "trusted-verifier/expected/preview-session/SECURITY.md",
+    "trusted-verifier/expected/preview-session/VISION.md",
+    "trusted-verifier/expected/preview-session/docs/plans/2026-06-25-cameraapp-preview-session-recovery.md",
+    "trusted-verifier/expected/preview-session/scripts/check-baseline.sh"
   ]
 }

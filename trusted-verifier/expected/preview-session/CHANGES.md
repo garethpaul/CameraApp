@@ -1,5 +1,98 @@
 # CameraApp Changes
 
+## 2026-06-25 15:40 PDT - P1 - Recover failed preview startup ownership
+
+### Summary
+
+Synchronous preview-start failures no longer leave a failed capture session,
+request builder, or request published as current shared camera state.
+
+### Work completed
+
+- Added an ownership-guarded `onConfigured()` recovery path for camera access,
+  closed-session, and invalid repeating-request failures.
+- Clear callback-owned preview fields before closing the failed session.
+- Added an exact source contract and documented the reviewed behavior.
+
+### Threads
+
+- Continued: Camera2 callback ownership and synchronous failure recovery.
+- Started or stopped: none.
+
+### Files changed
+
+- `Camera2BasicFragment.java` - recover failed preview startup ownership.
+- `scripts/check-baseline.sh` - enforce unique cleanup markers and ordering.
+- Repository guidance and the completed preview-recovery implementation plan.
+
+### Validation
+
+- RED: the source baseline rejected the missing ownership recovery marker.
+- GREEN: focused, hostile mutation, full, trusted, hosted, and review evidence
+  remains pending.
+
+### Bugs / findings
+
+- P1: `onConfigured()` published shared preview state before a repeating request
+  could fail synchronously, leaving an unusable session visible to later work.
+
+### Blockers
+
+- The base-owned exact trusted-verifier policy must be bootstrapped and merged
+  separately before this semantic child can be authorized.
+
+### Next action
+
+- Build the exact policy templates, merge the independently reviewed bootstrap,
+  then apply this repair as one direct child of the new default branch.
+
+## 2026-06-25 16:00 PDT - P1 - Authorize preview startup recovery bytes
+
+### Summary
+
+The base-owned trusted verifier now authorizes exactly the eight reviewed files
+for synchronous preview-session startup recovery.
+
+### Work completed
+
+- Replaced the completed focus-recovery templates with exact preview-session
+  recovery templates, modes, size limits, and SHA-256 digests.
+- Bound the next semantic repair to one direct child of this bootstrap base.
+- Preserved hostile topology, byte, path, mode, size, and tool-injection tests.
+
+### Threads
+
+- Started: exact authority for preview-session startup failure recovery.
+- Continued or stopped: none.
+
+### Files changed
+
+- `trusted-verifier/policy.json` and `expected/preview-session/` - define the
+  next exact eight-file semantic child.
+- `scripts/check-baseline.sh` and the rollout plan - enforce the new authority.
+
+### Validation
+
+- All eight hermetic trusted-verifier acceptance and hostile cases passed.
+- The exact eight-file synthetic semantic child was accepted with every
+  reviewed digest in its receipt.
+- `scripts/check-baseline.sh`, policy JSON parsing, and `git diff --check`
+  passed. Ordinary hosted and exact-head review evidence remains pending.
+
+### Bugs / findings
+
+- P1: the current trusted policy correctly rejects the newly designed preview
+  repair because it still authorizes only the completed focus-recovery bytes.
+
+### Blockers
+
+- The old trusted gate must reject this policy-changing bootstrap by design.
+
+### Next action
+
+- Merge this bootstrap only after ordinary checks and exact-head review, then
+  apply the reviewed semantic bytes as one direct child.
+
 ## 2026-06-25 11:15 PDT - P1 - Recover focus and precapture state
 
 ### Summary

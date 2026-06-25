@@ -27,6 +27,7 @@ Priority:
 - Keep asynchronous preview callbacks bound to their initiating camera device
 - Keep camera-device disconnect and error callbacks bound to the device that initiated them
 - Capture-result and still-capture completion callbacks reject stale session ownership before mutating capture state or unlocking focus.
+- Keep failed preview sessions out of shared capture state.
 - Current-session still-capture failures unlock focus and resume preview; stale session failures are ignored.
 - Synchronous still-capture and preview-restart failures restore preview state before Camera2 recovery work can throw.
 - Closed-session still-capture and preview-restart operations use the same
