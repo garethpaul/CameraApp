@@ -44,6 +44,7 @@ SYNCHRONOUS_CAPTURE_RECOVERY_PLAN="$ROOT_DIR/docs/plans/2026-06-16-cameraapp-syn
 MISSING_CAPTURE_DEPENDENCY_PLAN="$ROOT_DIR/docs/plans/2026-06-16-cameraapp-missing-capture-dependency-recovery.md"
 CLOSED_SESSION_CAPTURE_RECOVERY_PLAN="$ROOT_DIR/docs/plans/2026-06-16-cameraapp-closed-session-capture-recovery.md"
 FOCUS_STATE_RECOVERY_PLAN="$ROOT_DIR/docs/plans/2026-06-25-cameraapp-focus-state-recovery.md"
+PREVIEW_SESSION_RECOVERY_PLAN="$ROOT_DIR/docs/plans/2026-06-25-cameraapp-preview-session-recovery.md"
 INSTRUMENTATION_EXECUTION_PLAN="$ROOT_DIR/docs/plans/2026-06-16-cameraapp-instrumentation-execution.md"
 PERMISSION_DENIAL_INSTRUMENTATION_PLAN="$ROOT_DIR/docs/plans/2026-06-16-cameraapp-permission-denial-instrumentation.md"
 PERMISSION_DENIAL_RECREATION_PLAN="$ROOT_DIR/docs/plans/2026-06-17-cameraapp-permission-denial-recreation.md"
@@ -68,7 +69,8 @@ TRUSTED_GATE_RUNNER="$ROOT_DIR/trusted-verifier/run-hermetic.sh"
 TRUSTED_GATE_VERIFIER="$ROOT_DIR/trusted-verifier/verify_candidate.py"
 TRUSTED_ENV_VERIFIER="$ROOT_DIR/trusted-verifier/verify_environment.py"
 TRUSTED_GATE_TEST="$ROOT_DIR/trusted-verifier/tests/test_bootstrap.py"
-TRUSTED_GATE_EXPECTED_ROOT="$ROOT_DIR/trusted-verifier/expected/focus-state"
+TRUSTED_GATE_EXPECTED_ROOT="$ROOT_DIR/trusted-verifier/expected/preview-session"
+PREVIEW_TRUSTED_POLICY_PLAN="$ROOT_DIR/docs/plans/2026-06-25-cameraapp-preview-trusted-policy.md"
 BACKUP_RULES="$ROOT_DIR/Application/src/main/res/xml/backup_rules.xml"
 DATA_EXTRACTION_RULES="$ROOT_DIR/Application/src/main/res/xml/data_extraction_rules.xml"
 
@@ -151,6 +153,8 @@ for path in \
   "docs/plans/2026-06-19-gradle-9-6-refresh.md" \
   "docs/plans/2026-06-20-cameraapp-trusted-direct-gate-v3.md" \
   "docs/plans/2026-06-25-cameraapp-focus-trusted-policy.md" \
+  "docs/plans/2026-06-25-cameraapp-preview-trusted-policy.md" \
+  "docs/plans/2026-06-25-cameraapp-preview-session-recovery.md" \
   "scripts/run-instrumentation.sh" \
   "scripts/tests/run-instrumentation-cleanup-test.sh" \
   "trusted-verifier/policy.json" \
@@ -158,14 +162,14 @@ for path in \
   "trusted-verifier/verify_candidate.py" \
   "trusted-verifier/verify_environment.py" \
   "trusted-verifier/tests/test_bootstrap.py" \
-  "trusted-verifier/expected/focus-state/AGENTS.md" \
-  "trusted-verifier/expected/focus-state/Application/src/main/java/com/example/android/camera2basic/Camera2BasicFragment.java" \
-  "trusted-verifier/expected/focus-state/CHANGES.md" \
-  "trusted-verifier/expected/focus-state/README.md" \
-  "trusted-verifier/expected/focus-state/SECURITY.md" \
-  "trusted-verifier/expected/focus-state/VISION.md" \
-  "trusted-verifier/expected/focus-state/docs/plans/2026-06-25-cameraapp-focus-state-recovery.md" \
-  "trusted-verifier/expected/focus-state/scripts/check-baseline.sh" \
+  "trusted-verifier/expected/preview-session/AGENTS.md" \
+  "trusted-verifier/expected/preview-session/Application/src/main/java/com/example/android/camera2basic/Camera2BasicFragment.java" \
+  "trusted-verifier/expected/preview-session/CHANGES.md" \
+  "trusted-verifier/expected/preview-session/README.md" \
+  "trusted-verifier/expected/preview-session/SECURITY.md" \
+  "trusted-verifier/expected/preview-session/VISION.md" \
+  "trusted-verifier/expected/preview-session/docs/plans/2026-06-25-cameraapp-preview-session-recovery.md" \
+  "trusted-verifier/expected/preview-session/scripts/check-baseline.sh" \
   "Application/src/main/res/drawable-xxxhdpi/ic_launcher.png" \
   "Application/src/main/res/drawable-xxxhdpi/ic_action_info.png" \
   "gradlew" \
@@ -237,12 +241,12 @@ fi
 
 if [ ! -d "$TRUSTED_GATE_EXPECTED_ROOT" ] || \
    [ "$(find "$TRUSTED_GATE_EXPECTED_ROOT" -type f | wc -l | tr -d ' ')" -ne 8 ]; then
-  printf '%s\n' "Trusted focus-state policy must retain all eight reviewed semantic templates." >&2
+  printf '%s\n' "Trusted preview-session policy must retain all eight reviewed semantic templates." >&2
   exit 1
 fi
 
-if [ "$(grep -Fc '"mCaptureSession.capture(mPreviewRequestBuilder.build(), mCaptureCallback,"' "$TRUSTED_GATE_EXPECTED_ROOT/scripts/check-baseline.sh")" -ne 3 ]; then
-  printf '%s\n' "Trusted focus-state checker must require one recovery capture marker before ordering checks." >&2
+if [ "$(grep -Fc 'preview_start_recovery=$(printf' "$TRUSTED_GATE_EXPECTED_ROOT/scripts/check-baseline.sh")" -ne 2 ]; then
+  printf '%s\n' "Trusted preview-session checker must require exact startup recovery markers." >&2
   exit 1
 fi
 
@@ -966,9 +970,10 @@ if grep -Fq 'printStackTrace()' "$FRAGMENT"; then
   exit 1
 fi
 
-if [ "$(grep -Fc 'catch (CameraAccessException e)' "$FRAGMENT")" -ne 4 ] || \
-   [ "$(grep -Fc 'catch (CameraAccessException | IllegalStateException e)' "$FRAGMENT")" -ne 4 ]; then
-  printf '%s\n' "Camera error redaction must preserve four access-only and four closed-session recovery boundaries." >&2
+if [ "$(grep -Fc 'catch (CameraAccessException e)' "$FRAGMENT")" -ne 3 ] || \
+   [ "$(grep -Fc 'catch (CameraAccessException | IllegalStateException e)' "$FRAGMENT")" -ne 4 ] || \
+   [ "$(grep -Fc 'catch (CameraAccessException | IllegalStateException |' "$FRAGMENT")" -ne 1 ]; then
+  printf '%s\n' "Camera error redaction must preserve three access-only, four closed-session, and one preview-start recovery boundary." >&2
   exit 1
 fi
 
@@ -1066,6 +1071,38 @@ configure_failed_callback=$(printf '%s\n' "$preview_session_method" | awk '
   capture && /^[[:space:]]*}, null$/ { exit }
   capture { print }
 ')
+
+preview_start_recovery=$(printf '%s\n' "$configured_callback" | awk '
+  /catch \(CameraAccessException \| IllegalStateException \|/ { capture = 1 }
+  capture { print }
+')
+if [ "$(printf '%s\n' "$preview_start_recovery" | grep -Fc "IllegalArgumentException e)")" -ne 1 ]; then
+  printf '%s\n' "Preview-start recovery must include invalid repeating-request failures." >&2
+  exit 1
+fi
+for recovery_marker in \
+  "if (mCaptureSession == cameraCaptureSession)" \
+  "mCaptureSession = null;" \
+  "mPreviewRequestBuilder = null;" \
+  "mPreviewRequest = null;" \
+  "cameraCaptureSession.close();"; do
+  if [ "$(printf '%s\n' "$preview_start_recovery" | grep -Fc "$recovery_marker")" -ne 1 ]; then
+    printf '%s\n' "Preview-start failure recovery marker must be unique: $recovery_marker" >&2
+    exit 1
+  fi
+done
+preview_recovery_guard_line=$(printf '%s\n' "$preview_start_recovery" | grep -nF "if (mCaptureSession == cameraCaptureSession)" | cut -d: -f1)
+preview_session_clear_line=$(printf '%s\n' "$preview_start_recovery" | grep -nF "mCaptureSession = null;" | cut -d: -f1)
+preview_builder_clear_line=$(printf '%s\n' "$preview_start_recovery" | grep -nF "mPreviewRequestBuilder = null;" | cut -d: -f1)
+preview_request_clear_line=$(printf '%s\n' "$preview_start_recovery" | grep -nF "mPreviewRequest = null;" | cut -d: -f1)
+preview_session_close_line=$(printf '%s\n' "$preview_start_recovery" | grep -nF "cameraCaptureSession.close();" | cut -d: -f1)
+if [ "$preview_recovery_guard_line" -ge "$preview_session_clear_line" ] || \
+  [ "$preview_session_clear_line" -ge "$preview_builder_clear_line" ] || \
+  [ "$preview_builder_clear_line" -ge "$preview_request_clear_line" ] || \
+  [ "$preview_request_clear_line" -ge "$preview_session_close_line" ]; then
+  printf '%s\n' "Preview-start failure must clear owned preview state before closing the failed session." >&2
+  exit 1
+fi
 
 if [ "$(grep -Fc "private volatile CameraDevice mCameraDevice;" "$FRAGMENT")" -ne 1 ]; then
   printf '%s\n' "Camera device ownership must remain visible across lifecycle and callback threads." >&2
@@ -1553,7 +1590,6 @@ done
 
 for configured_marker in \
   "if (mCameraDevice != cameraDevice)" \
-  "cameraCaptureSession.close();" \
   "return;" \
   "mPreviewRequestBuilder = previewRequestBuilder;" \
   "mCaptureSession = cameraCaptureSession;" \
@@ -1564,9 +1600,13 @@ for configured_marker in \
     exit 1
   fi
 done
+if [ "$(printf '%s\n' "$configured_callback" | grep -Fc "cameraCaptureSession.close();")" -ne 2 ]; then
+  printf '%s\n' "Configured preview callbacks must close stale and failed sessions exactly once each." >&2
+  exit 1
+fi
 
 stale_guard_line=$(printf '%s\n' "$configured_callback" | grep -nF "if (mCameraDevice != cameraDevice)" | cut -d: -f1)
-stale_close_line=$(printf '%s\n' "$configured_callback" | grep -nF "cameraCaptureSession.close();" | cut -d: -f1)
+stale_close_line=$(printf '%s\n' "$configured_callback" | grep -nF "cameraCaptureSession.close();" | head -n 1 | cut -d: -f1)
 stale_return_line=$(printf '%s\n' "$configured_callback" | grep -nF "return;" | cut -d: -f1)
 builder_publish_line=$(printf '%s\n' "$configured_callback" | grep -nF "mPreviewRequestBuilder = previewRequestBuilder;" | cut -d: -f1)
 session_publish_line=$(printf '%s\n' "$configured_callback" | grep -nF "mCaptureSession = cameraCaptureSession;" | cut -d: -f1)
@@ -1996,7 +2036,7 @@ if grep -Eq 'write-all|:[[:space:]]*write|secrets\.|actions/cache|candidate/(Mak
 fi
 
 for trusted_policy_contract in \
-  '"bootstrap_exact_default": "b7d170c3375ac136dc8618afefbb80347ed2db33"' \
+  '"bootstrap_exact_default": "d83c5f209bafd5733a1d1937fe0f2efea72a2706"' \
   '"environment": "cameraapp-trusted-verifier-v1"' \
   '"diagnostic_check_context_is_authoritative": false' \
   '"kind": "required_protected_environment_deployment"' \
@@ -2006,7 +2046,7 @@ for trusted_policy_contract in \
   '"Application/src/main/java/com/example/android/camera2basic/Camera2BasicFragment.java"' \
   '"scripts/check-baseline.sh"' \
   '"trusted-verifier/verify_environment.py"' \
-  '"trusted-verifier/expected/focus-state/scripts/check-baseline.sh"'; do
+  '"trusted-verifier/expected/preview-session/scripts/check-baseline.sh"'; do
   if ! grep -Fq "$trusted_policy_contract" "$TRUSTED_GATE_POLICY"; then
     printf '%s\n' "Trusted CameraApp policy must preserve contract: $trusted_policy_contract" >&2
     exit 1
@@ -2291,6 +2331,20 @@ if ! grep -Fq "Status: Completed" "$FOCUS_STATE_RECOVERY_PLAN" || \
    ! grep -Fq "scripts/check-baseline.sh" "$FOCUS_STATE_RECOVERY_PLAN" || \
    ! grep -Fq "The local environment has no Android SDK, emulator, or physical camera" "$FOCUS_STATE_RECOVERY_PLAN"; then
   printf '%s\n' "CameraApp focus state recovery plan must record status, verification, and device limits." >&2
+  exit 1
+fi
+
+if ! grep -Fq "Status: Completed" "$PREVIEW_TRUSTED_POLICY_PLAN" || \
+   ! grep -Fq "one direct child" "$PREVIEW_TRUSTED_POLICY_PLAN" || \
+   ! grep -Fq "exact eight-file synthetic semantic child" "$PREVIEW_TRUSTED_POLICY_PLAN"; then
+  printf '%s\n' "CameraApp preview trusted policy plan must record status, topology, and exact-child evidence." >&2
+  exit 1
+fi
+
+if ! grep -Fq "Status: Completed" "$PREVIEW_SESSION_RECOVERY_PLAN" || \
+   ! grep -Fq "RED: the source baseline rejected the missing preview ownership guard" "$PREVIEW_SESSION_RECOVERY_PLAN" || \
+   ! grep -Fq "exact-head Codex review" "$PREVIEW_SESSION_RECOVERY_PLAN"; then
+  printf '%s\n' "CameraApp preview session recovery plan must record status, red evidence, and merge gates." >&2
   exit 1
 fi
 

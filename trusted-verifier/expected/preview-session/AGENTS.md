@@ -64,6 +64,8 @@
 - Interrupted camera-worker shutdown preserves the interrupt signal and unresolved worker ownership.
 - Device disconnect and error callbacks close their callback-owned device before rejecting stale shared ownership.
 - Capture-result and still-capture completion callbacks reject stale session ownership before mutating capture state or unlocking focus.
+- Synchronous preview-start failures clear only callback-owned shared preview
+  state and close the failed capture session before returning.
 - Current-session still-capture failures unlock focus and resume preview; stale session failures are ignored.
 - Synchronous still-capture and preview-restart failures restore preview state before Camera2 recovery work can throw.
 - Closed-session still-capture and preview-restart operations use the same

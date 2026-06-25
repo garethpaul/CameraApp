@@ -1,5 +1,52 @@
 # CameraApp Changes
 
+## 2026-06-25 16:00 PDT - P1 - Authorize preview startup recovery bytes
+
+### Summary
+
+The base-owned trusted verifier now authorizes exactly the eight reviewed files
+for synchronous preview-session startup recovery.
+
+### Work completed
+
+- Replaced the completed focus-recovery templates with exact preview-session
+  recovery templates, modes, size limits, and SHA-256 digests.
+- Bound the next semantic repair to one direct child of this bootstrap base.
+- Preserved hostile topology, byte, path, mode, size, and tool-injection tests.
+
+### Threads
+
+- Started: exact authority for preview-session startup failure recovery.
+- Continued or stopped: none.
+
+### Files changed
+
+- `trusted-verifier/policy.json` and `expected/preview-session/` - define the
+  next exact eight-file semantic child.
+- `scripts/check-baseline.sh` and the rollout plan - enforce the new authority.
+
+### Validation
+
+- All eight hermetic trusted-verifier acceptance and hostile cases passed.
+- The exact eight-file synthetic semantic child was accepted with every
+  reviewed digest in its receipt.
+- `scripts/check-baseline.sh`, policy JSON parsing, and `git diff --check`
+  passed. Ordinary hosted and exact-head review evidence remains pending.
+
+### Bugs / findings
+
+- P1: the current trusted policy correctly rejects the newly designed preview
+  repair because it still authorizes only the completed focus-recovery bytes.
+
+### Blockers
+
+- The old trusted gate must reject this policy-changing bootstrap by design.
+
+### Next action
+
+- Merge this bootstrap only after ordinary checks and exact-head review, then
+  apply the reviewed semantic bytes as one direct child.
+
 ## 2026-06-25 11:15 PDT - P1 - Recover focus and precapture state
 
 ### Summary
