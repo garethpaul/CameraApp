@@ -93,8 +93,8 @@ expected_wrapper_properties() {
   cat <<'EOF'
 distributionBase=GRADLE_USER_HOME
 distributionPath=wrapper/dists
-distributionSha256Sum=bbaeb2fef8710818cf0e261201dab964c572f92b942812df0c3620d62a529a01
-distributionUrl=https\://services.gradle.org/distributions/gradle-9.6.0-bin.zip
+distributionSha256Sum=9c0f7faeeb306cb14e4279a3e084ca6b596894089a0638e68a07c945a32c9e14
+distributionUrl=https\://services.gradle.org/distributions/gradle-9.6.1-bin.zip
 networkTimeout=10000
 retries=0
 retryBackOffMs=500
@@ -551,14 +551,14 @@ if [ ! -x "$ROOT_DIR/gradlew" ]; then
 fi
 
 if [ ! -x "$GRADLEW" ] || [ "$(cat "$WRAPPER_PROPERTIES")" != "$(expected_wrapper_properties)" ]; then
-  printf '%s\n' "Generated wrapper must retain the reviewed Gradle 9.6.0 URL and checksum." >&2
+  printf '%s\n' "Generated wrapper must retain the reviewed Gradle 9.6.1 URL and checksum." >&2
   exit 1
 fi
 
-require_sha256 "$GRADLEW" "ab5c0cad16305af2e619c159c1f58dd68d07fab9c11e36701e109c0277407f7a" "Unix wrapper must match the reviewed generated script."
-require_sha256 "$GRADLEW_BAT" "5c0a21ecd6b3a6292e0746bff3b75fd2d8f47b9ff226ce53dc22b30184ef3bec" "Windows wrapper must match the reviewed generated script."
+require_sha256 "$GRADLEW" "a5a5c199ba02189ae8c46a334223371a20599d9c298ef65e7540ede4a3f72d59" "Unix wrapper must match the reviewed generated script."
+require_sha256 "$GRADLEW_BAT" "59328c7a17f673b1a63040bfb380a0c749e5d6df3406f7f18641060314cd9aa1" "Windows wrapper must match the reviewed generated script."
 require_sha256 "$WRAPPER_JAR" "497c8c2a7e5031f6aa847f88104aa80a93532ec32ee17bdb8d1d2f67a194a9c7" "Wrapper JAR must match the reviewed generated artifact."
-require_sha256 "$WRAPPER_PROPERTIES" "c629b14195c2b627ef184fba4416f5dfce6f69c8b088230965bf3f77b8a1a7b4" "Wrapper properties must match the reviewed checksum contract."
+require_sha256 "$WRAPPER_PROPERTIES" "89f62533208a72b7a8cc2892b6b3540c445fa6175508297d932dae57d653591a" "Wrapper properties must match the reviewed checksum contract."
 
 for contract in \
   "id 'com.android.application' version '9.2.0' apply false"; do
@@ -594,7 +594,7 @@ for build_contract in \
   "sourceCompatibility = JavaVersion.VERSION_17" \
   "targetCompatibility = JavaVersion.VERSION_17" \
   "warningsAsErrors = true" \
-  "disable += ['AndroidGradlePluginVersion', 'GradleDependency', 'OldTargetApi']" \
+  "disable += ['GradleDependency', 'OldTargetApi']" \
   "androidTestImplementation 'androidx.test:core:1.7.0'" \
   "androidTestImplementation 'androidx.test.ext:junit:1.3.0'" \
   "androidTestImplementation 'androidx.test:runner:1.7.0'" \
@@ -2165,7 +2165,7 @@ done
 
 if ! grep -Fq "distributionSha256Sum" "$README" || \
    ! grep -Fq "does not persist checkout credentials" "$README" || \
-   ! grep -Fq "Gradle 9.6.0 wrapper authenticates" "$ROOT_DIR/SECURITY.md" || \
+   ! grep -Fq "Gradle 9.6.1 wrapper authenticates" "$ROOT_DIR/SECURITY.md" || \
    ! grep -Fq "checksum-verified direct wrapper" "$ROOT_DIR/VISION.md" || \
    ! grep -Fq "authenticated Gradle wrapper" "$ROOT_DIR/CHANGES.md"; then
   printf '%s\n' "Documentation must describe authenticated wrapper and checkout boundaries." >&2

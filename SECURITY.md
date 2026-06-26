@@ -78,7 +78,7 @@ If this project requests device permissions such as location, camera, microphone
 
 ## Dependency and Supply Chain Security
 
-The Gradle 9.6.0 wrapper authenticates its official binary distribution with a
+The Gradle 9.6.1 wrapper authenticates its official binary distribution with a
 checked-in SHA-256 before execution. Review all four wrapper files together.
 Hosted Check also uses read-only permissions and a non-persisted checkout token
 so later steps cannot reuse repository credentials.
