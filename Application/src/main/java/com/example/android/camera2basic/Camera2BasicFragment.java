@@ -183,9 +183,12 @@ public class Camera2BasicFragment extends Fragment implements View.OnClickListen
         @Override
         public void onOpened(CameraDevice cameraDevice) {
             // This method is called when the camera is opened.  We start camera preview here.
-            releaseCameraOpenLockFromCallback();
             mCameraDevice = cameraDevice;
-            createCameraPreviewSession();
+            try {
+                createCameraPreviewSession();
+            } finally {
+                releaseCameraOpenLockFromCallback();
+            }
         }
 
         @Override

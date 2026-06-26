@@ -45,6 +45,7 @@ be transferred to a different camera implementation.
 | Rapid repeated capture | Repeated capture does not exhaust the two-slot ImageReader or duplicate ownership. | `not run` | `not run` |
 | Orientation change | Portrait and landscape preserve preview geometry and non-overlapping controls. | `not run` | `not run` |
 | Background and resume | Leaving and returning closes and reopens camera ownership without deadlock or stale view access. | `not run` | `not run` |
+| Pause during camera open | Pausing while open completion is pending closes the callback-published device and prevents preview work after teardown. | `not run` | `not run` |
 | Permission result after view teardown | A delayed result cannot open camera work against a destroyed fragment view. | `not run` | `not run` |
 | System bar insets | Target-36 edge-to-edge preview remains full bleed while controls stay inside tappable insets. | `not run` | `not run` |
 | Sustained capture | Repeated preview and capture remain responsive without leaked images, threads, or semaphore permits. | `not run` | `not run` |
