@@ -35,10 +35,9 @@ android {
         abortOnError = true
         warningsAsErrors = true
         checkDependencies = true
-        // The trusted-policy bootstrap must stay green after Gradle 9.6.1 was
-        // published. The exact reviewed child removes this one advisory
-        // suppression while refreshing the authenticated wrapper.
-        disable += ['AndroidGradlePluginVersion', 'GradleDependency', 'OldTargetApi']
+        // Android 17/API 37 is still a preview. Keep the stable Android 16
+        // target while retaining every behavioral and security lint check.
+        disable += ['GradleDependency', 'OldTargetApi']
         xmlReport = true
     }
 
@@ -56,6 +55,3 @@ dependencies {
     androidTestImplementation 'androidx.test:runner:1.7.0'
     androidTestImplementation 'androidx.test.uiautomator:uiautomator:2.3.0'
 }
-
-
-

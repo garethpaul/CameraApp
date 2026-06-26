@@ -1,5 +1,36 @@
 # CameraApp Changes
 
+## 2026-06-26 15:20 PDT - P1 - Authorize Gradle 9.6.1 refresh bytes
+
+### Summary
+
+The base-owned trusted verifier now authorizes exactly the eleven reviewed files
+needed to refresh the authenticated Gradle wrapper from 9.6.0 to 9.6.1.
+
+### Work completed
+
+- Replaced the opened-camera templates with exact Gradle 9.6.1 wrapper,
+  documentation, plan, and baseline templates.
+- Bound the refresh to one direct child of this bootstrap base.
+- Preserved hostile topology, byte, path, mode, size, and tool-injection tests.
+
+### Validation
+
+- Trusted verifier unit tests and the SDK-free source baseline pass.
+- The exact eleven-file synthetic semantic child is accepted with every reviewed
+  digest in its receipt.
+- Policy JSON parsing and `git diff --check` pass. Ordinary hosted and
+  exact-head review evidence remain merge gates.
+
+### Blockers
+
+- The old protected gate must reject this policy-changing bootstrap by design.
+
+### Next action
+
+- Merge this bootstrap, then apply the reviewed wrapper refresh as one direct
+  child of the new default branch.
+
 ## 2026-06-26 06:43 PDT - P1 - Publish opened camera before lock release
 
 ### Summary

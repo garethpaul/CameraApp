@@ -71,10 +71,11 @@ TRUSTED_GATE_RUNNER="$ROOT_DIR/trusted-verifier/run-hermetic.sh"
 TRUSTED_GATE_VERIFIER="$ROOT_DIR/trusted-verifier/verify_candidate.py"
 TRUSTED_ENV_VERIFIER="$ROOT_DIR/trusted-verifier/verify_environment.py"
 TRUSTED_GATE_TEST="$ROOT_DIR/trusted-verifier/tests/test_bootstrap.py"
-TRUSTED_GATE_EXPECTED_ROOT="$ROOT_DIR/trusted-verifier/expected/open-publication"
+TRUSTED_GATE_EXPECTED_ROOT="$ROOT_DIR/trusted-verifier/expected/gradle-9-6-1"
 PREVIEW_TRUSTED_POLICY_PLAN="$ROOT_DIR/docs/plans/2026-06-25-cameraapp-preview-trusted-policy.md"
 CALLBACK_LOCK_TRUSTED_POLICY_PLAN="$ROOT_DIR/docs/plans/2026-06-26-cameraapp-callback-lock-trusted-policy.md"
 OPEN_PUBLICATION_TRUSTED_POLICY_PLAN="$ROOT_DIR/docs/plans/2026-06-26-cameraapp-open-publication-trusted-policy.md"
+GRADLE_961_TRUSTED_POLICY_PLAN="$ROOT_DIR/docs/plans/2026-06-26-gradle-9-6-1-trusted-policy.md"
 BACKUP_RULES="$ROOT_DIR/Application/src/main/res/xml/backup_rules.xml"
 DATA_EXTRACTION_RULES="$ROOT_DIR/Application/src/main/res/xml/data_extraction_rules.xml"
 
@@ -92,8 +93,8 @@ expected_wrapper_properties() {
   cat <<'EOF'
 distributionBase=GRADLE_USER_HOME
 distributionPath=wrapper/dists
-distributionSha256Sum=bbaeb2fef8710818cf0e261201dab964c572f92b942812df0c3620d62a529a01
-distributionUrl=https\://services.gradle.org/distributions/gradle-9.6.0-bin.zip
+distributionSha256Sum=9c0f7faeeb306cb14e4279a3e084ca6b596894089a0638e68a07c945a32c9e14
+distributionUrl=https\://services.gradle.org/distributions/gradle-9.6.1-bin.zip
 networkTimeout=10000
 retries=0
 retryBackOffMs=500
@@ -161,6 +162,7 @@ for path in \
   "docs/plans/2026-06-25-cameraapp-preview-session-recovery.md" \
   "docs/plans/2026-06-26-cameraapp-callback-lock-trusted-policy.md" \
   "docs/plans/2026-06-26-cameraapp-open-publication-trusted-policy.md" \
+  "docs/plans/2026-06-26-gradle-9-6-1-trusted-policy.md" \
   "scripts/run-instrumentation.sh" \
   "scripts/tests/run-instrumentation-cleanup-test.sh" \
   "trusted-verifier/policy.json" \
@@ -168,15 +170,17 @@ for path in \
   "trusted-verifier/verify_candidate.py" \
   "trusted-verifier/verify_environment.py" \
   "trusted-verifier/tests/test_bootstrap.py" \
-  "trusted-verifier/expected/open-publication/AGENTS.md" \
-  "trusted-verifier/expected/open-publication/Application/src/main/java/com/example/android/camera2basic/Camera2BasicFragment.java" \
-  "trusted-verifier/expected/open-publication/CHANGES.md" \
-  "trusted-verifier/expected/open-publication/DEVICE_VERIFICATION.md" \
-  "trusted-verifier/expected/open-publication/README.md" \
-  "trusted-verifier/expected/open-publication/SECURITY.md" \
-  "trusted-verifier/expected/open-publication/VISION.md" \
-  "trusted-verifier/expected/open-publication/docs/plans/2026-06-26-cameraapp-open-callback-publication.md" \
-  "trusted-verifier/expected/open-publication/scripts/check-baseline.sh" \
+  "trusted-verifier/expected/gradle-9-6-1/AGENTS.md" \
+  "trusted-verifier/expected/gradle-9-6-1/Application/build.gradle" \
+  "trusted-verifier/expected/gradle-9-6-1/CHANGES.md" \
+  "trusted-verifier/expected/gradle-9-6-1/README.md" \
+  "trusted-verifier/expected/gradle-9-6-1/SECURITY.md" \
+  "trusted-verifier/expected/gradle-9-6-1/VISION.md" \
+  "trusted-verifier/expected/gradle-9-6-1/docs/plans/2026-06-26-gradle-9-6-1-refresh.md" \
+  "trusted-verifier/expected/gradle-9-6-1/gradle/wrapper/gradle-wrapper.properties" \
+  "trusted-verifier/expected/gradle-9-6-1/gradlew" \
+  "trusted-verifier/expected/gradle-9-6-1/gradlew.bat" \
+  "trusted-verifier/expected/gradle-9-6-1/scripts/check-baseline.sh" \
   "Application/src/main/res/drawable-xxxhdpi/ic_launcher.png" \
   "Application/src/main/res/drawable-xxxhdpi/ic_action_info.png" \
   "gradlew" \
@@ -247,13 +251,14 @@ if [ ! -x "$TRUSTED_GATE_RUNNER" ] || ! sh -n "$TRUSTED_GATE_RUNNER" || \
 fi
 
 if [ ! -d "$TRUSTED_GATE_EXPECTED_ROOT" ] || \
-   [ "$(find "$TRUSTED_GATE_EXPECTED_ROOT" -type f | wc -l | tr -d ' ')" -ne 9 ]; then
-  printf '%s\n' "Trusted opened-publication policy must retain all nine reviewed semantic templates." >&2
+   [ "$(find "$TRUSTED_GATE_EXPECTED_ROOT" -type f | wc -l | tr -d ' ')" -ne 11 ]; then
+  printf '%s\n' "Trusted Gradle 9.6.1 policy must retain all eleven reviewed semantic templates." >&2
   exit 1
 fi
 
-if [ "$(grep -Fc 'mCameraOpenCallbackOwnsLock.compareAndSet(true, false)' "$TRUSTED_GATE_EXPECTED_ROOT/scripts/check-baseline.sh")" -ne 2 ]; then
-  printf '%s\n' "Trusted opened-publication checker must require atomic ownership consumption." >&2
+if ! grep -Fq 'gradle-9.6.1-bin.zip' "$TRUSTED_GATE_EXPECTED_ROOT/gradle/wrapper/gradle-wrapper.properties" || \
+   ! grep -Fq '9c0f7faeeb306cb14e4279a3e084ca6b596894089a0638e68a07c945a32c9e14' "$TRUSTED_GATE_EXPECTED_ROOT/scripts/check-baseline.sh"; then
+  printf '%s\n' "Trusted Gradle 9.6.1 templates must retain the reviewed URL and checksum." >&2
   exit 1
 fi
 
@@ -546,14 +551,14 @@ if [ ! -x "$ROOT_DIR/gradlew" ]; then
 fi
 
 if [ ! -x "$GRADLEW" ] || [ "$(cat "$WRAPPER_PROPERTIES")" != "$(expected_wrapper_properties)" ]; then
-  printf '%s\n' "Generated wrapper must retain the reviewed Gradle 9.6.0 URL and checksum." >&2
+  printf '%s\n' "Generated wrapper must retain the reviewed Gradle 9.6.1 URL and checksum." >&2
   exit 1
 fi
 
-require_sha256 "$GRADLEW" "ab5c0cad16305af2e619c159c1f58dd68d07fab9c11e36701e109c0277407f7a" "Unix wrapper must match the reviewed generated script."
-require_sha256 "$GRADLEW_BAT" "5c0a21ecd6b3a6292e0746bff3b75fd2d8f47b9ff226ce53dc22b30184ef3bec" "Windows wrapper must match the reviewed generated script."
+require_sha256 "$GRADLEW" "a5a5c199ba02189ae8c46a334223371a20599d9c298ef65e7540ede4a3f72d59" "Unix wrapper must match the reviewed generated script."
+require_sha256 "$GRADLEW_BAT" "59328c7a17f673b1a63040bfb380a0c749e5d6df3406f7f18641060314cd9aa1" "Windows wrapper must match the reviewed generated script."
 require_sha256 "$WRAPPER_JAR" "497c8c2a7e5031f6aa847f88104aa80a93532ec32ee17bdb8d1d2f67a194a9c7" "Wrapper JAR must match the reviewed generated artifact."
-require_sha256 "$WRAPPER_PROPERTIES" "c629b14195c2b627ef184fba4416f5dfce6f69c8b088230965bf3f77b8a1a7b4" "Wrapper properties must match the reviewed checksum contract."
+require_sha256 "$WRAPPER_PROPERTIES" "89f62533208a72b7a8cc2892b6b3540c445fa6175508297d932dae57d653591a" "Wrapper properties must match the reviewed checksum contract."
 
 for contract in \
   "id 'com.android.application' version '9.2.0' apply false"; do
@@ -589,6 +594,7 @@ for build_contract in \
   "sourceCompatibility = JavaVersion.VERSION_17" \
   "targetCompatibility = JavaVersion.VERSION_17" \
   "warningsAsErrors = true" \
+  "disable += ['GradleDependency', 'OldTargetApi']" \
   "androidTestImplementation 'androidx.test:core:1.7.0'" \
   "androidTestImplementation 'androidx.test.ext:junit:1.3.0'" \
   "androidTestImplementation 'androidx.test:runner:1.7.0'" \
@@ -2111,18 +2117,20 @@ if grep -Eq 'write-all|:[[:space:]]*write|secrets\.|actions/cache|candidate/(Mak
 fi
 
 for trusted_policy_contract in \
-  '"bootstrap_exact_default": "07e52496a3408dec2f505076b1e876c3bbcbce68"' \
+  '"bootstrap_exact_default": "62b2283308279efe7168e331ef1474fa98a4497e"' \
   '"environment": "cameraapp-trusted-verifier-v1"' \
   '"diagnostic_check_context_is_authoritative": false' \
   '"kind": "required_protected_environment_deployment"' \
   '"required_environment_branch": "master"' \
   '"15c0885755c41aa18aeb92a85193facdb61fb55c"' \
   '"67b2352a032ff956c4034e9215c53709d5e340bf"' \
-  '"Application/src/main/java/com/example/android/camera2basic/Camera2BasicFragment.java"' \
+  '"gradle/wrapper/gradle-wrapper.properties"' \
+  '"gradlew"' \
+  '"gradlew.bat"' \
   '"scripts/check-baseline.sh"' \
   '"trusted-verifier/verify_environment.py"' \
-  '"docs/plans/2026-06-26-cameraapp-open-callback-publication.md"' \
-  '"trusted-verifier/expected/open-publication/scripts/check-baseline.sh"'; do
+  '"docs/plans/2026-06-26-gradle-9-6-1-refresh.md"' \
+  '"trusted-verifier/expected/gradle-9-6-1/scripts/check-baseline.sh"'; do
   if ! grep -Fq "$trusted_policy_contract" "$TRUSTED_GATE_POLICY"; then
     printf '%s\n' "Trusted CameraApp policy must preserve contract: $trusted_policy_contract" >&2
     exit 1
@@ -2157,7 +2165,7 @@ done
 
 if ! grep -Fq "distributionSha256Sum" "$README" || \
    ! grep -Fq "does not persist checkout credentials" "$README" || \
-   ! grep -Fq "Gradle 9.6.0 wrapper authenticates" "$ROOT_DIR/SECURITY.md" || \
+   ! grep -Fq "Gradle 9.6.1 wrapper authenticates" "$ROOT_DIR/SECURITY.md" || \
    ! grep -Fq "checksum-verified direct wrapper" "$ROOT_DIR/VISION.md" || \
    ! grep -Fq "authenticated Gradle wrapper" "$ROOT_DIR/CHANGES.md"; then
   printf '%s\n' "Documentation must describe authenticated wrapper and checkout boundaries." >&2
@@ -2449,6 +2457,13 @@ if ! grep -Fq "Status: Completed" "$OPEN_PUBLICATION_TRUSTED_POLICY_PLAN" || \
    ! grep -Fq "one direct child" "$OPEN_PUBLICATION_TRUSTED_POLICY_PLAN" || \
    ! grep -Fq "exact nine-file synthetic semantic child" "$OPEN_PUBLICATION_TRUSTED_POLICY_PLAN"; then
   printf '%s\n' "CameraApp opened-publication trusted policy plan must record status, topology, and exact-child evidence." >&2
+  exit 1
+fi
+
+if ! grep -Fq "Status: Completed" "$GRADLE_961_TRUSTED_POLICY_PLAN" || \
+   ! grep -Fq "one direct child" "$GRADLE_961_TRUSTED_POLICY_PLAN" || \
+   ! grep -Fq "exact eleven-file synthetic semantic child" "$GRADLE_961_TRUSTED_POLICY_PLAN"; then
+  printf '%s\n' "CameraApp Gradle 9.6.1 trusted policy plan must record status, topology, and exact-child evidence." >&2
   exit 1
 fi
 

@@ -1,5 +1,70 @@
 # CameraApp Changes
 
+## 2026-06-26 15:35 PDT - P1 - Refresh Gradle wrapper to 9.6.1
+
+### Summary
+
+Refreshed the authenticated wrapper after Android lint began rejecting Gradle
+9.6.0 as stale once 9.6.1 became the current stable release.
+
+### Work completed
+
+- Regenerated the Unix and Windows launchers with Gradle 9.6.1.
+- Pinned the official binary distribution to SHA-256
+  `9c0f7faeeb306cb14e4279a3e084ca6b596894089a0638e68a07c945a32c9e14`.
+- Updated wrapper byte contracts and current toolchain documentation while
+  preserving historical 9.6.0 rollout evidence.
+
+### Validation
+
+- RED: exact master failed `lintDebug` on `AndroidGradlePluginVersion` because
+  Gradle 9.6.1 was available.
+- GREEN: the full JDK 17 / API 36 `make check` gate passes with zero lint
+  findings, instrumentation APK assembly, and debug APK assembly.
+- The trusted verifier accepts the exact eleven-file sole-child change and
+  rejects hostile path, byte, mode, topology, and tool-injection cases.
+
+### Blockers
+
+- Instrumentation runtime remains skipped without a camera-capable emulator or
+  physical device; the APK is assembled as part of the canonical gate.
+
+### Next action
+
+- Keep the wrapper checksum and generated launcher hashes synchronized when a
+  future stable Gradle release is intentionally adopted.
+
+## 2026-06-26 15:20 PDT - P1 - Authorize Gradle 9.6.1 refresh bytes
+
+### Summary
+
+The base-owned trusted verifier now authorizes exactly the eleven reviewed files
+needed to refresh the authenticated Gradle wrapper from 9.6.0 to 9.6.1.
+
+### Work completed
+
+- Replaced the opened-camera templates with exact Gradle 9.6.1 wrapper,
+  documentation, plan, and baseline templates.
+- Bound the refresh to one direct child of this bootstrap base.
+- Preserved hostile topology, byte, path, mode, size, and tool-injection tests.
+
+### Validation
+
+- Trusted verifier unit tests and the SDK-free source baseline pass.
+- The exact eleven-file synthetic semantic child is accepted with every reviewed
+  digest in its receipt.
+- Policy JSON parsing and `git diff --check` pass. Ordinary hosted and
+  exact-head review evidence remain merge gates.
+
+### Blockers
+
+- The old protected gate must reject this policy-changing bootstrap by design.
+
+### Next action
+
+- Merge this bootstrap, then apply the reviewed wrapper refresh as one direct
+  child of the new default branch.
+
 ## 2026-06-26 06:43 PDT - P1 - Publish opened camera before lock release
 
 ### Summary
