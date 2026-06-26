@@ -22,6 +22,7 @@ CI_PLAN="$ROOT_DIR/docs/plans/2026-06-10-ci-baseline.md"
 CAMERA_OPEN_LOCK_PLAN="$ROOT_DIR/docs/plans/2026-06-10-cameraapp-open-lock-release.md"
 CAMERA_CLOSE_LOCK_PLAN="$ROOT_DIR/docs/plans/2026-06-12-cameraapp-close-lock-ownership.md"
 CAMERA_OPEN_CALLBACK_LOCK_PLAN="$ROOT_DIR/docs/plans/2026-06-26-cameraapp-open-callback-lock-ownership.md"
+CAMERA_OPEN_CALLBACK_PUBLICATION_PLAN="$ROOT_DIR/docs/plans/2026-06-26-cameraapp-open-callback-publication.md"
 TOAST_HANDLER_PLAN="$ROOT_DIR/docs/plans/2026-06-12-cameraapp-toast-handler-lifecycle.md"
 WRAPPER_PLAN="$ROOT_DIR/docs/plans/2026-06-12-gradle-wrapper-verification.md"
 RTL_LAYOUT_PLAN="$ROOT_DIR/docs/plans/2026-06-13-cameraapp-rtl-layout.md"
@@ -872,6 +873,20 @@ device_state_callback=$(awk '
   capture && /An additional thread for running tasks/ { exit }
   capture { print }
 ' "$FRAGMENT")
+opened_callback=$(awk '
+  /public void onOpened\(CameraDevice cameraDevice\)/ { capture = 1 }
+  capture { print }
+  capture && /^        }$/ { exit }
+' "$FRAGMENT")
+opened_callback_compact=$(printf '%s\n' "$opened_callback" | tr '\n' ' ' | tr -s '[:space:]' ' ')
+if ! printf '%s\n' "$opened_callback_compact" | grep -Fq \
+    'mCameraDevice = cameraDevice; try { createCameraPreviewSession(); } finally { releaseCameraOpenLockFromCallback(); }' || \
+   [ "$(printf '%s\n' "$opened_callback" | grep -Fc 'mCameraDevice = cameraDevice;')" -ne 1 ] || \
+   [ "$(printf '%s\n' "$opened_callback" | grep -Fc 'createCameraPreviewSession();')" -ne 1 ] || \
+   [ "$(printf '%s\n' "$opened_callback" | grep -Fc 'releaseCameraOpenLockFromCallback();')" -ne 1 ]; then
+  printf '%s\n' "Opened camera publication and preview submission must precede callback lock release." >&2
+  exit 1
+fi
 if [ "$(printf '%s\n' "$device_state_callback" | grep -Fc "releaseCameraOpenLockFromCallback();")" -ne 3 ] || \
    printf '%s\n' "$device_state_callback" | grep -Fq "mCameraOpenCloseLock.release();"; then
   printf '%s\n' "Opened, disconnected, and error callbacks must share the single-release helper." >&2
@@ -891,6 +906,21 @@ for callback_release_marker in \
     exit 1
   fi
 done
+
+if ! grep -Fq "Status: Completed" "$CAMERA_OPEN_CALLBACK_PUBLICATION_PLAN" || \
+   ! grep -Fq "Publish the callback-owned device before beginning preview setup" "$CAMERA_OPEN_CALLBACK_PUBLICATION_PLAN" || \
+   ! grep -Fq "Release callback ownership from a \`finally\` block" "$CAMERA_OPEN_CALLBACK_PUBLICATION_PLAN" || \
+   ! grep -Fq "pause-during-open runtime" "$CAMERA_OPEN_CALLBACK_PUBLICATION_PLAN" || \
+   ! grep -Fq "Three isolated mutations were rejected" "$CAMERA_OPEN_CALLBACK_PUBLICATION_PLAN" || \
+   ! grep -Fq "The opened callback must publish its device" "$ROOT_DIR/AGENTS.md" || \
+   ! grep -Fq "The opened callback publishes its device" "$README" || \
+   ! grep -Fq "opened camera device and synchronous preview-session submission" "$ROOT_DIR/SECURITY.md" || \
+   ! grep -Fq "Keep opened-device publication and preview submission ahead" "$ROOT_DIR/VISION.md" || \
+   ! grep -Fq "Pause during camera open" "$ROOT_DIR/DEVICE_VERIFICATION.md" || \
+   ! grep -Fq 'Prevented `onPause` from acquiring the camera lifecycle semaphore' "$ROOT_DIR/CHANGES.md"; then
+  printf '%s\n' "Opened camera publication guidance and plan must remain checked in." >&2
+  exit 1
+fi
 
 if ! grep -B1 -F "manager.openCamera(mCameraId, mStateCallback, mBackgroundHandler);" "$FRAGMENT" | \
      grep -Fq "mCameraOpenCallbackOwnsLock.set(true);" || \

@@ -65,6 +65,8 @@
 - Device disconnect and error callbacks close their callback-owned device before rejecting stale shared ownership.
 - Opened, disconnected, and error callbacks share one atomic release token so
   a post-open device failure cannot add a semaphore permit.
+- The opened callback must publish its device and synchronously submit preview
+  creation before releasing its transferred semaphore ownership.
 - Capture-result and still-capture completion callbacks reject stale session ownership before mutating capture state or unlocking focus.
 - Synchronous preview-start failures clear only callback-owned shared preview
   state and close the failed capture session before returning.
