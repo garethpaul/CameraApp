@@ -1,59 +1,71 @@
 {
-  "bootstrap_exact_default": "07e52496a3408dec2f505076b1e876c3bbcbce68",
+  "bootstrap_exact_default": "62b2283308279efe7168e331ef1474fa98a4497e",
   "expected_files": {
     "AGENTS.md": {
       "max_bytes": 10000,
       "mode": "100644",
-      "sha256": "b5aaf0e3f63e298ea277453d1e8ef398f8d81b76bdcfd873c35733d2071a7ef4",
-      "template": "expected/open-publication/AGENTS.md"
+      "sha256": "e09237c6986e9ec9df7a0d9bbdfc86916595993fdc94b895f1237161673effe6",
+      "template": "expected/gradle-9-6-1/AGENTS.md"
     },
-    "Application/src/main/java/com/example/android/camera2basic/Camera2BasicFragment.java": {
-      "max_bytes": 50000,
-      "mode": "100644",
-      "sha256": "227295ab97505e8359a188a6531a8a63bd0fa8bced074d2178f8f573cc5fe6f7",
-      "template": "expected/open-publication/Application/src/main/java/com/example/android/camera2basic/Camera2BasicFragment.java"
-    },
-    "CHANGES.md": {
-      "max_bytes": 30000,
-      "mode": "100644",
-      "sha256": "af2a88185acf5cdb1cbb71a1f5759e4ed1514041268112d13b146a1d3b035595",
-      "template": "expected/open-publication/CHANGES.md"
-    },
-    "DEVICE_VERIFICATION.md": {
+    "Application/build.gradle": {
       "max_bytes": 10000,
       "mode": "100644",
-      "sha256": "f9d2945ee194bc2cad81bba3bf77a127c4bd831740164a9044be6d27e3959cd7",
-      "template": "expected/open-publication/DEVICE_VERIFICATION.md"
+      "sha256": "65b4da05395db12cf093432261ae56dd4df45ddd9140c6fffa0a4890d323d8c3",
+      "template": "expected/gradle-9-6-1/Application/build.gradle"
+    },
+    "CHANGES.md": {
+      "max_bytes": 35000,
+      "mode": "100644",
+      "sha256": "d1e167845677cf68e58596c89433c2a1f37f707a064501a7454dd94b8f168408",
+      "template": "expected/gradle-9-6-1/CHANGES.md"
     },
     "README.md": {
       "max_bytes": 20000,
       "mode": "100644",
-      "sha256": "63b611d1f40fb10785f8598a30af2f07fbe58db2fb4d8bb4d3f715493497d44e",
-      "template": "expected/open-publication/README.md"
+      "sha256": "de1632d8f5e6b64833e8d56309e7be5037612ebb17e56fac41ac0006f00206b7",
+      "template": "expected/gradle-9-6-1/README.md"
     },
     "SECURITY.md": {
       "max_bytes": 12000,
       "mode": "100644",
-      "sha256": "a1cfa59f472477b5d0391849e15947931b7599ef0b754305ef7cd6cc924a51a6",
-      "template": "expected/open-publication/SECURITY.md"
+      "sha256": "dd1810a4ebb146ee2e313a13ee0e1a458754147d7634fa19bc1a9fcbbab1ad49",
+      "template": "expected/gradle-9-6-1/SECURITY.md"
     },
     "VISION.md": {
       "max_bytes": 10000,
       "mode": "100644",
-      "sha256": "22a815633d265840294d4f70b4d3bd0bc3262581c371f7d0ab71ef4ac8c9ba29",
-      "template": "expected/open-publication/VISION.md"
+      "sha256": "1e9e31a7bbf15dbcf0e268cc106be424b4abe2bdd7395926f066506ebb9b85ab",
+      "template": "expected/gradle-9-6-1/VISION.md"
     },
-    "docs/plans/2026-06-26-cameraapp-open-callback-publication.md": {
+    "docs/plans/2026-06-26-gradle-9-6-1-refresh.md": {
       "max_bytes": 6000,
       "mode": "100644",
-      "sha256": "1c3373bb12533e89c990f9f1f0975d20db9cd4753b944a3348d08dec002b33a7",
-      "template": "expected/open-publication/docs/plans/2026-06-26-cameraapp-open-callback-publication.md"
+      "sha256": "4d7aeccf1ef59c2952993ef066c2d5345671a8ff6f74c63d7b18bc07b251ccbe",
+      "template": "expected/gradle-9-6-1/docs/plans/2026-06-26-gradle-9-6-1-refresh.md"
+    },
+    "gradle/wrapper/gradle-wrapper.properties": {
+      "max_bytes": 2000,
+      "mode": "100644",
+      "sha256": "89f62533208a72b7a8cc2892b6b3540c445fa6175508297d932dae57d653591a",
+      "template": "expected/gradle-9-6-1/gradle/wrapper/gradle-wrapper.properties"
+    },
+    "gradlew": {
+      "max_bytes": 20000,
+      "mode": "100755",
+      "sha256": "a5a5c199ba02189ae8c46a334223371a20599d9c298ef65e7540ede4a3f72d59",
+      "template": "expected/gradle-9-6-1/gradlew"
+    },
+    "gradlew.bat": {
+      "max_bytes": 10000,
+      "mode": "100644",
+      "sha256": "59328c7a17f673b1a63040bfb380a0c749e5d6df3406f7f18641060314cd9aa1",
+      "template": "expected/gradle-9-6-1/gradlew.bat"
     },
     "scripts/check-baseline.sh": {
-      "max_bytes": 130000,
+      "max_bytes": 140000,
       "mode": "100755",
-      "sha256": "6231e1ff4979cb979c88b8b1533debe2c883cc20d8613715b08e468db2b386ac",
-      "template": "expected/open-publication/scripts/check-baseline.sh"
+      "sha256": "127bf880a907be7eb4091c3c8b8a85b294ca9ae2a89c79c5ee492b29167e7ad0",
+      "template": "expected/gradle-9-6-1/scripts/check-baseline.sh"
     }
   },
   "merge_authority": {
@@ -73,14 +85,16 @@
     "trusted-verifier/run-hermetic.sh",
     "trusted-verifier/verify_candidate.py",
     "trusted-verifier/verify_environment.py",
-    "trusted-verifier/expected/open-publication/AGENTS.md",
-    "trusted-verifier/expected/open-publication/Application/src/main/java/com/example/android/camera2basic/Camera2BasicFragment.java",
-    "trusted-verifier/expected/open-publication/CHANGES.md",
-    "trusted-verifier/expected/open-publication/DEVICE_VERIFICATION.md",
-    "trusted-verifier/expected/open-publication/README.md",
-    "trusted-verifier/expected/open-publication/SECURITY.md",
-    "trusted-verifier/expected/open-publication/VISION.md",
-    "trusted-verifier/expected/open-publication/docs/plans/2026-06-26-cameraapp-open-callback-publication.md",
-    "trusted-verifier/expected/open-publication/scripts/check-baseline.sh"
+    "trusted-verifier/expected/gradle-9-6-1/AGENTS.md",
+    "trusted-verifier/expected/gradle-9-6-1/Application/build.gradle",
+    "trusted-verifier/expected/gradle-9-6-1/CHANGES.md",
+    "trusted-verifier/expected/gradle-9-6-1/README.md",
+    "trusted-verifier/expected/gradle-9-6-1/SECURITY.md",
+    "trusted-verifier/expected/gradle-9-6-1/VISION.md",
+    "trusted-verifier/expected/gradle-9-6-1/docs/plans/2026-06-26-gradle-9-6-1-refresh.md",
+    "trusted-verifier/expected/gradle-9-6-1/gradle/wrapper/gradle-wrapper.properties",
+    "trusted-verifier/expected/gradle-9-6-1/gradlew",
+    "trusted-verifier/expected/gradle-9-6-1/gradlew.bat",
+    "trusted-verifier/expected/gradle-9-6-1/scripts/check-baseline.sh"
   ]
 }

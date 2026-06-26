@@ -63,7 +63,7 @@ Android SDK before invoking the verification targets.
 
 - Use Android Studio to open the project or run the checked-in wrapper when the
   Android SDK is configured.
-- The project uses Gradle 9.6.0, Android Gradle Plugin 9.2.0, compile/target SDK
+- The project uses Gradle 9.6.1, Android Gradle Plugin 9.2.0, compile/target SDK
   36, min SDK 21, and Android Build Tools 36.1.0.
 - The application runtime dependency graph is intentionally empty. AndroidX is
   used only by the instrumentation smoke test.
@@ -108,7 +108,7 @@ Focused Gradle commands are available after Android SDK configuration:
 ./gradlew :Application:assembleDebug --no-daemon
 ```
 
-The wrapper pins the official Gradle 9.6.0 binary distribution and authenticates
+The wrapper pins the official Gradle 9.6.1 binary distribution and authenticates
 it with `distributionSha256Sum`; an empty wrapper cache therefore requires
 access to Gradle's HTTPS distribution service.
 
