@@ -73,6 +73,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class Camera2BasicFragment extends Fragment implements View.OnClickListener {
 
@@ -182,14 +183,14 @@ public class Camera2BasicFragment extends Fragment implements View.OnClickListen
         @Override
         public void onOpened(CameraDevice cameraDevice) {
             // This method is called when the camera is opened.  We start camera preview here.
-            mCameraOpenCloseLock.release();
+            releaseCameraOpenLockFromCallback();
             mCameraDevice = cameraDevice;
             createCameraPreviewSession();
         }
 
         @Override
         public void onDisconnected(CameraDevice cameraDevice) {
-            mCameraOpenCloseLock.release();
+            releaseCameraOpenLockFromCallback();
             cameraDevice.close();
             if (mCameraDevice != cameraDevice) {
                 return;
@@ -199,7 +200,7 @@ public class Camera2BasicFragment extends Fragment implements View.OnClickListen
 
         @Override
         public void onError(CameraDevice cameraDevice, int error) {
-            mCameraOpenCloseLock.release();
+            releaseCameraOpenLockFromCallback();
             cameraDevice.close();
             if (mCameraDevice != cameraDevice) {
                 return;
@@ -222,6 +223,12 @@ public class Camera2BasicFragment extends Fragment implements View.OnClickListen
      * A {@link Handler} for running tasks in the background.
      */
     private Handler mBackgroundHandler;
+
+    private void releaseCameraOpenLockFromCallback() {
+        if (mCameraOpenCallbackOwnsLock.compareAndSet(true, false)) {
+            mCameraOpenCloseLock.release();
+        }
+    }
 
     /**
      * An {@link ImageReader} that handles still image capture.
@@ -285,6 +292,8 @@ public class Camera2BasicFragment extends Fragment implements View.OnClickListen
      * A {@link Semaphore} to prevent the app from exiting before closing the camera.
      */
     private Semaphore mCameraOpenCloseLock = new Semaphore(1);
+
+    private final AtomicBoolean mCameraOpenCallbackOwnsLock = new AtomicBoolean();
 
     /**
      * A {@link CameraCaptureSession.CaptureCallback} that handles events related to JPEG capture.
@@ -627,6 +636,7 @@ public class Camera2BasicFragment extends Fragment implements View.OnClickListen
             if (!cameraLockAcquired) {
                 throw new RuntimeException("Time out waiting to lock camera opening.");
             }
+            mCameraOpenCallbackOwnsLock.set(true);
             manager.openCamera(mCameraId, mStateCallback, mBackgroundHandler);
             cameraLockAcquired = false;
         } catch (CameraAccessException e) {
@@ -635,6 +645,7 @@ public class Camera2BasicFragment extends Fragment implements View.OnClickListen
             throw new RuntimeException("Interrupted while trying to lock camera opening.", e);
         } finally {
             if (cameraLockAcquired) {
+                mCameraOpenCallbackOwnsLock.set(false);
                 mCameraOpenCloseLock.release();
             }
         }

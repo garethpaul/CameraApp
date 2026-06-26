@@ -22,6 +22,7 @@ Priority:
 - Keep the sample-origin source layout and attribution intact
 - Keep camera lifecycle startup tied to an available texture view
 - Keep camera open/close semaphore ownership balanced across failure paths
+- Keep all camera-open callbacks bound to one atomic semaphore-release token
 - Keep interrupted camera close attempts from releasing unowned permits
 - Interrupted camera-worker shutdown preserves the interrupt signal and unresolved worker ownership.
 - Keep asynchronous preview callbacks bound to their initiating camera device
