@@ -39,6 +39,58 @@ camera lifecycle semaphore a second time and weakening open/close serialization.
   then merge only its one-commit direct child after every hosted gate passes.
 
 
+
+## 2026-06-26 05:31 PDT - P1 - Finalize callback lock semantic history
+
+### Summary
+
+Made the exact callback-lock semantic changelog retain the corrective digest
+marker itself, the earlier history marker, and the original policy bootstrap.
+
+### Work completed
+
+- Embedded this marker and all prior callback-lock rollout records in the exact
+  semantic `CHANGES.md` template.
+- Refreshed the trusted changelog digest and bounded size limit.
+- Preserved the same eight-file semantic boundary and verifier behavior.
+
+### Validation
+
+- The full hermetic verifier suite passed.
+- A literal one-commit synthetic semantic child was accepted with the final
+  self-preserving changelog digest.
+- Source baseline, JSON parsing, and `git diff --check` passed.
+
+### Next action
+
+- Merge this final base-only marker, then apply the reviewed semantic repair as
+  one direct child of the new default branch.
+
+## 2026-06-26 05:22 PDT - P1 - Preserve bootstrap history in semantic bytes
+
+### Summary
+
+Updated the trusted callback-lock changelog template so the semantic repair
+retains the base-owned bootstrap record instead of replacing it.
+
+### Work completed
+
+- Added the merged bootstrap entry to the exact semantic `CHANGES.md` template.
+- Refreshed only that template's SHA-256 policy digest.
+- Preserved the same eight-file semantic boundary and all verifier behavior.
+
+### Validation
+
+- The full hermetic verifier suite passed.
+- A literal one-commit synthetic semantic child was accepted with the refreshed
+  changelog digest.
+- Source baseline, JSON parsing, and `git diff --check` passed.
+
+### Next action
+
+- Merge this base-only digest marker, then apply the semantic repair as one
+  direct child of the new default branch.
+
 ## 2026-06-26 05:05 PDT - P1 - Authorize callback lock ownership bytes
 
 ### Summary
