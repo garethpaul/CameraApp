@@ -31,6 +31,8 @@ Helpful reports include:
 - Review found mobile permission or privacy-sensitive data handling; changes in those areas should receive security-focused review before merge.
 - Interrupted camera-worker shutdown preserves the interrupt signal and unresolved worker ownership.
 - Stale camera-device callbacks cannot clear replacement state or finish its activity.
+- Camera open callbacks atomically consume one release token; later disconnect
+  or error callbacks cannot weaken lifecycle serialization with an extra permit.
 - Capture-result and still-capture completion callbacks reject stale session ownership before mutating capture state or unlocking focus.
 - Preview startup failures clear only the failed callback's published session,
   builder, and request before closing that session.

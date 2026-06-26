@@ -69,8 +69,9 @@ TRUSTED_GATE_RUNNER="$ROOT_DIR/trusted-verifier/run-hermetic.sh"
 TRUSTED_GATE_VERIFIER="$ROOT_DIR/trusted-verifier/verify_candidate.py"
 TRUSTED_ENV_VERIFIER="$ROOT_DIR/trusted-verifier/verify_environment.py"
 TRUSTED_GATE_TEST="$ROOT_DIR/trusted-verifier/tests/test_bootstrap.py"
-TRUSTED_GATE_EXPECTED_ROOT="$ROOT_DIR/trusted-verifier/expected/preview-session"
+TRUSTED_GATE_EXPECTED_ROOT="$ROOT_DIR/trusted-verifier/expected/callback-lock"
 PREVIEW_TRUSTED_POLICY_PLAN="$ROOT_DIR/docs/plans/2026-06-25-cameraapp-preview-trusted-policy.md"
+CALLBACK_LOCK_TRUSTED_POLICY_PLAN="$ROOT_DIR/docs/plans/2026-06-26-cameraapp-callback-lock-trusted-policy.md"
 BACKUP_RULES="$ROOT_DIR/Application/src/main/res/xml/backup_rules.xml"
 DATA_EXTRACTION_RULES="$ROOT_DIR/Application/src/main/res/xml/data_extraction_rules.xml"
 
@@ -155,6 +156,7 @@ for path in \
   "docs/plans/2026-06-25-cameraapp-focus-trusted-policy.md" \
   "docs/plans/2026-06-25-cameraapp-preview-trusted-policy.md" \
   "docs/plans/2026-06-25-cameraapp-preview-session-recovery.md" \
+  "docs/plans/2026-06-26-cameraapp-callback-lock-trusted-policy.md" \
   "scripts/run-instrumentation.sh" \
   "scripts/tests/run-instrumentation-cleanup-test.sh" \
   "trusted-verifier/policy.json" \
@@ -162,14 +164,14 @@ for path in \
   "trusted-verifier/verify_candidate.py" \
   "trusted-verifier/verify_environment.py" \
   "trusted-verifier/tests/test_bootstrap.py" \
-  "trusted-verifier/expected/preview-session/AGENTS.md" \
-  "trusted-verifier/expected/preview-session/Application/src/main/java/com/example/android/camera2basic/Camera2BasicFragment.java" \
-  "trusted-verifier/expected/preview-session/CHANGES.md" \
-  "trusted-verifier/expected/preview-session/README.md" \
-  "trusted-verifier/expected/preview-session/SECURITY.md" \
-  "trusted-verifier/expected/preview-session/VISION.md" \
-  "trusted-verifier/expected/preview-session/docs/plans/2026-06-25-cameraapp-preview-session-recovery.md" \
-  "trusted-verifier/expected/preview-session/scripts/check-baseline.sh" \
+  "trusted-verifier/expected/callback-lock/AGENTS.md" \
+  "trusted-verifier/expected/callback-lock/Application/src/main/java/com/example/android/camera2basic/Camera2BasicFragment.java" \
+  "trusted-verifier/expected/callback-lock/CHANGES.md" \
+  "trusted-verifier/expected/callback-lock/README.md" \
+  "trusted-verifier/expected/callback-lock/SECURITY.md" \
+  "trusted-verifier/expected/callback-lock/VISION.md" \
+  "trusted-verifier/expected/callback-lock/docs/plans/2026-06-26-cameraapp-open-callback-lock-ownership.md" \
+  "trusted-verifier/expected/callback-lock/scripts/check-baseline.sh" \
   "Application/src/main/res/drawable-xxxhdpi/ic_launcher.png" \
   "Application/src/main/res/drawable-xxxhdpi/ic_action_info.png" \
   "gradlew" \
@@ -241,12 +243,12 @@ fi
 
 if [ ! -d "$TRUSTED_GATE_EXPECTED_ROOT" ] || \
    [ "$(find "$TRUSTED_GATE_EXPECTED_ROOT" -type f | wc -l | tr -d ' ')" -ne 8 ]; then
-  printf '%s\n' "Trusted preview-session policy must retain all eight reviewed semantic templates." >&2
+  printf '%s\n' "Trusted callback-lock policy must retain all eight reviewed semantic templates." >&2
   exit 1
 fi
 
-if [ "$(grep -Fc 'preview_start_recovery=$(printf' "$TRUSTED_GATE_EXPECTED_ROOT/scripts/check-baseline.sh")" -ne 2 ]; then
-  printf '%s\n' "Trusted preview-session checker must require exact startup recovery markers." >&2
+if [ "$(grep -Fc 'mCameraOpenCallbackOwnsLock.compareAndSet(true, false)' "$TRUSTED_GATE_EXPECTED_ROOT/scripts/check-baseline.sh")" -ne 2 ]; then
+  printf '%s\n' "Trusted callback-lock checker must require atomic ownership consumption." >&2
   exit 1
 fi
 
@@ -2036,7 +2038,7 @@ if grep -Eq 'write-all|:[[:space:]]*write|secrets\.|actions/cache|candidate/(Mak
 fi
 
 for trusted_policy_contract in \
-  '"bootstrap_exact_default": "d83c5f209bafd5733a1d1937fe0f2efea72a2706"' \
+  '"bootstrap_exact_default": "50629b69078b707125ae311afdac34ca81e76909"' \
   '"environment": "cameraapp-trusted-verifier-v1"' \
   '"diagnostic_check_context_is_authoritative": false' \
   '"kind": "required_protected_environment_deployment"' \
@@ -2046,7 +2048,8 @@ for trusted_policy_contract in \
   '"Application/src/main/java/com/example/android/camera2basic/Camera2BasicFragment.java"' \
   '"scripts/check-baseline.sh"' \
   '"trusted-verifier/verify_environment.py"' \
-  '"trusted-verifier/expected/preview-session/scripts/check-baseline.sh"'; do
+  '"docs/plans/2026-06-26-cameraapp-open-callback-lock-ownership.md"' \
+  '"trusted-verifier/expected/callback-lock/scripts/check-baseline.sh"'; do
   if ! grep -Fq "$trusted_policy_contract" "$TRUSTED_GATE_POLICY"; then
     printf '%s\n' "Trusted CameraApp policy must preserve contract: $trusted_policy_contract" >&2
     exit 1
@@ -2338,6 +2341,13 @@ if ! grep -Fq "Status: Completed" "$PREVIEW_TRUSTED_POLICY_PLAN" || \
    ! grep -Fq "one direct child" "$PREVIEW_TRUSTED_POLICY_PLAN" || \
    ! grep -Fq "exact eight-file synthetic semantic child" "$PREVIEW_TRUSTED_POLICY_PLAN"; then
   printf '%s\n' "CameraApp preview trusted policy plan must record status, topology, and exact-child evidence." >&2
+  exit 1
+fi
+
+if ! grep -Fq "Status: Completed" "$CALLBACK_LOCK_TRUSTED_POLICY_PLAN" || \
+   ! grep -Fq "one direct child" "$CALLBACK_LOCK_TRUSTED_POLICY_PLAN" || \
+   ! grep -Fq "exact eight-file synthetic semantic child" "$CALLBACK_LOCK_TRUSTED_POLICY_PLAN"; then
+  printf '%s\n' "CameraApp callback-lock trusted policy plan must record status, topology, and exact-child evidence." >&2
   exit 1
 fi
 

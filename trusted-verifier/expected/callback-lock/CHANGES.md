@@ -1,5 +1,43 @@
 # CameraApp Changes
 
+## 2026-06-26 04:56 PDT - P1 - Preserve camera callback lock ownership
+
+### Summary
+
+Prevented a disconnect or error delivered after `onOpened` from releasing the
+camera lifecycle semaphore a second time and weakening open/close serialization.
+
+### Work completed
+
+- Added one atomic callback-release token transferred immediately before the
+  asynchronous camera open.
+- Routed opened, disconnected, and error callbacks through a one-shot release
+  helper while preserving callback-device closure and stale ownership guards.
+- Revoked callback ownership before synchronous camera-open failure cleanup.
+- Added SDK-free ordered contracts, four hostile mutations, synchronized
+  guidance, and a completed implementation plan.
+
+### Validation
+
+- RED: the baseline rejected the missing atomic callback ownership token.
+- GREEN: `scripts/check-baseline.sh` passes after implementation.
+- Four isolated ownership mutations were rejected: direct extra release,
+  missing error callback release, weakened atomic consumption, and stale
+  synchronous-failure ownership.
+- Root/external Make, hosted Android, trusted verifier, and exact-head review
+  remain merge gates.
+
+### Blockers
+
+- No emulator, physical camera, or live post-open disconnect/error callback is
+  available locally; runtime lifecycle confirmation remains in the device
+  verification matrix.
+
+### Next action
+
+- Bootstrap the base-owned trusted policy for these exact eight semantic files,
+  then merge only its one-commit direct child after every hosted gate passes.
+
 ## 2026-06-25 15:40 PDT - P1 - Recover failed preview startup ownership
 
 ### Summary
