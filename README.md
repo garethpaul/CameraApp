@@ -183,6 +183,8 @@ contracts as camera execution.
   only the initiating camera lifetime may report configuration failures.
 - Synchronous camera-open failures release the open/close semaphore before
   pause or teardown can wait on it.
+- Opened, disconnected, and error callbacks atomically consume one transferred
+  release token, preventing a post-open callback from adding a semaphore permit.
 - Camera close releases the semaphore only after successful acquisition and
   restores interrupt status when acquisition is interrupted.
 - Toast messages use a static main-looper handler with a weak fragment reference
