@@ -1,5 +1,75 @@
 # CameraApp Changes
 
+## 2026-06-26 06:43 PDT - P1 - Publish opened camera before lock release
+
+### Summary
+
+Prevented `onPause` from acquiring the camera lifecycle semaphore between an
+opened callback's release and its shared-device publication, which could let a
+late camera and preview submission escape teardown.
+
+### Work completed
+
+- Published the callback-owned camera before beginning preview setup.
+- Kept the transferred semaphore token through synchronous preview-session
+  submission and released it from `finally` on every return or failure.
+- Added SDK-free ordering contracts, lifecycle guidance, a device-verification
+  scenario, and an implementation plan.
+
+### Validation
+
+- RED: the source baseline rejected release before publication and preview
+  submission.
+- GREEN: `scripts/check-baseline.sh` passes after implementation.
+- Three isolated ownership mutations were rejected. Root Make authority,
+  external-directory baseline execution, eight trusted-verifier tests, shell
+  syntax, policy JSON, and `git diff --check` pass.
+- Full local Android verification stopped at the explicit toolchain gate
+  because this runner has JDK 21 and no Android SDK; hosted JDK 17, API 36,
+  Build Tools 36.1.0, instrumentation, CodeQL, and exact-head review remain
+  merge gates.
+
+### Blockers
+
+- No physical camera is available locally; pause-during-open runtime
+  confirmation remains in the exact-head device verification matrix.
+
+### Next action
+
+- Bootstrap the base-owned trusted policy for the exact reviewed semantic
+  bytes, then merge only the exact hosted-green semantic head.
+
+## 2026-06-26 06:58 PDT - P1 - Authorize opened-camera publication bytes
+
+### Summary
+
+The base-owned trusted verifier now authorizes exactly the nine reviewed files
+for opened-device publication before camera callback semaphore release.
+
+### Work completed
+
+- Replaced the callback-lock templates with exact opened-camera publication
+  templates, modes, size limits, and SHA-256 digests.
+- Bound the next semantic repair to one direct child of this bootstrap base.
+- Preserved hostile topology, byte, path, mode, size, and tool-injection tests.
+
+### Validation
+
+- Trusted verifier unit tests and the SDK-free source baseline pass.
+- The exact nine-file synthetic semantic child is accepted with every reviewed
+  digest in its receipt.
+- Policy JSON parsing and `git diff --check` pass. Ordinary hosted and
+  exact-head review evidence remain merge gates.
+
+### Blockers
+
+- The old protected gate must reject this policy-changing bootstrap by design.
+
+### Next action
+
+- Merge this bootstrap, then rebase and apply the reviewed semantic repair as
+  one direct child of the new default branch.
+
 ## 2026-06-26 04:56 PDT - P1 - Preserve camera callback lock ownership
 
 ### Summary

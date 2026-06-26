@@ -60,6 +60,9 @@ Helpful reports include:
 - Camera access is requested at runtime on API 23 and newer. Camera output
   configuration and `CameraManager.openCamera` must remain unreachable until
   permission is granted.
+- The opened camera device and synchronous preview-session submission remain
+  inside the transferred open/close semaphore ownership so lifecycle teardown
+  cannot miss and then outlive a late opened callback.
 - Application runtime dependencies are intentionally absent. AndroidX
   dependencies are limited to the instrumentation test configuration.
 - Hosted instrumentation executes only the pre-permission activity/fragment

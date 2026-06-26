@@ -185,6 +185,9 @@ contracts as camera execution.
   pause or teardown can wait on it.
 - Opened, disconnected, and error callbacks atomically consume one transferred
   release token, preventing a post-open callback from adding a semaphore permit.
+- The opened callback publishes its device and submits preview-session creation
+  before releasing that token, so pause cannot close an apparently empty camera
+  lifetime and then allow late callback work to escape teardown.
 - Camera close releases the semaphore only after successful acquisition and
   restores interrupt status when acquisition is interrupted.
 - Toast messages use a static main-looper handler with a weak fragment reference
@@ -246,6 +249,8 @@ contracts as camera execution.
   Actions baseline.
 - See `docs/plans/2026-06-10-cameraapp-open-lock-release.md` for the synchronous
   camera-open semaphore recovery guard.
+- See `docs/plans/2026-06-26-cameraapp-open-callback-publication.md` for the
+  opened-device publication and preview-submission semaphore boundary.
 - See `docs/plans/2026-06-13-cameraapp-rtl-layout.md` for the logical camera
   control placement baseline.
 - See `docs/plans/2026-06-13-cameraapp-landscape-overlap.md` for landscape

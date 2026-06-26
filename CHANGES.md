@@ -1,5 +1,36 @@
 # CameraApp Changes
 
+## 2026-06-26 06:58 PDT - P1 - Authorize opened-camera publication bytes
+
+### Summary
+
+The base-owned trusted verifier now authorizes exactly the nine reviewed files
+for opened-device publication before camera callback semaphore release.
+
+### Work completed
+
+- Replaced the callback-lock templates with exact opened-camera publication
+  templates, modes, size limits, and SHA-256 digests.
+- Bound the next semantic repair to one direct child of this bootstrap base.
+- Preserved hostile topology, byte, path, mode, size, and tool-injection tests.
+
+### Validation
+
+- Trusted verifier unit tests and the SDK-free source baseline pass.
+- The exact nine-file synthetic semantic child is accepted with every reviewed
+  digest in its receipt.
+- Policy JSON parsing and `git diff --check` pass. Ordinary hosted and
+  exact-head review evidence remain merge gates.
+
+### Blockers
+
+- The old protected gate must reject this policy-changing bootstrap by design.
+
+### Next action
+
+- Merge this bootstrap, then rebase and apply the reviewed semantic repair as
+  one direct child of the new default branch.
+
 ## 2026-06-26 04:56 PDT - P1 - Preserve camera callback lock ownership
 
 ### Summary

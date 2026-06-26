@@ -22,6 +22,7 @@ CI_PLAN="$ROOT_DIR/docs/plans/2026-06-10-ci-baseline.md"
 CAMERA_OPEN_LOCK_PLAN="$ROOT_DIR/docs/plans/2026-06-10-cameraapp-open-lock-release.md"
 CAMERA_CLOSE_LOCK_PLAN="$ROOT_DIR/docs/plans/2026-06-12-cameraapp-close-lock-ownership.md"
 CAMERA_OPEN_CALLBACK_LOCK_PLAN="$ROOT_DIR/docs/plans/2026-06-26-cameraapp-open-callback-lock-ownership.md"
+CAMERA_OPEN_CALLBACK_PUBLICATION_PLAN="$ROOT_DIR/docs/plans/2026-06-26-cameraapp-open-callback-publication.md"
 TOAST_HANDLER_PLAN="$ROOT_DIR/docs/plans/2026-06-12-cameraapp-toast-handler-lifecycle.md"
 WRAPPER_PLAN="$ROOT_DIR/docs/plans/2026-06-12-gradle-wrapper-verification.md"
 RTL_LAYOUT_PLAN="$ROOT_DIR/docs/plans/2026-06-13-cameraapp-rtl-layout.md"
@@ -70,9 +71,10 @@ TRUSTED_GATE_RUNNER="$ROOT_DIR/trusted-verifier/run-hermetic.sh"
 TRUSTED_GATE_VERIFIER="$ROOT_DIR/trusted-verifier/verify_candidate.py"
 TRUSTED_ENV_VERIFIER="$ROOT_DIR/trusted-verifier/verify_environment.py"
 TRUSTED_GATE_TEST="$ROOT_DIR/trusted-verifier/tests/test_bootstrap.py"
-TRUSTED_GATE_EXPECTED_ROOT="$ROOT_DIR/trusted-verifier/expected/callback-lock"
+TRUSTED_GATE_EXPECTED_ROOT="$ROOT_DIR/trusted-verifier/expected/open-publication"
 PREVIEW_TRUSTED_POLICY_PLAN="$ROOT_DIR/docs/plans/2026-06-25-cameraapp-preview-trusted-policy.md"
 CALLBACK_LOCK_TRUSTED_POLICY_PLAN="$ROOT_DIR/docs/plans/2026-06-26-cameraapp-callback-lock-trusted-policy.md"
+OPEN_PUBLICATION_TRUSTED_POLICY_PLAN="$ROOT_DIR/docs/plans/2026-06-26-cameraapp-open-publication-trusted-policy.md"
 BACKUP_RULES="$ROOT_DIR/Application/src/main/res/xml/backup_rules.xml"
 DATA_EXTRACTION_RULES="$ROOT_DIR/Application/src/main/res/xml/data_extraction_rules.xml"
 
@@ -158,6 +160,7 @@ for path in \
   "docs/plans/2026-06-25-cameraapp-preview-trusted-policy.md" \
   "docs/plans/2026-06-25-cameraapp-preview-session-recovery.md" \
   "docs/plans/2026-06-26-cameraapp-callback-lock-trusted-policy.md" \
+  "docs/plans/2026-06-26-cameraapp-open-publication-trusted-policy.md" \
   "scripts/run-instrumentation.sh" \
   "scripts/tests/run-instrumentation-cleanup-test.sh" \
   "trusted-verifier/policy.json" \
@@ -165,14 +168,15 @@ for path in \
   "trusted-verifier/verify_candidate.py" \
   "trusted-verifier/verify_environment.py" \
   "trusted-verifier/tests/test_bootstrap.py" \
-  "trusted-verifier/expected/callback-lock/AGENTS.md" \
-  "trusted-verifier/expected/callback-lock/Application/src/main/java/com/example/android/camera2basic/Camera2BasicFragment.java" \
-  "trusted-verifier/expected/callback-lock/CHANGES.md" \
-  "trusted-verifier/expected/callback-lock/README.md" \
-  "trusted-verifier/expected/callback-lock/SECURITY.md" \
-  "trusted-verifier/expected/callback-lock/VISION.md" \
-  "trusted-verifier/expected/callback-lock/docs/plans/2026-06-26-cameraapp-open-callback-lock-ownership.md" \
-  "trusted-verifier/expected/callback-lock/scripts/check-baseline.sh" \
+  "trusted-verifier/expected/open-publication/AGENTS.md" \
+  "trusted-verifier/expected/open-publication/Application/src/main/java/com/example/android/camera2basic/Camera2BasicFragment.java" \
+  "trusted-verifier/expected/open-publication/CHANGES.md" \
+  "trusted-verifier/expected/open-publication/DEVICE_VERIFICATION.md" \
+  "trusted-verifier/expected/open-publication/README.md" \
+  "trusted-verifier/expected/open-publication/SECURITY.md" \
+  "trusted-verifier/expected/open-publication/VISION.md" \
+  "trusted-verifier/expected/open-publication/docs/plans/2026-06-26-cameraapp-open-callback-publication.md" \
+  "trusted-verifier/expected/open-publication/scripts/check-baseline.sh" \
   "Application/src/main/res/drawable-xxxhdpi/ic_launcher.png" \
   "Application/src/main/res/drawable-xxxhdpi/ic_action_info.png" \
   "gradlew" \
@@ -243,13 +247,13 @@ if [ ! -x "$TRUSTED_GATE_RUNNER" ] || ! sh -n "$TRUSTED_GATE_RUNNER" || \
 fi
 
 if [ ! -d "$TRUSTED_GATE_EXPECTED_ROOT" ] || \
-   [ "$(find "$TRUSTED_GATE_EXPECTED_ROOT" -type f | wc -l | tr -d ' ')" -ne 8 ]; then
-  printf '%s\n' "Trusted callback-lock policy must retain all eight reviewed semantic templates." >&2
+   [ "$(find "$TRUSTED_GATE_EXPECTED_ROOT" -type f | wc -l | tr -d ' ')" -ne 9 ]; then
+  printf '%s\n' "Trusted opened-publication policy must retain all nine reviewed semantic templates." >&2
   exit 1
 fi
 
 if [ "$(grep -Fc 'mCameraOpenCallbackOwnsLock.compareAndSet(true, false)' "$TRUSTED_GATE_EXPECTED_ROOT/scripts/check-baseline.sh")" -ne 2 ]; then
-  printf '%s\n' "Trusted callback-lock checker must require atomic ownership consumption." >&2
+  printf '%s\n' "Trusted opened-publication checker must require atomic ownership consumption." >&2
   exit 1
 fi
 
@@ -869,6 +873,20 @@ device_state_callback=$(awk '
   capture && /An additional thread for running tasks/ { exit }
   capture { print }
 ' "$FRAGMENT")
+opened_callback=$(awk '
+  /public void onOpened\(CameraDevice cameraDevice\)/ { capture = 1 }
+  capture { print }
+  capture && /^        }$/ { exit }
+' "$FRAGMENT")
+opened_callback_compact=$(printf '%s\n' "$opened_callback" | tr '\n' ' ' | tr -s '[:space:]' ' ')
+if ! printf '%s\n' "$opened_callback_compact" | grep -Fq \
+    'mCameraDevice = cameraDevice; try { createCameraPreviewSession(); } finally { releaseCameraOpenLockFromCallback(); }' || \
+   [ "$(printf '%s\n' "$opened_callback" | grep -Fc 'mCameraDevice = cameraDevice;')" -ne 1 ] || \
+   [ "$(printf '%s\n' "$opened_callback" | grep -Fc 'createCameraPreviewSession();')" -ne 1 ] || \
+   [ "$(printf '%s\n' "$opened_callback" | grep -Fc 'releaseCameraOpenLockFromCallback();')" -ne 1 ]; then
+  printf '%s\n' "Opened camera publication and preview submission must precede callback lock release." >&2
+  exit 1
+fi
 if [ "$(printf '%s\n' "$device_state_callback" | grep -Fc "releaseCameraOpenLockFromCallback();")" -ne 3 ] || \
    printf '%s\n' "$device_state_callback" | grep -Fq "mCameraOpenCloseLock.release();"; then
   printf '%s\n' "Opened, disconnected, and error callbacks must share the single-release helper." >&2
@@ -888,6 +906,21 @@ for callback_release_marker in \
     exit 1
   fi
 done
+
+if ! grep -Fq "Status: Completed" "$CAMERA_OPEN_CALLBACK_PUBLICATION_PLAN" || \
+   ! grep -Fq "Publish the callback-owned device before beginning preview setup" "$CAMERA_OPEN_CALLBACK_PUBLICATION_PLAN" || \
+   ! grep -Fq "Release callback ownership from a \`finally\` block" "$CAMERA_OPEN_CALLBACK_PUBLICATION_PLAN" || \
+   ! grep -Fq "pause-during-open runtime" "$CAMERA_OPEN_CALLBACK_PUBLICATION_PLAN" || \
+   ! grep -Fq "Three isolated mutations were rejected" "$CAMERA_OPEN_CALLBACK_PUBLICATION_PLAN" || \
+   ! grep -Fq "The opened callback must publish its device" "$ROOT_DIR/AGENTS.md" || \
+   ! grep -Fq "The opened callback publishes its device" "$README" || \
+   ! grep -Fq "opened camera device and synchronous preview-session submission" "$ROOT_DIR/SECURITY.md" || \
+   ! grep -Fq "Keep opened-device publication and preview submission ahead" "$ROOT_DIR/VISION.md" || \
+   ! grep -Fq "Pause during camera open" "$ROOT_DIR/DEVICE_VERIFICATION.md" || \
+   ! grep -Fq 'Prevented `onPause` from acquiring the camera lifecycle semaphore' "$ROOT_DIR/CHANGES.md"; then
+  printf '%s\n' "Opened camera publication guidance and plan must remain checked in." >&2
+  exit 1
+fi
 
 if ! grep -B1 -F "manager.openCamera(mCameraId, mStateCallback, mBackgroundHandler);" "$FRAGMENT" | \
      grep -Fq "mCameraOpenCallbackOwnsLock.set(true);" || \
@@ -2078,7 +2111,7 @@ if grep -Eq 'write-all|:[[:space:]]*write|secrets\.|actions/cache|candidate/(Mak
 fi
 
 for trusted_policy_contract in \
-  '"bootstrap_exact_default": "50629b69078b707125ae311afdac34ca81e76909"' \
+  '"bootstrap_exact_default": "07e52496a3408dec2f505076b1e876c3bbcbce68"' \
   '"environment": "cameraapp-trusted-verifier-v1"' \
   '"diagnostic_check_context_is_authoritative": false' \
   '"kind": "required_protected_environment_deployment"' \
@@ -2088,8 +2121,8 @@ for trusted_policy_contract in \
   '"Application/src/main/java/com/example/android/camera2basic/Camera2BasicFragment.java"' \
   '"scripts/check-baseline.sh"' \
   '"trusted-verifier/verify_environment.py"' \
-  '"docs/plans/2026-06-26-cameraapp-open-callback-lock-ownership.md"' \
-  '"trusted-verifier/expected/callback-lock/scripts/check-baseline.sh"'; do
+  '"docs/plans/2026-06-26-cameraapp-open-callback-publication.md"' \
+  '"trusted-verifier/expected/open-publication/scripts/check-baseline.sh"'; do
   if ! grep -Fq "$trusted_policy_contract" "$TRUSTED_GATE_POLICY"; then
     printf '%s\n' "Trusted CameraApp policy must preserve contract: $trusted_policy_contract" >&2
     exit 1
@@ -2409,6 +2442,13 @@ if ! grep -Fq "Status: Completed" "$CALLBACK_LOCK_TRUSTED_POLICY_PLAN" || \
    ! grep -Fq "one direct child" "$CALLBACK_LOCK_TRUSTED_POLICY_PLAN" || \
    ! grep -Fq "exact eight-file synthetic semantic child" "$CALLBACK_LOCK_TRUSTED_POLICY_PLAN"; then
   printf '%s\n' "CameraApp callback-lock trusted policy plan must record status, topology, and exact-child evidence." >&2
+  exit 1
+fi
+
+if ! grep -Fq "Status: Completed" "$OPEN_PUBLICATION_TRUSTED_POLICY_PLAN" || \
+   ! grep -Fq "one direct child" "$OPEN_PUBLICATION_TRUSTED_POLICY_PLAN" || \
+   ! grep -Fq "exact nine-file synthetic semantic child" "$OPEN_PUBLICATION_TRUSTED_POLICY_PLAN"; then
+  printf '%s\n' "CameraApp opened-publication trusted policy plan must record status, topology, and exact-child evidence." >&2
   exit 1
 fi
 
