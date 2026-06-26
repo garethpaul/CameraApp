@@ -1,5 +1,36 @@
 # CameraApp Changes
 
+## 2026-06-26 05:05 PDT - P1 - Authorize callback lock ownership bytes
+
+### Summary
+
+The base-owned trusted verifier now authorizes exactly the eight reviewed files
+for camera-open callback semaphore ownership.
+
+### Work completed
+
+- Replaced the completed preview-session templates with exact callback-lock
+  ownership templates, modes, size limits, and SHA-256 digests.
+- Bound the next semantic repair to one direct child of this bootstrap base.
+- Preserved hostile topology, byte, path, mode, size, and tool-injection tests.
+
+### Validation
+
+- Trusted verifier unit tests and the SDK-free source baseline passed.
+- The exact eight-file synthetic semantic child was accepted with every
+  reviewed digest in its receipt.
+- Policy JSON parsing and `git diff --check` passed. Ordinary hosted and
+  exact-head review evidence remain merge gates.
+
+### Blockers
+
+- The old protected gate must reject this policy-changing bootstrap by design.
+
+### Next action
+
+- Merge this bootstrap, then rebase and apply the reviewed semantic repair as
+  one direct child of the new default branch.
+
 ## 2026-06-25 15:40 PDT - P1 - Recover failed preview startup ownership
 
 ### Summary
