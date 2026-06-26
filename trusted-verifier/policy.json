@@ -16,7 +16,7 @@
     "CHANGES.md": {
       "max_bytes": 20000,
       "mode": "100644",
-      "sha256": "5a2601a1c725dbf7896bd837a33860bd93a7535222e8a3a2bbfb068aa642260d",
+      "sha256": "56af66b0f43aaaf5547366640a9a41b738e3cdb735237c72e6c84676431a6da6",
       "template": "expected/callback-lock/CHANGES.md"
     },
     "README.md": {
