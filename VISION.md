@@ -61,7 +61,7 @@ Priority:
 - Keep the full JDK 17, SDK 36, lint, test-APK, and app-APK gate in GitHub Actions
 - Keep pull-request merge authority in a base-owned trusted verifier that treats
   candidate bytes as data until exact semantic review passes
-- Keep Gradle 9.6.0 behind a checksum-verified direct wrapper
+- Keep Gradle 9.6.1 behind a checksum-verified direct wrapper
 - Keep the application runtime dependency graph empty
 - Avoid changing camera behavior without device verification notes
 
