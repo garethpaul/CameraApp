@@ -77,6 +77,7 @@ CALLBACK_LOCK_TRUSTED_POLICY_PLAN="$ROOT_DIR/docs/plans/2026-06-26-cameraapp-cal
 OPEN_PUBLICATION_TRUSTED_POLICY_PLAN="$ROOT_DIR/docs/plans/2026-06-26-cameraapp-open-publication-trusted-policy.md"
 GRADLE_961_TRUSTED_POLICY_PLAN="$ROOT_DIR/docs/plans/2026-06-26-gradle-9-6-1-trusted-policy.md"
 READY_CAPTURE_TRUSTED_POLICY_PLAN="$ROOT_DIR/docs/plans/2026-06-26-cameraapp-ready-capture-trusted-policy.md"
+READY_CAPTURE_POLICY_CORRECTION_PLAN="$ROOT_DIR/docs/plans/2026-06-26-cameraapp-ready-capture-policy-correction.md"
 BACKUP_RULES="$ROOT_DIR/Application/src/main/res/xml/backup_rules.xml"
 DATA_EXTRACTION_RULES="$ROOT_DIR/Application/src/main/res/xml/data_extraction_rules.xml"
 
@@ -165,6 +166,7 @@ for path in \
   "docs/plans/2026-06-26-cameraapp-open-publication-trusted-policy.md" \
   "docs/plans/2026-06-26-gradle-9-6-1-trusted-policy.md" \
   "docs/plans/2026-06-26-cameraapp-ready-capture-trusted-policy.md" \
+  "docs/plans/2026-06-26-cameraapp-ready-capture-policy-correction.md" \
   "scripts/run-instrumentation.sh" \
   "scripts/tests/run-instrumentation-cleanup-test.sh" \
   "trusted-verifier/policy.json" \
@@ -2117,7 +2119,7 @@ if grep -Eq 'write-all|:[[:space:]]*write|secrets\.|actions/cache|candidate/(Mak
 fi
 
 for trusted_policy_contract in \
-  '"bootstrap_exact_default": "93274cfff2672d2de533363bccf083a0edb16747"' \
+  '"bootstrap_exact_default": "50abf2951082f2cc6f7b4d41e4c300cd42957b0a"' \
   '"environment": "cameraapp-trusted-verifier-v1"' \
   '"diagnostic_check_context_is_authoritative": false' \
   '"kind": "required_protected_environment_deployment"' \
@@ -2470,6 +2472,13 @@ if ! grep -Fq "Status: Completed" "$READY_CAPTURE_TRUSTED_POLICY_PLAN" || \
    ! grep -Fq "one direct child" "$READY_CAPTURE_TRUSTED_POLICY_PLAN" || \
    ! grep -Fq "exact nine-file synthetic semantic child" "$READY_CAPTURE_TRUSTED_POLICY_PLAN"; then
   printf '%s\n' "CameraApp ready-capture trusted policy plan must record status, topology, and exact-child evidence." >&2
+  exit 1
+fi
+
+if ! grep -Fq "Status: Completed" "$READY_CAPTURE_POLICY_CORRECTION_PLAN" || \
+   ! grep -Fq "one direct child" "$READY_CAPTURE_POLICY_CORRECTION_PLAN" || \
+   ! grep -Fq "exact nine-file synthetic semantic child" "$READY_CAPTURE_POLICY_CORRECTION_PLAN"; then
+  printf '%s\n' "CameraApp ready-capture policy correction plan must record status, topology, and exact-child evidence." >&2
   exit 1
 fi
 

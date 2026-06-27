@@ -1,5 +1,40 @@
 # CameraApp Changes
 
+## 2026-06-26 19:36 PDT - P1 - Correct ready-capture template base
+
+### Summary
+
+Rebuilt the two overlapping ready-capture templates from the merged trusted
+base so the semantic child retains current policy evidence and inventory.
+
+### Work completed
+
+- Preserved the merged policy bootstrap entries in candidate `CHANGES.md`.
+- Preserved the ready-capture expected-root and correction-plan contracts in
+  the candidate baseline checker.
+- Updated only those two expected templates and their SHA-256 policy digests;
+  the other seven reviewed semantic files remain byte-identical.
+
+### Validation
+
+- The pre-correction semantic child was never pushed.
+- All 8 trusted verifier regression tests pass, including exact reviewed-child
+  acceptance and byte-mutation rejection.
+- SDK-free baseline, policy JSON, shell syntax, and `git diff --check` pass.
+- `make check` passes Make-authority coverage, then stops because this host
+  exposes JDK 21 while the repository requires JDK 17.
+
+### Blockers
+
+- The current protected gate must reject this second policy change by design.
+- Android compilation and instrumentation remain delegated to hosted JDK 17
+  and API 36 jobs.
+
+### Next action
+
+- Merge this correction, then apply the exact reviewed semantic child as one
+  direct child of the corrected default branch.
+
 ## 2026-06-26 19:18 PDT - P1 - Authorize ready-capture state bytes
 
 ### Summary

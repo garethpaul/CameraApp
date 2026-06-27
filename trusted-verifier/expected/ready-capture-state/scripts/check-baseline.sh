@@ -71,11 +71,13 @@ TRUSTED_GATE_RUNNER="$ROOT_DIR/trusted-verifier/run-hermetic.sh"
 TRUSTED_GATE_VERIFIER="$ROOT_DIR/trusted-verifier/verify_candidate.py"
 TRUSTED_ENV_VERIFIER="$ROOT_DIR/trusted-verifier/verify_environment.py"
 TRUSTED_GATE_TEST="$ROOT_DIR/trusted-verifier/tests/test_bootstrap.py"
-TRUSTED_GATE_EXPECTED_ROOT="$ROOT_DIR/trusted-verifier/expected/gradle-9-6-1"
+TRUSTED_GATE_EXPECTED_ROOT="$ROOT_DIR/trusted-verifier/expected/ready-capture-state"
 PREVIEW_TRUSTED_POLICY_PLAN="$ROOT_DIR/docs/plans/2026-06-25-cameraapp-preview-trusted-policy.md"
 CALLBACK_LOCK_TRUSTED_POLICY_PLAN="$ROOT_DIR/docs/plans/2026-06-26-cameraapp-callback-lock-trusted-policy.md"
 OPEN_PUBLICATION_TRUSTED_POLICY_PLAN="$ROOT_DIR/docs/plans/2026-06-26-cameraapp-open-publication-trusted-policy.md"
 GRADLE_961_TRUSTED_POLICY_PLAN="$ROOT_DIR/docs/plans/2026-06-26-gradle-9-6-1-trusted-policy.md"
+READY_CAPTURE_TRUSTED_POLICY_PLAN="$ROOT_DIR/docs/plans/2026-06-26-cameraapp-ready-capture-trusted-policy.md"
+READY_CAPTURE_POLICY_CORRECTION_PLAN="$ROOT_DIR/docs/plans/2026-06-26-cameraapp-ready-capture-policy-correction.md"
 BACKUP_RULES="$ROOT_DIR/Application/src/main/res/xml/backup_rules.xml"
 DATA_EXTRACTION_RULES="$ROOT_DIR/Application/src/main/res/xml/data_extraction_rules.xml"
 
@@ -163,6 +165,8 @@ for path in \
   "docs/plans/2026-06-26-cameraapp-callback-lock-trusted-policy.md" \
   "docs/plans/2026-06-26-cameraapp-open-publication-trusted-policy.md" \
   "docs/plans/2026-06-26-gradle-9-6-1-trusted-policy.md" \
+  "docs/plans/2026-06-26-cameraapp-ready-capture-trusted-policy.md" \
+  "docs/plans/2026-06-26-cameraapp-ready-capture-policy-correction.md" \
   "scripts/run-instrumentation.sh" \
   "scripts/tests/run-instrumentation-cleanup-test.sh" \
   "trusted-verifier/policy.json" \
@@ -170,17 +174,15 @@ for path in \
   "trusted-verifier/verify_candidate.py" \
   "trusted-verifier/verify_environment.py" \
   "trusted-verifier/tests/test_bootstrap.py" \
-  "trusted-verifier/expected/gradle-9-6-1/AGENTS.md" \
-  "trusted-verifier/expected/gradle-9-6-1/Application/build.gradle" \
-  "trusted-verifier/expected/gradle-9-6-1/CHANGES.md" \
-  "trusted-verifier/expected/gradle-9-6-1/README.md" \
-  "trusted-verifier/expected/gradle-9-6-1/SECURITY.md" \
-  "trusted-verifier/expected/gradle-9-6-1/VISION.md" \
-  "trusted-verifier/expected/gradle-9-6-1/docs/plans/2026-06-26-gradle-9-6-1-refresh.md" \
-  "trusted-verifier/expected/gradle-9-6-1/gradle/wrapper/gradle-wrapper.properties" \
-  "trusted-verifier/expected/gradle-9-6-1/gradlew" \
-  "trusted-verifier/expected/gradle-9-6-1/gradlew.bat" \
-  "trusted-verifier/expected/gradle-9-6-1/scripts/check-baseline.sh" \
+  "trusted-verifier/expected/ready-capture-state/AGENTS.md" \
+  "trusted-verifier/expected/ready-capture-state/Application/src/main/java/com/example/android/camera2basic/Camera2BasicFragment.java" \
+  "trusted-verifier/expected/ready-capture-state/CHANGES.md" \
+  "trusted-verifier/expected/ready-capture-state/DEVICE_VERIFICATION.md" \
+  "trusted-verifier/expected/ready-capture-state/README.md" \
+  "trusted-verifier/expected/ready-capture-state/SECURITY.md" \
+  "trusted-verifier/expected/ready-capture-state/VISION.md" \
+  "trusted-verifier/expected/ready-capture-state/docs/plans/2026-06-26-cameraapp-ready-capture-state.md" \
+  "trusted-verifier/expected/ready-capture-state/scripts/check-baseline.sh" \
   "Application/src/main/res/drawable-xxxhdpi/ic_launcher.png" \
   "Application/src/main/res/drawable-xxxhdpi/ic_action_info.png" \
   "gradlew" \
@@ -251,14 +253,14 @@ if [ ! -x "$TRUSTED_GATE_RUNNER" ] || ! sh -n "$TRUSTED_GATE_RUNNER" || \
 fi
 
 if [ ! -d "$TRUSTED_GATE_EXPECTED_ROOT" ] || \
-   [ "$(find "$TRUSTED_GATE_EXPECTED_ROOT" -type f | wc -l | tr -d ' ')" -ne 11 ]; then
-  printf '%s\n' "Trusted Gradle 9.6.1 policy must retain all eleven reviewed semantic templates." >&2
+   [ "$(find "$TRUSTED_GATE_EXPECTED_ROOT" -type f | wc -l | tr -d ' ')" -ne 9 ]; then
+  printf '%s\n' "Trusted ready-capture policy must retain all nine reviewed semantic templates." >&2
   exit 1
 fi
 
-if ! grep -Fq 'gradle-9.6.1-bin.zip' "$TRUSTED_GATE_EXPECTED_ROOT/gradle/wrapper/gradle-wrapper.properties" || \
-   ! grep -Fq '9c0f7faeeb306cb14e4279a3e084ca6b596894089a0638e68a07c945a32c9e14' "$TRUSTED_GATE_EXPECTED_ROOT/scripts/check-baseline.sh"; then
-  printf '%s\n' "Trusted Gradle 9.6.1 templates must retain the reviewed URL and checksum." >&2
+if [ "$(grep -Fc 'mState = STATE_PICTURE_TAKEN;' "$TRUSTED_GATE_EXPECTED_ROOT/Application/src/main/java/com/example/android/camera2basic/Camera2BasicFragment.java")" -lt 3 ] || \
+   ! grep -Fq 'Immediately-ready AF/AE results must publish picture-taken state before each still capture.' "$TRUSTED_GATE_EXPECTED_ROOT/scripts/check-baseline.sh"; then
+  printf '%s\n' "Trusted ready-capture templates must retain terminal-state source and checker bytes." >&2
   exit 1
 fi
 
@@ -2134,20 +2136,19 @@ if grep -Eq 'write-all|:[[:space:]]*write|secrets\.|actions/cache|candidate/(Mak
 fi
 
 for trusted_policy_contract in \
-  '"bootstrap_exact_default": "62b2283308279efe7168e331ef1474fa98a4497e"' \
+  '"bootstrap_exact_default": "93274cfff2672d2de533363bccf083a0edb16747"' \
   '"environment": "cameraapp-trusted-verifier-v1"' \
   '"diagnostic_check_context_is_authoritative": false' \
   '"kind": "required_protected_environment_deployment"' \
   '"required_environment_branch": "master"' \
   '"15c0885755c41aa18aeb92a85193facdb61fb55c"' \
   '"67b2352a032ff956c4034e9215c53709d5e340bf"' \
-  '"gradle/wrapper/gradle-wrapper.properties"' \
-  '"gradlew"' \
-  '"gradlew.bat"' \
+  '"Application/src/main/java/com/example/android/camera2basic/Camera2BasicFragment.java"' \
+  '"DEVICE_VERIFICATION.md"' \
   '"scripts/check-baseline.sh"' \
   '"trusted-verifier/verify_environment.py"' \
-  '"docs/plans/2026-06-26-gradle-9-6-1-refresh.md"' \
-  '"trusted-verifier/expected/gradle-9-6-1/scripts/check-baseline.sh"'; do
+  '"docs/plans/2026-06-26-cameraapp-ready-capture-state.md"' \
+  '"trusted-verifier/expected/ready-capture-state/scripts/check-baseline.sh"'; do
   if ! grep -Fq "$trusted_policy_contract" "$TRUSTED_GATE_POLICY"; then
     printf '%s\n' "Trusted CameraApp policy must preserve contract: $trusted_policy_contract" >&2
     exit 1
@@ -2481,6 +2482,20 @@ if ! grep -Fq "Status: Completed" "$GRADLE_961_TRUSTED_POLICY_PLAN" || \
    ! grep -Fq "one direct child" "$GRADLE_961_TRUSTED_POLICY_PLAN" || \
    ! grep -Fq "exact eleven-file synthetic semantic child" "$GRADLE_961_TRUSTED_POLICY_PLAN"; then
   printf '%s\n' "CameraApp Gradle 9.6.1 trusted policy plan must record status, topology, and exact-child evidence." >&2
+  exit 1
+fi
+
+if ! grep -Fq "Status: Completed" "$READY_CAPTURE_TRUSTED_POLICY_PLAN" || \
+   ! grep -Fq "one direct child" "$READY_CAPTURE_TRUSTED_POLICY_PLAN" || \
+   ! grep -Fq "exact nine-file synthetic semantic child" "$READY_CAPTURE_TRUSTED_POLICY_PLAN"; then
+  printf '%s\n' "CameraApp ready-capture trusted policy plan must record status, topology, and exact-child evidence." >&2
+  exit 1
+fi
+
+if ! grep -Fq "Status: Completed" "$READY_CAPTURE_POLICY_CORRECTION_PLAN" || \
+   ! grep -Fq "one direct child" "$READY_CAPTURE_POLICY_CORRECTION_PLAN" || \
+   ! grep -Fq "exact nine-file synthetic semantic child" "$READY_CAPTURE_POLICY_CORRECTION_PLAN"; then
+  printf '%s\n' "CameraApp ready-capture policy correction plan must record status, topology, and exact-child evidence." >&2
   exit 1
 fi
 
