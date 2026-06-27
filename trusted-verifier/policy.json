@@ -16,7 +16,7 @@
     "CHANGES.md": {
       "max_bytes": 40000,
       "mode": "100644",
-      "sha256": "945c5797ec9d43c2d1a550b53deb2439b0aa651674995acf6b4f3b1aacd0d07c",
+      "sha256": "e6b31d6ae47dc8645db31153c8f14ecfd5db6a9f6657d8c8c553202bce62a251",
       "template": "expected/ready-capture-state/CHANGES.md"
     },
     "DEVICE_VERIFICATION.md": {
@@ -52,7 +52,7 @@
     "scripts/check-baseline.sh": {
       "max_bytes": 150000,
       "mode": "100755",
-      "sha256": "38c5d81bba9932d81f49684eee3d6ee13c27768687edfbb57cbacaafd0224f23",
+      "sha256": "1315d49baf31b0f44e05a457760046491d4f32d87cecc33a43eeb28adef0d561",
       "template": "expected/ready-capture-state/scripts/check-baseline.sh"
     }
   },

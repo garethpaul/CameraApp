@@ -2136,7 +2136,7 @@ if grep -Eq 'write-all|:[[:space:]]*write|secrets\.|actions/cache|candidate/(Mak
 fi
 
 for trusted_policy_contract in \
-  '"bootstrap_exact_default": "93274cfff2672d2de533363bccf083a0edb16747"' \
+  '"bootstrap_exact_default": "50abf2951082f2cc6f7b4d41e4c300cd42957b0a"' \
   '"environment": "cameraapp-trusted-verifier-v1"' \
   '"diagnostic_check_context_is_authoritative": false' \
   '"kind": "required_protected_environment_deployment"' \

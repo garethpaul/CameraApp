@@ -34,6 +34,39 @@ when autofocus metadata was unavailable or auto-exposure was already converged.
 - Verify this exact semantic child through the protected environment and
   merge only after API 36, CodeQL, and exact-head review are green.
 
+## 2026-06-26 19:54 PDT - P1 - Align semantic bootstrap contract
+
+### Summary
+
+Corrected the reviewed semantic baseline template so it preserves the merged
+bootstrap SHA required by the current trusted policy.
+
+### Work completed
+
+- Replaced the stale pre-bootstrap SHA in the expected semantic checker with
+  merge `50abf2951082f2cc6f7b4d41e4c300cd42957b0a`.
+- Added a trusted-verifier regression that binds the checker template to the
+  policy's `bootstrap_exact_default` contract.
+- Regenerated only the affected semantic template digests.
+
+### Validation
+
+- RED: the new regression rejected the stale reviewed checker template.
+- GREEN: all trusted verifier tests, the SDK-free baseline, policy JSON,
+  shell syntax, and `git diff --check` pass.
+- Full `make check` remains limited locally by JDK 21 versus required JDK 17.
+
+### Blockers
+
+- The protected gate must reject this policy correction by design.
+- Android compilation and instrumentation remain delegated to hosted JDK 17
+  and API 36 jobs.
+
+### Next action
+
+- Merge this correction, then publish the exact nine-file semantic child and
+  require its baseline checker and protected trusted gate to pass.
+
 ## 2026-06-26 19:36 PDT - P1 - Correct ready-capture template base
 
 ### Summary
