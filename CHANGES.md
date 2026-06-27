@@ -1,5 +1,43 @@
 # CameraApp Changes
 
+## 2026-06-26 19:18 PDT - P1 - Authorize ready-capture state bytes
+
+### Summary
+
+The base-owned trusted verifier now authorizes exactly the nine reviewed files
+that prevent duplicate immediately-ready still captures.
+
+### Work completed
+
+- Replaced the Gradle refresh templates with exact camera state, contract,
+  documentation, device-matrix, and plan templates.
+- Bound the semantic repair to one direct child of this bootstrap base.
+- Preserved hostile topology, byte, path, mode, size, and tool-injection tests.
+
+### Validation
+
+- Trusted verifier unit tests and the SDK-free source baseline pass.
+- The exact nine-file synthetic semantic child is accepted with every reviewed
+  digest in its receipt.
+- Policy JSON parsing, shell syntax, Make authority tests, and
+  `git diff --check` pass. Full local `make check` stops at the explicit JDK 17
+  gate because this host exposes JDK 21. Hosted push run 28275674939,
+  pull-request run 28275676049, and PR CodeQL run 28275675515 pass on bootstrap
+  head `2fe9382`.
+- The base-owned trusted gate run 28275676057 rejects the policy-changing
+  bootstrap as designed. Required `codex review --base origin/master` failed
+  before analysis with OpenAI HTTP 401; an immutable exact-head review found no
+  actionable policy, topology, template, digest, or trust-boundary issue.
+
+### Blockers
+
+- The old protected gate must reject this policy-changing bootstrap by design.
+
+### Next action
+
+- Merge this bootstrap, then apply the reviewed semantic repair as one direct
+  child of the new default branch.
+
 ## 2026-06-26 15:35 PDT - P1 - Refresh Gradle wrapper to 9.6.1
 
 ### Summary

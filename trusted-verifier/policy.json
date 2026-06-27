@@ -1,71 +1,59 @@
 {
-  "bootstrap_exact_default": "62b2283308279efe7168e331ef1474fa98a4497e",
+  "bootstrap_exact_default": "93274cfff2672d2de533363bccf083a0edb16747",
   "expected_files": {
     "AGENTS.md": {
       "max_bytes": 10000,
       "mode": "100644",
-      "sha256": "e09237c6986e9ec9df7a0d9bbdfc86916595993fdc94b895f1237161673effe6",
-      "template": "expected/gradle-9-6-1/AGENTS.md"
+      "sha256": "0087d4f8ae589b85d83be2a68626ee217fe92f654d94023da5057535724a1b2d",
+      "template": "expected/ready-capture-state/AGENTS.md"
     },
-    "Application/build.gradle": {
-      "max_bytes": 10000,
+    "Application/src/main/java/com/example/android/camera2basic/Camera2BasicFragment.java": {
+      "max_bytes": 50000,
       "mode": "100644",
-      "sha256": "65b4da05395db12cf093432261ae56dd4df45ddd9140c6fffa0a4890d323d8c3",
-      "template": "expected/gradle-9-6-1/Application/build.gradle"
+      "sha256": "8d92dda645e717e2b3abe7ff3e5aa394963da77e7cec072f6e9ca986153b468e",
+      "template": "expected/ready-capture-state/Application/src/main/java/com/example/android/camera2basic/Camera2BasicFragment.java"
     },
     "CHANGES.md": {
-      "max_bytes": 35000,
+      "max_bytes": 40000,
       "mode": "100644",
-      "sha256": "d1e167845677cf68e58596c89433c2a1f37f707a064501a7454dd94b8f168408",
-      "template": "expected/gradle-9-6-1/CHANGES.md"
+      "sha256": "2e43920d59a61b09622ff7c64dcc9d155834562a6d80d8a4a4f4b57dbfd7044c",
+      "template": "expected/ready-capture-state/CHANGES.md"
+    },
+    "DEVICE_VERIFICATION.md": {
+      "max_bytes": 10000,
+      "mode": "100644",
+      "sha256": "a6d32afe917d4639dde27ad2ab5f13588b75ae504bff9a94783dd0e08b2adbdc",
+      "template": "expected/ready-capture-state/DEVICE_VERIFICATION.md"
     },
     "README.md": {
-      "max_bytes": 20000,
+      "max_bytes": 22000,
       "mode": "100644",
-      "sha256": "de1632d8f5e6b64833e8d56309e7be5037612ebb17e56fac41ac0006f00206b7",
-      "template": "expected/gradle-9-6-1/README.md"
+      "sha256": "b1a7661d1a7a69b7f964b6b29c50108be175f613795039c7c43eb05a8b7fbf4f",
+      "template": "expected/ready-capture-state/README.md"
     },
     "SECURITY.md": {
-      "max_bytes": 12000,
+      "max_bytes": 14000,
       "mode": "100644",
-      "sha256": "dd1810a4ebb146ee2e313a13ee0e1a458754147d7634fa19bc1a9fcbbab1ad49",
-      "template": "expected/gradle-9-6-1/SECURITY.md"
+      "sha256": "1c872e71beb0afd7313f1e2ef7852cbbf2015b7c5de846a263096bed4ebccdb1",
+      "template": "expected/ready-capture-state/SECURITY.md"
     },
     "VISION.md": {
-      "max_bytes": 10000,
+      "max_bytes": 12000,
       "mode": "100644",
-      "sha256": "1e9e31a7bbf15dbcf0e268cc106be424b4abe2bdd7395926f066506ebb9b85ab",
-      "template": "expected/gradle-9-6-1/VISION.md"
+      "sha256": "ad4348d0bde389fe55d1fca0868be957934022efbe4003ae1d9df9728248045c",
+      "template": "expected/ready-capture-state/VISION.md"
     },
-    "docs/plans/2026-06-26-gradle-9-6-1-refresh.md": {
+    "docs/plans/2026-06-26-cameraapp-ready-capture-state.md": {
       "max_bytes": 6000,
       "mode": "100644",
-      "sha256": "4d7aeccf1ef59c2952993ef066c2d5345671a8ff6f74c63d7b18bc07b251ccbe",
-      "template": "expected/gradle-9-6-1/docs/plans/2026-06-26-gradle-9-6-1-refresh.md"
-    },
-    "gradle/wrapper/gradle-wrapper.properties": {
-      "max_bytes": 2000,
-      "mode": "100644",
-      "sha256": "89f62533208a72b7a8cc2892b6b3540c445fa6175508297d932dae57d653591a",
-      "template": "expected/gradle-9-6-1/gradle/wrapper/gradle-wrapper.properties"
-    },
-    "gradlew": {
-      "max_bytes": 20000,
-      "mode": "100755",
-      "sha256": "a5a5c199ba02189ae8c46a334223371a20599d9c298ef65e7540ede4a3f72d59",
-      "template": "expected/gradle-9-6-1/gradlew"
-    },
-    "gradlew.bat": {
-      "max_bytes": 10000,
-      "mode": "100644",
-      "sha256": "59328c7a17f673b1a63040bfb380a0c749e5d6df3406f7f18641060314cd9aa1",
-      "template": "expected/gradle-9-6-1/gradlew.bat"
+      "sha256": "2fb77b09475034e4a14d72e38da62989c36d37d3d923cf97d5d7224e86955cf7",
+      "template": "expected/ready-capture-state/docs/plans/2026-06-26-cameraapp-ready-capture-state.md"
     },
     "scripts/check-baseline.sh": {
-      "max_bytes": 140000,
+      "max_bytes": 150000,
       "mode": "100755",
-      "sha256": "127bf880a907be7eb4091c3c8b8a85b294ca9ae2a89c79c5ee492b29167e7ad0",
-      "template": "expected/gradle-9-6-1/scripts/check-baseline.sh"
+      "sha256": "08ee439e3470ac50a1b7257acf3f77ba07606f831b28844604bed4180a2ea667",
+      "template": "expected/ready-capture-state/scripts/check-baseline.sh"
     }
   },
   "merge_authority": {
@@ -85,16 +73,14 @@
     "trusted-verifier/run-hermetic.sh",
     "trusted-verifier/verify_candidate.py",
     "trusted-verifier/verify_environment.py",
-    "trusted-verifier/expected/gradle-9-6-1/AGENTS.md",
-    "trusted-verifier/expected/gradle-9-6-1/Application/build.gradle",
-    "trusted-verifier/expected/gradle-9-6-1/CHANGES.md",
-    "trusted-verifier/expected/gradle-9-6-1/README.md",
-    "trusted-verifier/expected/gradle-9-6-1/SECURITY.md",
-    "trusted-verifier/expected/gradle-9-6-1/VISION.md",
-    "trusted-verifier/expected/gradle-9-6-1/docs/plans/2026-06-26-gradle-9-6-1-refresh.md",
-    "trusted-verifier/expected/gradle-9-6-1/gradle/wrapper/gradle-wrapper.properties",
-    "trusted-verifier/expected/gradle-9-6-1/gradlew",
-    "trusted-verifier/expected/gradle-9-6-1/gradlew.bat",
-    "trusted-verifier/expected/gradle-9-6-1/scripts/check-baseline.sh"
+    "trusted-verifier/expected/ready-capture-state/AGENTS.md",
+    "trusted-verifier/expected/ready-capture-state/Application/src/main/java/com/example/android/camera2basic/Camera2BasicFragment.java",
+    "trusted-verifier/expected/ready-capture-state/CHANGES.md",
+    "trusted-verifier/expected/ready-capture-state/DEVICE_VERIFICATION.md",
+    "trusted-verifier/expected/ready-capture-state/README.md",
+    "trusted-verifier/expected/ready-capture-state/SECURITY.md",
+    "trusted-verifier/expected/ready-capture-state/VISION.md",
+    "trusted-verifier/expected/ready-capture-state/docs/plans/2026-06-26-cameraapp-ready-capture-state.md",
+    "trusted-verifier/expected/ready-capture-state/scripts/check-baseline.sh"
   ]
 }
