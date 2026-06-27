@@ -178,6 +178,8 @@ contracts as camera execution.
 - Missing still-capture dependencies restore preview state before the capture path returns.
 - Missing, failed, or closed-session focus and precapture operations restore preview state instead of leaving the capture state machine waiting.
 - Submitted focus or precapture failures clear AF/AE triggers and restart repeating preview when dependencies remain available.
+- Immediately-ready AF/AE results publish the terminal picture-taken state
+  before submission so later metadata cannot duplicate the still capture.
 - Configured preview callbacks must still own their exact initiating camera device before publishing preview state; stale sessions close instead.
 - Failed preview callbacks rely on Camera2 session closure and suppress stale UI;
   only the initiating camera lifetime may report configuration failures.

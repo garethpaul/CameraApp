@@ -77,6 +77,8 @@
 - Missing still-capture dependencies restore preview state before the capture path returns.
 - Missing, failed, or closed-session focus and precapture operations restore preview state instead of leaving the capture state machine waiting.
 - Submitted focus or precapture failures clear AF/AE triggers and restart repeating preview when dependencies remain available.
+- Immediately-ready AF/AE branches must publish `STATE_PICTURE_TAKEN` directly
+  before still submission to prevent duplicate captures from later results.
 - ImageReader backpressure is handled by dropping a backed-up capture callback before it can crash the still-image save path.
 - During background-thread shutdown, rejected image-save handoffs close the
   callback-owned image instead of consuming `ImageReader` capacity.

@@ -41,6 +41,7 @@ be transferred to a different camera implementation.
 | Preview startup | A supported camera produces a correctly scaled full-bleed preview with responsive controls. | `not run` | `not run` |
 | Unsupported camera | Missing or unsupported Camera2 capability produces bounded recovery without a crash. | `not run` | `not run` |
 | Still capture | One capture produces one saved result and generic confirmation without exposing a private path. | `not run` | `not run` |
+| Immediately-ready AF/AE capture | AF-unavailable or already-converged AE results submit exactly one still before preview recovery. | `not run` | `not run` |
 | Rejected save handoff | A forced background-handler rejection closes the acquired image and later captures remain possible. | `not run` | `not run` |
 | Rapid repeated capture | Repeated capture does not exhaust the two-slot ImageReader or duplicate ownership. | `not run` | `not run` |
 | Orientation change | Portrait and landscape preserve preview geometry and non-overlapping controls. | `not run` | `not run` |

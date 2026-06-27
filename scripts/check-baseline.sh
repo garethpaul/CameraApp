@@ -1212,6 +1212,23 @@ capture_completed_callback=$(printf '%s\n' "$capture_result_callback" | awk '
   capture { print }
 ')
 
+waiting_lock_case=$(printf '%s\n' "$capture_result_callback" | awk '
+  /case STATE_WAITING_LOCK:/ { capture = 1 }
+  capture && /case STATE_WAITING_PRECAPTURE:/ { exit }
+  capture { print }
+')
+if [ "$(printf '%s\n' "$waiting_lock_case" | grep -Fc "mState = STATE_PICTURE_TAKEN;")" -ne 2 ] || \
+   [ "$(printf '%s\n' "$waiting_lock_case" | grep -Fc "captureStillPicture();")" -ne 2 ] || \
+   printf '%s\n' "$waiting_lock_case" | grep -Fq "mState = STATE_WAITING_NON_PRECAPTURE;" || \
+   [ "$(printf '%s\n' "$waiting_lock_case" | awk '
+       /mState = STATE_PICTURE_TAKEN;/ { state_line = NR; next }
+       /captureStillPicture\(\);/ && state_line == NR - 1 { adjacent += 1 }
+       END { print adjacent + 0 }
+     ')" -ne 2 ]; then
+  printf '%s\n' "Immediately-ready AF/AE results must publish picture-taken state before each still capture." >&2
+  exit 1
+fi
+
 for callback_name in progressed completed; do
   if [ "$callback_name" = progressed ]; then
     callback_body=$capture_progressed_callback
