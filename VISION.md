@@ -37,6 +37,8 @@ Priority:
 - Missing still-capture dependencies restore preview state before the capture path returns.
 - Keep missing, failed, or closed-session focus and precapture operations from leaving the capture state machine waiting.
 - Keep submitted focus and precapture failures from retaining stale AF/AE triggers or abandoning repeating preview.
+- Keep immediately-ready AF/AE branches in picture-taken state before still
+  submission so one gesture cannot produce duplicate captures.
 - Report preview configuration failures only for the initiating camera lifetime
 - Keep layout control binding tolerant of missing optional controls
 - Keep right-to-left camera control placement tied to logical layout anchors

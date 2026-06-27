@@ -1,5 +1,39 @@
 # CameraApp Changes
 
+## 2026-06-26 19:38 PDT - P1 - Prevent duplicate immediately-ready captures
+
+### Summary
+
+Corrected two Camera2 state transitions that could submit a second still image
+when autofocus metadata was unavailable or auto-exposure was already converged.
+
+### Work completed
+
+- Changed both immediately-ready branches to publish `STATE_PICTURE_TAKEN`
+  directly before `captureStillPicture()`.
+- Kept `STATE_WAITING_NON_PRECAPTURE` reserved for the actual AE precapture
+  sequence.
+- Added an SDK-free ordering contract, maintained guidance, a device scenario,
+  and a completed implementation plan.
+
+### Validation
+
+- RED: the source baseline rejected both old waiting-state transitions.
+- GREEN: the corrected baseline requires two adjacent terminal-state capture
+  submissions and rejects either state reverting to the waiting path.
+- Full root/external, API 36, trusted-byte, CodeQL, and review evidence remains
+  required before merge.
+
+### Blockers
+
+- AF-unavailable and already-converged AE timing require a camera-capable
+  device; no physical capture execution is claimed locally.
+
+### Next action
+
+- Verify this exact semantic child through the protected environment and
+  merge only after API 36, CodeQL, and exact-head review are green.
+
 ## 2026-06-26 19:54 PDT - P1 - Align semantic bootstrap contract
 
 ### Summary
