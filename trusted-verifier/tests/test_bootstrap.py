@@ -297,6 +297,16 @@ class TrustedDirectGateBootstrapTests(unittest.TestCase):
         self.assertEqual(receipt["candidate_head_sha"], head_sha)
         self.assertEqual(set(receipt["verified_files"]), set(EXPECTED_FILES))
 
+    def test_expected_semantic_checker_matches_policy_bootstrap_contract(self):
+        expected_checker = (
+            TRUSTED / EXPECTED_FILES["scripts/check-baseline.sh"]["template"]
+        ).read_text(encoding="utf-8")
+
+        self.assertIn(
+            f'"bootstrap_exact_default": "{POLICY["bootstrap_exact_default"]}"',
+            expected_checker,
+        )
+
     def test_candidate_workflow_spoofing_extra_commits_files_and_modes_are_rejected(self):
         cases = {
             "workflow-spoof": lambda: (
