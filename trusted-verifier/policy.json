@@ -1,5 +1,5 @@
 {
-  "bootstrap_exact_default": "93274cfff2672d2de533363bccf083a0edb16747",
+  "bootstrap_exact_default": "50abf2951082f2cc6f7b4d41e4c300cd42957b0a",
   "expected_files": {
     "AGENTS.md": {
       "max_bytes": 10000,
@@ -16,7 +16,7 @@
     "CHANGES.md": {
       "max_bytes": 40000,
       "mode": "100644",
-      "sha256": "2e43920d59a61b09622ff7c64dcc9d155834562a6d80d8a4a4f4b57dbfd7044c",
+      "sha256": "945c5797ec9d43c2d1a550b53deb2439b0aa651674995acf6b4f3b1aacd0d07c",
       "template": "expected/ready-capture-state/CHANGES.md"
     },
     "DEVICE_VERIFICATION.md": {
@@ -52,7 +52,7 @@
     "scripts/check-baseline.sh": {
       "max_bytes": 150000,
       "mode": "100755",
-      "sha256": "08ee439e3470ac50a1b7257acf3f77ba07606f831b28844604bed4180a2ea667",
+      "sha256": "38c5d81bba9932d81f49684eee3d6ee13c27768687edfbb57cbacaafd0224f23",
       "template": "expected/ready-capture-state/scripts/check-baseline.sh"
     }
   },

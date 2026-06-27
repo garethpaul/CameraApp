@@ -1,6 +1,6 @@
 # CameraApp Changes
 
-## 2026-06-26 19:14 PDT - P1 - Prevent duplicate immediately-ready captures
+## 2026-06-26 19:38 PDT - P1 - Prevent duplicate immediately-ready captures
 
 ### Summary
 
@@ -31,8 +31,81 @@ when autofocus metadata was unavailable or auto-exposure was already converged.
 
 ### Next action
 
-- Merge the base-owned exact-byte policy, then apply this reviewed semantic
-  child directly to that default-branch commit.
+- Verify this exact semantic child through the protected environment and
+  merge only after API 36, CodeQL, and exact-head review are green.
+
+## 2026-06-26 19:36 PDT - P1 - Correct ready-capture template base
+
+### Summary
+
+Rebuilt the two overlapping ready-capture templates from the merged trusted
+base so the semantic child retains current policy evidence and inventory.
+
+### Work completed
+
+- Preserved the merged policy bootstrap entries in candidate `CHANGES.md`.
+- Preserved the ready-capture expected-root and correction-plan contracts in
+  the candidate baseline checker.
+- Updated only those two expected templates and their SHA-256 policy digests;
+  the other seven reviewed semantic files remain byte-identical.
+
+### Validation
+
+- The pre-correction semantic child was never pushed.
+- All 8 trusted verifier regression tests pass, including exact reviewed-child
+  acceptance and byte-mutation rejection.
+- SDK-free baseline, policy JSON, shell syntax, and `git diff --check` pass.
+- `make check` passes Make-authority coverage, then stops because this host
+  exposes JDK 21 while the repository requires JDK 17.
+
+### Blockers
+
+- The current protected gate must reject this second policy change by design.
+- Android compilation and instrumentation remain delegated to hosted JDK 17
+  and API 36 jobs.
+
+### Next action
+
+- Merge this correction, then apply the exact reviewed semantic child as one
+  direct child of the corrected default branch.
+
+## 2026-06-26 19:18 PDT - P1 - Authorize ready-capture state bytes
+
+### Summary
+
+The base-owned trusted verifier now authorizes exactly the nine reviewed files
+that prevent duplicate immediately-ready still captures.
+
+### Work completed
+
+- Replaced the Gradle refresh templates with exact camera state, contract,
+  documentation, device-matrix, and plan templates.
+- Bound the semantic repair to one direct child of this bootstrap base.
+- Preserved hostile topology, byte, path, mode, size, and tool-injection tests.
+
+### Validation
+
+- Trusted verifier unit tests and the SDK-free source baseline pass.
+- The exact nine-file synthetic semantic child is accepted with every reviewed
+  digest in its receipt.
+- Policy JSON parsing, shell syntax, Make authority tests, and
+  `git diff --check` pass. Full local `make check` stops at the explicit JDK 17
+  gate because this host exposes JDK 21. Hosted push run 28275674939,
+  pull-request run 28275676049, and PR CodeQL run 28275675515 pass on bootstrap
+  head `2fe9382`.
+- The base-owned trusted gate run 28275676057 rejects the policy-changing
+  bootstrap as designed. Required `codex review --base origin/master` failed
+  before analysis with OpenAI HTTP 401; an immutable exact-head review found no
+  actionable policy, topology, template, digest, or trust-boundary issue.
+
+### Blockers
+
+- The old protected gate must reject this policy-changing bootstrap by design.
+
+### Next action
+
+- Merge this bootstrap, then apply the reviewed semantic repair as one direct
+  child of the new default branch.
 
 ## 2026-06-26 15:35 PDT - P1 - Refresh Gradle wrapper to 9.6.1
 
